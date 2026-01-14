@@ -1,0 +1,218 @@
+// Extended Prisma schema with all StudyFetch features
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String?
+  image         String?
+  preferences   Json?     // Store user preferences (language, study time, etc.)
+  subscription  String    @default("free") // free, premium
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  sessions      Session[]
+  documents     Document[]
+  progress      Progress[]
+  flashcards    Flashcard[]
+  quizzes       Quiz[]
+  notes         Note[]
+  studyPlans    StudyPlan[]
+  achievements  Achievement[]
+  studyRooms    StudyRoomMember[]
+}
+
+model Session {
+  id            String    @id @default(cuid())
+  userId        String
+  subject       String
+  messages      Json      // Store chat messages as JSON
+  context       Json?     // Store conversation context
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Document {
+  id            String    @id @default(cuid())
+  userId        String
+  filename      String
+  filepath      String
+  mimeType      String
+  size          Int
+  content       String?   // Extracted text content
+  metadata      Json?     // Store additional metadata
+  createdAt     DateTime  @default(now())
+  
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flashcards    Flashcard[]
+  quizzes       Quiz[]
+  notes         Note[]
+}
+
+model Flashcard {
+  id            String    @id @default(cuid())
+  userId        String
+  documentId    String?
+  subject       String
+  front         String
+  back          String
+  difficulty    Int       @default(0) // For spaced repetition
+  nextReview    DateTime  @default(now())
+  interval      Int       @default(1) // Days until next review
+  easeFactor    Float     @default(2.5) // Spaced repetition ease
+  reviewCount   Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document      Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  reviews       FlashcardReview[]
+}
+
+model FlashcardReview {
+  id            String    @id @default(cuid())
+  flashcardId   String
+  quality       Int       // 0-5 rating from user
+  createdAt     DateTime  @default(now())
+  
+  flashcard     Flashcard @relation(fields: [flashcardId], references: [id], onDelete: Cascade)
+}
+
+model Quiz {
+  id            String    @id @default(cuid())
+  userId        String
+  documentId    String?
+  subject       String
+  title         String
+  questions     Json      // Array of questions with answers
+  timeLimit     Int?      // Minutes
+  createdAt     DateTime  @default(now())
+  
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document      Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  attempts      QuizAttempt[]
+}
+
+model QuizAttempt {
+  id            String    @id @default(cuid())
+  quizId        String
+  score         Float
+  answers       Json      // User's answers
+  feedback      Json?     // AI feedback for each answer
+  timeSpent     Int       // Seconds
+  createdAt     DateTime  @default(now())
+  
+  quiz          Quiz      @relation(fields: [quizId], references: [id], onDelete: Cascade)
+}
+
+model Note {
+  id            String    @id @default(cuid())
+  userId        String
+  documentId    String?
+  subject       String
+  title         String
+  content       String
+  summary       String?
+  transcription String?   // Audio transcription
+  audioUrl      String?   // Podcast/lecture URL
+  videoUrl      String?   // Video URL
+  tags          Json?     // Array of tags
+  isLive        Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document      Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+}
+
+model Progress {
+  id            String    @id @default(cuid())
+  userId        String
+  subject       String
+  topic         String
+  score         Float?
+  accuracy      Float?
+  timeSpent     Int       // Minutes
+  strengths     Json?     // Array of strong topics
+  weaknesses    Json?     // Array of weak topics
+  notes         String?
+  createdAt     DateTime  @default(now())
+  
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model StudyPlan {
+  id            String    @id @default(cuid())
+  userId        String
+  title         String
+  subject       String
+  deadline      DateTime?
+  schedule      Json      // Weekly schedule
+  goals         Json      // Learning goals
+  completed     Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Achievement {
+  id            String    @id @default(cuid())
+  userId        String
+  type          String    // streak, quiz_master, speed_reader, etc.
+  title         String
+  description   String
+  icon          String?
+  unlockedAt    DateTime  @default(now())
+  
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model StudyRoom {
+  id            String    @id @default(cuid())
+  name          String
+  subject       String
+  description   String?
+  isPublic      Boolean   @default(false)
+  maxMembers    Int       @default(10)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  members       StudyRoomMember[]
+  resources     StudyRoomResource[]
+}
+
+model StudyRoomMember {
+  id            String    @id @default(cuid())
+  userId        String
+  roomId        String
+  role          String    @default("member") // owner, moderator, member
+  joinedAt      DateTime  @default(now())
+  
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room          StudyRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, roomId])
+}
+
+model StudyRoomResource {
+  id            String    @id @default(cuid())
+  roomId        String
+  type          String    // flashcard, quiz, note, document
+  resourceId    String    // ID of the resource
+  title         String
+  createdAt     DateTime  @default(now())
+  
+  room          StudyRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+}
