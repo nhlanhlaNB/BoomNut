@@ -102,26 +102,36 @@ Current Streak: ${analytics.overallProgress.currentStreak} days
 Provide actionable, specific recommendations for improvement.
 Return as JSON: {"recommendations": ["Recommendation 1", "Recommendation 2", ...]}`;
 
-    const recResponse = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an educational advisor providing personalized study recommendations based on student data.',
-        },
-        {
-          role: 'user',
-          content: recommendationsPrompt,
-        },
-      ],
-      temperature: 0.7,
-      response_format: { type: 'json_object' },
-    });
+    const openai = getOpenAIClient();
+    if (openai) {
+      try {
+        const recResponse = await openai.chat.completions.create({
+          model: 'gpt-4-turbo-preview',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an educational advisor providing personalized study recommendations based on student data.',
+            },
+            {
+              role: 'user',
+              content: recommendationsPrompt,
+            },
+          ],
+          temperature: 0.7,
+          response_format: { type: 'json_object' },
+        });
 
-    try {
-      const parsed = JSON.parse(recResponse.choices[0]?.message?.content || '{}');
-      analytics.recommendations = parsed.recommendations || [];
-    } catch (e) {
+        const parsed = JSON.parse(recResponse.choices[0]?.message?.content || '{}');
+        analytics.recommendations = parsed.recommendations || [];
+      } catch (e) {
+        console.error('Failed to generate AI recommendations:', e);
+        analytics.recommendations = [
+          'Focus on your weaker topics with targeted practice',
+          'Maintain your study streak for consistent progress',
+          'Review flashcards daily using spaced repetition',
+        ];
+      }
+    } else {
       analytics.recommendations = [
         'Focus on your weaker topics with targeted practice',
         'Maintain your study streak for consistent progress',
