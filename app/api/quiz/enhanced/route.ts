@@ -103,6 +103,8 @@ export async function PUT(req: NextRequest) {
       );
     }
 
+    const openai = getOpenAIClient();
+
     // Grade each answer
     let totalPoints = 0;
     let earnedPoints = 0;
@@ -117,9 +119,10 @@ export async function PUT(req: NextRequest) {
       let isCorrect = false;
       let feedback = '';
 
-      if (question.type === 'short-answer') {
+      if (question.type === 'short-answer' && openai) {
         // Use AI to grade short answer
-        const gradeResponse = await openai.chat.completions.create({
+        try {
+          const gradeResponse = await openai.chat.completions.create({
           model: 'gpt-4-turbo-preview',
           messages: [
             {
@@ -144,6 +147,17 @@ Return JSON: {"score": 0.8, "feedback": "Good answer but...", "isCorrect": true}
         isCorrect = grading.isCorrect;
         feedback = grading.feedback;
         earnedPoints += (question.points || 1) * (grading.score || 0);
+        } catch (error) {
+          console.error('AI grading failed:', error);
+          // Fallback to simple matching
+          isCorrect = userAnswer?.toString().toLowerCase().includes(question.correctAnswer?.toString().toLowerCase());
+          if (isCorrect) {
+            earnedPoints += question.points || 1;
+            feedback = 'Answer accepted';
+          } else {
+            feedback = `Expected: ${question.correctAnswer}`;
+          }
+        }
       } else {
         // Auto-grade objective questions
         isCorrect = userAnswer?.toString().toLowerCase() === question.correctAnswer?.toString().toLowerCase();
@@ -168,27 +182,42 @@ Return JSON: {"score": 0.8, "feedback": "Good answer but...", "isCorrect": true}
     const percentage = (earnedPoints / totalPoints) * 100;
     
     // Generate overall feedback
-    const feedbackResponse = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
-      messages: [
-        {
-          role: 'system',
-          content: 'Provide encouraging, constructive feedback for a student based on their quiz performance.',
-        },
-        {
-          role: 'user',
-          content: `Student scored ${percentage.toFixed(1)}% (${earnedPoints}/${totalPoints} points). 
+    let overallFeedback = '';
+    if (openai) {
+      try {
+        const feedbackResponse = await openai.chat.completions.create({
+          model: 'gpt-4-turbo-preview',
+          messages: [
+            {
+              role: 'system',
+              content: 'Provide encouraging, constructive feedback for a student based on their quiz performance.',
+            },
+            {
+              role: 'user',
+              content: `Student scored ${percentage.toFixed(1)}% (${earnedPoints}/${totalPoints} points). 
 Questions answered: ${gradedAnswers.length}
 Correct: ${gradedAnswers.filter(a => a.isCorrect).length}
 
 Provide brief, personalized feedback and study suggestions.`,
-        },
-      ],
-      temperature: 0.7,
-      max_tokens: 200,
-    });
+            },
+          ],
+          temperature: 0.7,
+          max_tokens: 200,
+        });
 
-    const overallFeedback = feedbackResponse.choices[0]?.message?.content || '';
+        overallFeedback = feedbackResponse.choices[0]?.message?.content || '';
+      } catch (error) {
+        console.error('Failed to generate feedback:', error);
+      }
+    }
+    
+    if (!overallFeedback) {
+      overallFeedback = percentage >= 80 
+        ? 'Great job! Keep up the excellent work.' 
+        : percentage >= 60 
+        ? 'Good effort! Review the topics you missed and try again.' 
+        : 'Keep practicing! Focus on understanding the core concepts.';
+    }
 
     return NextResponse.json({
       score: earnedPoints,
