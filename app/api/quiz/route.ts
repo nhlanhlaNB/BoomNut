@@ -2,14 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import Groq from 'groq-sdk';
 import OpenAI from 'openai';
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
+function getGroqClient() {
+  if (!process.env.GROQ_API_KEY) return null;
+  return new Groq({ apiKey: process.env.GROQ_API_KEY });
+}
 
-const openrouter = new OpenAI({
-  apiKey: process.env.OPENROUTER_API_KEY,
-  baseURL: 'https://openrouter.ai/api/v1',
-});
+function getOpenRouterClient() {
+  if (!process.env.OPENROUTER_API_KEY) return null;
+  return new OpenAI({
+    apiKey: process.env.OPENROUTER_API_KEY,
+    baseURL: 'https://openrouter.ai/api/v1',
+  });
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,8 +54,11 @@ Make questions that:
 
     const userPrompt = `Generate a ${difficulty} quiz with ${questionCount} questions from this content:\n\n${content}`;
 
+    const groq = getGroqClient();
+    
     try {
       // Try Groq first
+      if (!groq) throw new Error('Groq not configured');
       const completion = await groq.chat.completions.create({
         model: 'llama-3.3-70b-versatile',
         messages: [
@@ -67,6 +74,11 @@ Make questions that:
       return NextResponse.json(quizData);
     } catch (groqError) {
       console.log('Groq failed, trying OpenRouter fallback:', groqError);
+      
+      const openrouter = getOpenRouterClient();
+      if (!openrouter) {
+        throw new Error('No AI provider configured. Please set GROQ_API_KEY or OPENROUTER_API_KEY.');
+      }
       
       // Fallback to OpenRouter
       const completion = await openrouter.chat.completions.create({

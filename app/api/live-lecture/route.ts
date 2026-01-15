@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+function getOpenAIClient() {
+  if (!process.env.OPENAI_API_KEY) return null;
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 let activeStream: any = null;
 let fullTranscription = '';
@@ -12,6 +13,14 @@ let fullTranscription = '';
 export async function POST(req: NextRequest) {
   try {
     const { action, audio, language = 'en', sessionId } = await req.json();
+
+    const openai = getOpenAIClient();
+    if (!openai && action !== 'start') {
+      return NextResponse.json(
+        { error: 'OpenAI API key not configured' },
+        { status: 500 }
+      );
+    }
 
     if (action === 'start') {
       // Start new session
