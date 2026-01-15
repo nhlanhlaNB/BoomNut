@@ -14,14 +14,6 @@ export async function POST(req: NextRequest) {
   try {
     const { action, audio, language = 'en', sessionId } = await req.json();
 
-    const openai = getOpenAIClient();
-    if (!openai && action !== 'start') {
-      return NextResponse.json(
-        { error: 'OpenAI API key not configured' },
-        { status: 500 }
-      );
-    }
-
     if (action === 'start') {
       // Start new session
       fullTranscription = '';
@@ -31,7 +23,18 @@ export async function POST(req: NextRequest) {
         status: 'started',
         message: 'Live lecture session started',
       });
-    } else if (action === 'transcribe') {
+    }
+
+    // All other actions require OpenAI
+    const openai = getOpenAIClient();
+    if (!openai) {
+      return NextResponse.json(
+        { error: 'OpenAI API key not configured' },
+        { status: 500 }
+      );
+    }
+
+    if (action === 'transcribe') {
       // Transcribe audio chunk
       if (!audio) {
         return NextResponse.json(
@@ -79,7 +82,9 @@ export async function POST(req: NextRequest) {
         notes,
         wordCount: fullTranscription.split(' ').length,
       });
-    } else if (action === 'question') {
+    }
+    
+    if (action === 'question') {
       // Answer question about lecture
       const { question } = await req.json();
 
@@ -112,7 +117,9 @@ export async function POST(req: NextRequest) {
         question,
         answer,
       });
-    } else if (action === 'end') {
+    }
+    
+    if (action === 'end') {
       // End session and generate final notes
       const finalNotesResponse = await openai.chat.completions.create({
         model: 'gpt-4-turbo-preview',
