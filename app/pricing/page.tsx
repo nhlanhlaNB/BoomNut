@@ -218,7 +218,7 @@ export default function PricingPage() {
         strategy="lazyOnload"
       />
 
-      <header className="relative z-10 p-4 md:p-6 bg-white/70 backdrop-blur-lg shadow-sm sticky top-0 border-b border-white/20">
+      <header className="z-10 p-4 md:p-6 bg-white/70 backdrop-blur-lg shadow-sm sticky top-0 border-b border-white/20">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <Link href="/" className="flex items-center gap-2 text-orange-600 hover:text-orange-700 transition-colors group">
             <div className="p-2 bg-gradient-to-br from-orange-500 to-amber-600 rounded-lg group-hover:scale-110 transition-transform">
@@ -292,7 +292,6 @@ export default function PricingPage() {
                 className={`relative group transform transition-all duration-500 hover:scale-105 ${
                   plan.popular ? 'md:-mt-4 md:scale-110' : ''
                 }`}
-                style={{ animationDelay: `${index * 100}ms` }}
               >
                 {plan.popular && (
                   <div className="absolute -top-4 sm:-top-6 left-1/2 transform -translate-x-1/2 z-10">

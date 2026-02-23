@@ -1,9 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, Upload, TrendingUp, Brain, Zap, Sparkles, Users, Volume2, Target, Clock, Award, MessageCircle } from 'lucide-react';
-import AuthButton from '@/components/AuthButton';
-import SubscriptionBadge from '@/components/SubscriptionBadge';
+import { BookOpen, Upload, TrendingUp, Brain, Zap, Sparkles, Users, Volume2, Target, Clock, Award, MessageCircle, Gamepad2, FileText, Lightbulb, Mic, Video, BookMarked } from 'lucide-react';
 
 export default function Home() {
   return (
@@ -14,53 +12,6 @@ export default function Home() {
         <div className="absolute top-40 right-10 w-72 h-72 bg-yellow-200 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob animation-delay-2000"></div>
         <div className="absolute -bottom-20 left-1/3 w-80 h-80 bg-amber-200 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob animation-delay-4000"></div>
       </div>
-
-      {/* Header */}
-      <header className="z-10 p-0.5 md:p-1 bg-white/80 backdrop-blur-lg shadow-sm sticky top-0 border-b border-white/20">
-        <div className="max-w-7xl mx-auto flex justify-between items-center flex-wrap gap-4">
-          <div className="flex items-center gap-2">
-            <img 
-              src="/logoBoomNut.png" 
-              alt="BoomNut Logo" 
-              className="h-24 md:h-28 w-auto object-contain mix-blend-multiply"
-            />
-          </div>
-          <div className="flex gap-2 md:gap-3 items-center flex-wrap">
-            <Link 
-              href="/pricing"
-              className="px-3 md:px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-lg hover:opacity-90 transition font-bold text-xs md:text-sm shadow-lg"
-            >
-              💸 Pricing
-            </Link>
-            <SubscriptionBadge />
-            <Link 
-              href="/progress"
-              className="px-3 md:px-4 py-2 bg-white text-gray-700 rounded-lg hover:bg-gray-50 transition text-xs md:text-sm border border-gray-200"
-            >
-              Progress
-            </Link>
-            <Link 
-              href="/study-plan"
-              className="px-3 md:px-4 py-2 bg-white text-gray-700 rounded-lg hover:bg-gray-50 transition text-xs md:text-sm border border-gray-200"
-            >
-              Study Plan
-            </Link>
-            <Link 
-              href="/study-rooms"
-              className="px-3 md:px-4 py-2 bg-white text-gray-700 rounded-lg hover:bg-gray-50 transition text-xs md:text-sm border border-gray-200"
-            >
-              Study Rooms
-            </Link>
-            <Link 
-              href="/study"
-              className="px-3 md:px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:opacity-90 transition font-semibold text-xs md:text-sm"
-            >
-              Dashboard
-            </Link>
-            <AuthButton />
-          </div>
-        </div>
-      </header>
 
       {/* Hero Section */}
       <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-12 md:pt-20 pb-12 md:pb-16">
@@ -100,13 +51,39 @@ export default function Home() {
           <p className="text-sm text-gray-500 mt-6">No credit card required • Free forever plan</p>
         </div>
 
-        {/* Demo Image/Video Placeholder */}
-        <div className="bg-white rounded-3xl shadow-2xl p-4 sm:p-8 border-4 border-gray-100 mb-16 md:mb-24 transform hover:scale-[1.02] transition-all">
-          <div className="bg-gradient-to-br from-orange-100 to-amber-100 rounded-2xl aspect-video flex items-center justify-center">
-            <div className="text-center">
-              <Brain className="w-16 h-16 md:w-24 md:h-24 text-orange-500 mx-auto mb-4" />
-              <p className="text-xl md:text-2xl font-bold text-gray-700">Your Dashboard Preview</p>
-              <p className="text-sm md:text-base text-gray-500">Flashcards • Quizzes • AI Tutor</p>
+        {/* Nelson Mandela Quote Section */}
+        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border-4 border-orange-200 mb-16 md:mb-24 transform hover:scale-[1.02] transition-all">
+          <div className="grid md:grid-cols-2 gap-0">
+            {/* Image Side */}
+            <div className="relative h-64 md:h-auto">
+              <img 
+                src="/Mandela.jpg" 
+                alt="Nelson Mandela"
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/40 to-transparent"></div>
+            </div>
+            
+            {/* Quote Side */}
+            <div className="bg-gradient-to-br from-orange-50 to-amber-50 p-8 md:p-12 flex flex-col justify-center">
+              <div className="mb-6">
+                <svg className="w-12 h-12 text-orange-500 opacity-50" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
+                </svg>
+              </div>
+              
+              <blockquote className="mb-6">
+                <p className="text-xl md:text-3xl font-bold text-gray-900 leading-relaxed mb-4">
+                  "Education is the most powerful weapon which you can use to change the world."
+                </p>
+                <footer className="text-lg md:text-xl text-orange-600 font-semibold">
+                  — Nelson Mandela
+                </footer>
+              </blockquote>
+              
+              <p className="text-sm md:text-base text-gray-600 italic">
+                Start your journey to academic excellence with AI-powered learning tools.
+              </p>
             </div>
           </div>
         </div>
@@ -139,30 +116,66 @@ export default function Home() {
             </h3>
             <p className="text-lg md:text-xl text-gray-600">Powerful study tools that adapt to your learning style</p>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <StudyModeCard
               icon={<Zap className="w-12 h-12 text-orange-600" />}
               title="Smart Flashcards"
               description="AI-powered flashcards with spaced repetition for maximum retention"
               gradient="from-orange-400 to-amber-500"
+              link="/study"
             />
             <StudyModeCard
               icon={<Target className="w-12 h-12 text-purple-600" />}
               title="Practice Quizzes"
               description="Adaptive quizzes that test exactly what you need to learn"
               gradient="from-purple-400 to-pink-500"
+              link="/study"
             />
             <StudyModeCard
               icon={<BookOpen className="w-12 h-12 text-blue-600" />}
               title="Study Guides"
               description="Comprehensive guides with all key concepts organized perfectly"
               gradient="from-blue-400 to-cyan-500"
+              link="/study"
             />
             <StudyModeCard
               icon={<MessageCircle className="w-12 h-12 text-green-600" />}
               title="AI Tutor Chat"
               description="24/7 personal tutor that explains concepts in simple terms"
               gradient="from-green-400 to-emerald-500"
+              link="/tutor"
+            />
+          </div>
+          
+          {/* New Features Row */}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <StudyModeCard
+              icon={<Gamepad2 className="w-12 h-12 text-pink-600" />}
+              title="Study Arcade"
+              description="Gamified learning with points, challenges, and leaderboards"
+              gradient="from-pink-400 to-rose-500"
+              link="/arcade"
+            />
+            <StudyModeCard
+              icon={<FileText className="w-12 h-12 text-indigo-600" />}
+              title="Essay Grading"
+              description="Get instant AI feedback on your essays with detailed analysis"
+              gradient="from-indigo-400 to-purple-500"
+              link="/essay-grading"
+            />
+            <StudyModeCard
+              icon={<Lightbulb className="w-12 h-12 text-yellow-600" />}
+              title="Explainers"
+              description="Clear, simple explanations for any complex topic with examples"
+              gradient="from-yellow-400 to-amber-500"
+              link="/explainers"
+            />
+            <StudyModeCard
+              icon={<Mic className="w-12 h-12 text-red-600" />}
+              title="Live Lecture"
+              description="Real-time transcription and AI notes during your lectures"
+              gradient="from-red-400 to-orange-500"
+              link="/live-lecture"
             />
           </div>
         </div>
@@ -181,17 +194,27 @@ export default function Home() {
               description="PDFs, notes, textbooks, lectures - we handle it all"
             />
             <FeatureCard
-              icon={<Clock className="w-12 h-12 text-blue-500" />}
+              icon={<Volume2 className="w-12 h-12 text-blue-500" />}
+              title="Audio Recap"
+              description="Convert your notes into engaging audio podcasts"
+            />
+            <FeatureCard
+              icon={<BookMarked className="w-12 h-12 text-purple-500" />}
+              title="Notes & Materials"
+              description="Organize, store, and access all your study materials"
+            />
+            <FeatureCard
+              icon={<Clock className="w-12 h-12 text-green-500" />}
               title="Save Hours of Time"
               description="Get study materials ready in seconds, not hours"
             />
             <FeatureCard
-              icon={<Brain className="w-12 h-12 text-purple-500" />}
+              icon={<Brain className="w-12 h-12 text-pink-500" />}
               title="Learn Faster"
               description="AI adapts to your learning pace and style"
             />
             <FeatureCard
-              icon={<Users className="w-12 h-12 text-green-500" />}
+              icon={<Users className="w-12 h-12 text-cyan-500" />}
               title="Study Together"
               description="Join study rooms and collaborate with classmates"
             />
@@ -204,6 +227,11 @@ export default function Home() {
               icon={<Award className="w-12 h-12 text-amber-500" />}
               title="Better Grades"
               description="95% of students improve their test scores"
+            />
+            <FeatureCard
+              icon={<Video className="w-12 h-12 text-red-500" />}
+              title="Visual Learning"
+              description="Analyze diagrams, charts, and images with AI"
             />
           </div>
         </div>
@@ -274,12 +302,16 @@ export default function Home() {
                 <li><Link href="/study" className="hover:text-orange-500">Flashcards</Link></li>
                 <li><Link href="/study" className="hover:text-orange-500">Quizzes</Link></li>
                 <li><Link href="/study" className="hover:text-orange-500">Study Guides</Link></li>
+                <li><Link href="/arcade" className="hover:text-orange-500">Study Arcade</Link></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold text-gray-900 mb-4">Features</h4>
               <ul className="space-y-2 text-sm text-gray-600">
                 <li><Link href="/tutor" className="hover:text-orange-500">AI Tutor</Link></li>
+                <li><Link href="/essay-grading" className="hover:text-orange-500">Essay Grading</Link></li>
+                <li><Link href="/explainers" className="hover:text-orange-500">Explainers</Link></li>
+                <li><Link href="/live-lecture" className="hover:text-orange-500">Live Lecture</Link></li>
                 <li><Link href="/voice-tutor" className="hover:text-orange-500">Voice Chat</Link></li>
                 <li><Link href="/progress" className="hover:text-orange-500">Progress Tracking</Link></li>
               </ul>
@@ -326,13 +358,14 @@ export default function Home() {
   );
 }
 
-function StudyModeCard({ icon, title, description, gradient }: { 
+function StudyModeCard({ icon, title, description, gradient, link }: { 
   icon: React.ReactNode; 
   title: string; 
   description: string; 
   gradient: string;
+  link?: string;
 }) {
-  return (
+  const CardContent = (
     <div className="relative group cursor-pointer">
       <div className={`absolute inset-0 bg-gradient-to-br ${gradient} rounded-2xl blur-lg opacity-20 group-hover:opacity-40 transition-all duration-300`} />
       <div className="relative p-6 md:p-8 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-gray-100 h-full flex flex-col">
@@ -342,6 +375,12 @@ function StudyModeCard({ icon, title, description, gradient }: {
       </div>
     </div>
   );
+
+  if (link) {
+    return <Link href={link}>{CardContent}</Link>;
+  }
+  
+  return CardContent;
 }
 
 function FeatureCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {

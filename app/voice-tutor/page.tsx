@@ -704,62 +704,6 @@ copy .env.example .env{'\n'}
               </div>
             </div>
           </div>
-
-          {/* Terminal Access Note */}
-          <div className="mt-6 p-4 bg-gray-900 text-green-400 rounded-xl font-mono text-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-yellow-400">⚡</span>
-              <span className="font-bold">Terminal Required</span>
-            </div>
-            <p className="text-gray-300">
-              To use the voice tutor, run <span className="text-blue-400">python voice_tutor.py</span> in the voice-tutor directory.
-              The Python application handles real-time audio streaming with Azure.
-            </p>
-          </div>
-        </div>
-
-        {/* Additional Resources */}
-        <div className="mt-8 grid md:grid-cols-3 gap-4">
-          <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-gray-100">
-            <h3 className="font-bold text-lg mb-2 text-blue-600">📚 Documentation</h3>
-            <p className="text-sm text-gray-600 mb-3">
-              Complete setup guide and troubleshooting
-            </p>
-            <a
-              href="/voice-tutor/README.md"
-              target="_blank"
-              className="text-blue-600 hover:text-blue-700 font-semibold text-sm"
-            >
-              Read README →
-            </a>
-          </div>
-
-          <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-gray-100">
-            <h3 className="font-bold text-lg mb-2 text-purple-600">⚙️ Configuration</h3>
-            <p className="text-sm text-gray-600 mb-3">
-              Customize voice, model, and teaching style
-            </p>
-            <a
-              href="/voice-tutor/.env.example"
-              target="_blank"
-              className="text-purple-600 hover:text-purple-700 font-semibold text-sm"
-            >
-              View Config →
-            </a>
-          </div>
-
-          <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-gray-100">
-            <h3 className="font-bold text-lg mb-2 text-green-600">🔧 Troubleshooting</h3>
-            <p className="text-sm text-gray-600 mb-3">
-              Common issues and solutions
-            </p>
-            <button
-              onClick={() => setShowSetup(true)}
-              className="text-green-600 hover:text-green-700 font-semibold text-sm"
-            >
-              Show Setup →
-            </button>
-          </div>
         </div>
       </div>
     </div>

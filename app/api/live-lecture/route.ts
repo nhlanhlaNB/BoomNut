@@ -43,8 +43,22 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const audioBuffer = Buffer.from(audio.split(',')[1], 'base64');
-      const audioFile = new File([audioBuffer], 'audio.webm', { type: 'audio/webm' });
+      // Handle base64 audio data
+      let audioBuffer: Buffer;
+      try {
+        // Remove data URL prefix if present
+        const base64Data = audio.includes(',') ? audio.split(',')[1] : audio;
+        audioBuffer = Buffer.from(base64Data, 'base64');
+      } catch (error) {
+        return NextResponse.json(
+          { error: 'Invalid audio data format' },
+          { status: 400 }
+        );
+      }
+
+      // Create a File-like object for OpenAI (Node.js doesn't have native File API)
+      const audioFile = new Blob([new Uint8Array(audioBuffer)], { type: 'audio/webm' }) as any;
+      audioFile.name = 'audio.webm';
 
       const transcription = await openai.audio.transcriptions.create({
         file: audioFile,
