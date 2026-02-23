@@ -11,6 +11,12 @@ body {
   color: var(--foreground);
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
+  overflow: auto;
+}
+
+/* Prevent scroll when modal is open */
+body.modal-open {
+  overflow: hidden;
 }
 
 @layer utilities {

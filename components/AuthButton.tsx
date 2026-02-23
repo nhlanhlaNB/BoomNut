@@ -29,6 +29,19 @@ export default function AuthButton() {
     return () => unsubscribe();
   }, []);
 
+  // Handle body scroll when modal opens/closes
+  useEffect(() => {
+    if (showAuthModal) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+
+    return () => {
+      document.body.classList.remove('modal-open');
+    };
+  }, [showAuthModal]);
+
   const handleSignIn = async () => {
     try {
       await signInWithPopup(auth, googleProvider);
@@ -128,8 +141,8 @@ export default function AuthButton() {
         </button>
 
         {showAuthModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 relative">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 relative my-8">
               <button
                 onClick={() => {
                   setShowAuthModal(false);
