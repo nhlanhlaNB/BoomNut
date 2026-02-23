@@ -12,11 +12,11 @@ export default function Home() {
           {/* Left Content */}
           <div className="flex flex-col justify-center">
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 mb-6 leading-tight">
-              Create Beautiful Websites & Online Stores
+              Study Smarter with AI
             </h1>
             
             <p className="text-xl text-gray-600 mb-10 leading-relaxed max-w-lg">
-              Design, launch and grow — professional websites and online stores for businesses across the world
+              Master any subject with AI-powered flashcards, quizzes, study guides, and personalized tutoring. Learn at your own pace
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4">
@@ -82,7 +82,7 @@ export default function Home() {
               </blockquote>
               
               <p className="text-base text-gray-600">
-                Start your journey to academic excellence with AI-powered learning tools.
+                BoomNut combines AI technology with proven study methods to accelerate your learning and boost your grades.
               </p>
             </div>
           </div>

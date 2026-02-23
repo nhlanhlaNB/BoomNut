@@ -160,7 +160,7 @@ export default function ProgressDashboard() {
                 <div key={day.day} className="flex-1 flex flex-col items-center gap-2">
                   <div className="flex-1 w-full flex items-end">
                     <div
-                      className="w-full bg-indigo-600 rounded-t hover:bg-indigo-700 transition-colors"
+                      className="w-full bg-gray-700 rounded-t hover:bg-gray-800 transition-colors"
                       style={{ height: `${(day.minutes / 80) * 100}%` }}
                       title={`${day.minutes} minutes`}
                     />
@@ -174,14 +174,14 @@ export default function ProgressDashboard() {
           {/* Achievements */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <Award className="w-6 h-6 text-yellow-600" />
+              <Award className="w-6 h-6 text-gray-700" />
               Recent Achievements
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {data.recentAchievements.map((achievement) => (
                 <div
                   key={achievement.id}
-                  className="flex items-center gap-4 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200"
+                  className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200"
                 >
                   <div className="text-4xl">{achievement.icon}</div>
                   <div>
@@ -202,7 +202,7 @@ export default function ProgressDashboard() {
             <ul className="space-y-3">
               {data.recommendations.map((rec, index) => (
                 <li key={index} className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-sm font-semibold">
+                  <span className="flex-shrink-0 w-6 h-6 bg-gray-200 text-gray-700 rounded-full flex items-center justify-center text-sm font-semibold">
                     {index + 1}
                   </span>
                   <span className="text-gray-700">{rec}</span>
@@ -219,7 +219,7 @@ export default function ProgressDashboard() {
           <p className="text-gray-600 mb-4">No progress data yet</p>
           <button
             onClick={loadProgress}
-            className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            className="px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800"
           >
             Load Demo Data
           </button>
