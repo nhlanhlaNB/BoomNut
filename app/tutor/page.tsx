@@ -129,9 +129,9 @@ export default function TutorPage() {
       )}
 
       {/* Header */}
-      <header className="bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg p-4">
+      <header className="bg-white shadow-md p-4 border-b border-gray-200">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-2 text-white hover:text-blue-100">
+          <Link href="/" className="flex items-center gap-2 text-gray-900 hover:text-gray-700">
             <Home className="w-5 h-5" />
             <span className="font-semibold">Home</span>
           </Link>
@@ -139,15 +139,14 @@ export default function TutorPage() {
             <AuthButton />
             <Link 
               href="/study-rooms" 
-              className="px-4 py-2 bg-white/20 backdrop-blur-sm text-white rounded-lg hover:bg-white/30 transition-colors font-medium"
+              className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors font-medium"
             >
               Study Rooms
             </Link>
             <Link 
               href="/study" 
-              className="px-4 py-2 bg-white/20 backdrop-blur-sm text-white rounded-lg hover:bg-white/30 transition-colors font-medium"
+              className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors font-medium"
             >
-              Study Dashboard
             </Link>
             <SubjectSelector subject={subject} onSubjectChange={setSubject} />
           </div>

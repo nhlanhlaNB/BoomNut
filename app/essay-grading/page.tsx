@@ -75,7 +75,7 @@ export default function EssayGradingPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 md:p-8">
+    <main className="min-h-screen bg-white p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -90,12 +90,12 @@ export default function EssayGradingPage() {
 
         {/* Title */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full text-sm font-bold text-blue-700 mb-4">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full text-sm font-bold text-gray-700 mb-4">
             <FileText className="w-4 h-4" />
             <span>AI-Powered Essay Analysis</span>
           </div>
           <h1 className="text-5xl md:text-7xl font-black text-gray-900 mb-4">
-            Essay <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Grading</span> ✍️
+            Essay <span className="text-gray-900 font-bold">Grading</span>
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             Get instant, detailed feedback on your essays with AI-powered grading
@@ -189,7 +189,7 @@ export default function EssayGradingPage() {
                 <button
                   onClick={gradeEssay}
                   disabled={isGrading || !essay.trim()}
-                  className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-gray-900 text-white rounded-lg font-bold hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isGrading ? (
                     <>
@@ -229,7 +229,7 @@ export default function EssayGradingPage() {
               <div className="bg-white rounded-3xl shadow-xl p-6 md:p-8 space-y-6">
                 {/* Grade Display */}
                 <div className="text-center pb-6 border-b border-gray-200">
-                  <div className="inline-flex items-center justify-center w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white mb-4">
+                  <div className="inline-flex items-center justify-center w-32 h-32 rounded-full bg-gray-300 text-gray-700 mb-4">
                     <div className="text-center">
                       <div className="text-5xl font-black">{result.grade}</div>
                       <div className="text-sm font-medium">{result.score}/{result.totalPoints}</div>

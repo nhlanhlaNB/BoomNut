@@ -203,13 +203,7 @@ export default function PricingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 relative overflow-hidden">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-yellow-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
-        <div className="absolute top-1/2 left-1/2 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
-      </div>
+    <div className="min-h-screen bg-white">
 
       {/* PayPal SDK */}
       <Script
@@ -218,13 +212,13 @@ export default function PricingPage() {
         strategy="lazyOnload"
       />
 
-      <header className="z-10 p-4 md:p-6 bg-white/70 backdrop-blur-lg shadow-sm sticky top-0 border-b border-white/20">
+      <header className="z-10 p-4 md:p-6 bg-white shadow-md sticky top-0 border-b border-gray-200">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-2 text-orange-600 hover:text-orange-700 transition-colors group">
-            <div className="p-2 bg-gradient-to-br from-orange-500 to-amber-600 rounded-lg group-hover:scale-110 transition-transform">
+          <Link href="/" className="flex items-center gap-2 text-gray-900 hover:text-gray-700 transition-colors group">
+            <div className="p-2 bg-gray-900 rounded-lg group-hover:scale-110 transition-transform">
               <Zap className="w-5 h-5 text-white" />
             </div>
-            <span className="font-bold text-lg hidden sm:inline bg-gradient-to-r from-orange-500 to-amber-600 bg-clip-text text-transparent">BoomNut</span>
+            <span className="font-bold text-lg hidden sm:inline text-gray-900">BoomNut</span>
           </Link>
           <AuthButton />
         </div>
@@ -232,13 +226,13 @@ export default function PricingPage() {
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-8 md:py-16">
         {/* Header Section */}
-        <div className="text-center mb-12 md:mb-16 space-y-6 animate-fade-in">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 rounded-full border border-indigo-200 backdrop-blur-sm">
-            <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+        <div className="text-center mb-12 md:mb-16 space-y-6">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full border border-gray-300">
+            <Star className="w-4 h-4 text-gray-700" />
             <span className="text-sm font-semibold text-gray-700">Trusted by 10,000+ students</span>
           </div>
           
-          <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 leading-tight">
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold text-gray-900 leading-tight">
             Supercharge Your Learning
           </h1>
           
@@ -247,12 +241,12 @@ export default function PricingPage() {
           </p>
           
           {/* Billing Toggle */}
-          <div className="inline-flex items-center gap-2 sm:gap-4 bg-white rounded-full p-1.5 sm:p-2 shadow-xl border border-gray-200">
+          <div className="inline-flex items-center gap-2 sm:gap-4 bg-white rounded-full p-1.5 sm:p-2 shadow-md border border-gray-300">
             <button
               onClick={() => setBillingPeriod('monthly')}
               className={`px-4 sm:px-8 py-2 sm:py-3 rounded-full font-bold text-sm sm:text-base transition-all duration-300 ${
                 billingPeriod === 'monthly'
-                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg scale-105'
+                  ? 'bg-gray-900 text-white shadow-lg'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -262,13 +256,13 @@ export default function PricingPage() {
               onClick={() => setBillingPeriod('yearly')}
               className={`px-4 sm:px-8 py-2 sm:py-3 rounded-full font-bold text-sm sm:text-base transition-all duration-300 relative ${
                 billingPeriod === 'yearly'
-                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg scale-105'
+                  ? 'bg-gray-900 text-white shadow-lg'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               Yearly
-              <span className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 py-1 rounded-full font-bold shadow-lg animate-bounce">
-                Save up to 50%! 🎉
+              <span className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs bg-gray-700 text-white px-3 py-1 rounded-full font-bold shadow-lg">
+                Save up to 50%!
               </span>
             </button>
           </div>
@@ -295,7 +289,7 @@ export default function PricingPage() {
               >
                 {plan.popular && (
                   <div className="absolute -top-4 sm:-top-6 left-1/2 transform -translate-x-1/2 z-10">
-                    <div className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-bold shadow-2xl flex items-center gap-1.5 animate-pulse">
+                    <div className="bg-gray-900 text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-bold shadow-lg flex items-center gap-1.5">
                       <Award className="w-3 h-3 sm:w-4 sm:h-4" />
                       <span>MOST POPULAR</span>
                     </div>
@@ -303,19 +297,19 @@ export default function PricingPage() {
                 )}
 
                 <div
-                  className={`relative bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-6 sm:p-8 border-2 h-full flex flex-col ${
+                  className={`relative bg-white rounded-lg shadow-md p-6 sm:p-8 border h-full flex flex-col ${
                     plan.popular 
-                      ? 'border-indigo-400 shadow-indigo-200/50' 
-                      : 'border-gray-200 hover:border-indigo-200'
+                      ? 'border-gray-400 shadow-lg' 
+                      : 'border-gray-200 hover:border-gray-400'
                   }`}
                 >
                   {/* Icon & Badge */}
                   <div className="flex items-start justify-between mb-4 sm:mb-6">
-                    <div className={`w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br ${plan.color} rounded-2xl flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform`}>
-                      <Icon className="w-7 h-7 sm:w-9 sm:h-9 text-white" />
+                    <div className={`w-14 h-14 sm:w-16 sm:h-16 bg-gray-300 rounded-lg flex items-center justify-center shadow-md group-hover:scale-110 transition-transform`}>
+                      <Icon className="w-7 h-7 sm:w-9 sm:h-9 text-gray-700" />
                     </div>
                     {billingPeriod === 'yearly' && savings > 0 && (
-                      <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">
+                      <div className="bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-xs font-bold">
                         Save {savings}%
                       </div>
                     )}
@@ -328,23 +322,23 @@ export default function PricingPage() {
                   <div className="mb-6">
                     {plan.price === 0 ? (
                       <div>
-                        <span className="text-4xl sm:text-5xl font-extrabold text-gray-900">Free</span>
+                        <span className="text-4xl sm:text-5xl font-bold text-gray-900">Free</span>
                       </div>
                     ) : (
                       <>
                         <div className="flex items-baseline gap-2">
-                          <span className="text-5xl sm:text-6xl font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                          <span className="text-5xl sm:text-6xl font-bold text-gray-900">
                             ${displayPrice}
                           </span>
                           <span className="text-xl text-gray-500">/month</span>
                         </div>
                         {billingPeriod === 'yearly' && totalYearly && (
-                          <div className="text-sm text-gray-500 mt-2 font-medium">
+                          <div className="text-sm text-gray-600 mt-2 font-medium">
                             ${totalYearly} billed annually
                           </div>
                         )}
                         {billingPeriod === 'monthly' && (
-                          <div className="text-xs text-gray-400 mt-1">
+                          <div className="text-xs text-gray-500 mt-1">
                             or ${plan.price * 12}/year
                           </div>
                         )}

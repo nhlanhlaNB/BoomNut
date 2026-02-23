@@ -61,18 +61,18 @@ export default function StudyRoomsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-100">
-        <header className="p-6 bg-white/80 backdrop-blur-sm shadow-sm">
+      <div className="min-h-screen bg-white">
+        <header className="p-6 bg-white shadow-md border-b border-gray-200">
           <div className="max-w-7xl mx-auto flex justify-between items-center">
-            <Link href="/" className="flex items-center gap-2 text-blue-600 hover:text-blue-700">
+            <Link href="/" className="flex items-center gap-2 text-gray-900 hover:text-gray-700">
               <Home className="w-5 h-5" />
               <span className="font-semibold">Home</span>
             </Link>
@@ -81,9 +81,9 @@ export default function StudyRoomsPage() {
         </header>
         
         <div className="flex items-center justify-center p-6 min-h-[80vh]">
-          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-            <Sparkles className="w-16 h-16 text-blue-600 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Sign In to Continue</h2>
+          <div className="bg-gray-50 rounded-lg shadow p-8 max-w-md w-full text-center border border-gray-200">
+            <Sparkles className="w-16 h-16 text-gray-700 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Sign In to Continue</h2>
             <p className="text-gray-600 mb-6">
               Sign in with Google to create or join study rooms and collaborate with friends
             </p>
@@ -95,8 +95,8 @@ export default function StudyRoomsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-100">
-      <header className="p-6 bg-white/80 backdrop-blur-sm shadow-sm">
+    <div className="min-h-screen bg-white">
+      <header className="p-6 bg-white shadow-md border-b border-gray-200">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <Link href="/" className="flex items-center gap-2 text-blue-600 hover:text-blue-700">
             <Home className="w-5 h-5" />
@@ -122,16 +122,16 @@ export default function StudyRoomsPage() {
         <div className="grid md:grid-cols-2 gap-6">
           {/* Create Room */}
           <div className="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition-shadow">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center mb-6">
-              <Plus className="w-8 h-8 text-white" />
+            <div className="w-16 h-16 bg-gray-300 rounded-lg flex items-center justify-center mb-6">
+              <Plus className="w-8 h-8 text-gray-700" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-3">Create New Room</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">Create New Room</h2>
             <p className="text-gray-600 mb-6">
               Start a new study session and invite your friends to join
             </p>
             <button
               onClick={createRoom}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:opacity-90 transition-all font-semibold"
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-all font-semibold"
             >
               Create Room
               <ArrowRight className="w-5 h-5" />
@@ -140,10 +140,10 @@ export default function StudyRoomsPage() {
 
           {/* Join Room */}
           <div className="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition-shadow">
-            <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-teal-500 rounded-xl flex items-center justify-center mb-6">
-              <Users className="w-8 h-8 text-white" />
+            <div className="w-16 h-16 bg-gray-300 rounded-lg flex items-center justify-center mb-6">
+              <Users className="w-8 h-8 text-gray-700" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-3">Join Existing Room</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">Join Existing Room</h2>
             <p className="text-gray-600 mb-6">
               Enter a room code to join your friends' study session
             </p>
@@ -154,12 +154,12 @@ export default function StudyRoomsPage() {
                 onChange={(e) => setRoomCode(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && joinRoom()}
                 placeholder="Enter room code"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
               />
               <button
                 onClick={joinRoom}
                 disabled={!roomCode.trim()}
-                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-lg hover:opacity-90 transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Join Room
                 <ArrowRight className="w-5 h-5" />

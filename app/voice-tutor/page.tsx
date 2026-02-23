@@ -317,12 +317,12 @@ export default function VoiceTutorPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-6">
+    <div className="min-h-screen bg-white p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
-            🎓 AI Voice Tutor
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            AI Voice Tutor
           </h1>
           <p className="text-gray-600">
             Have a real-time voice conversation with your AI tutor
@@ -402,10 +402,10 @@ export default function VoiceTutorPage() {
                 <button
                   onClick={isRecording ? stopVoiceSession : startVoiceSession}
                   disabled={isLoading}
-                  className={`flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-semibold transition-all w-full ${
+                  className={`flex items-center justify-center gap-2 px-6 py-4 rounded-lg font-semibold transition-all w-full ${
                     isRecording
-                      ? 'bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-200'
-                      : 'bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white shadow-lg shadow-blue-200'
+                      ? 'bg-red-600 hover:bg-red-700 text-white shadow-md'
+                      : 'bg-gray-900 hover:bg-gray-800 text-white shadow-md'
                   } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   {isLoading ? (
@@ -476,9 +476,9 @@ export default function VoiceTutorPage() {
                       className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                     >
                       <div
-                        className={`max-w-[80%] p-4 rounded-2xl ${
+                        className={`max-w-[80%] p-4 rounded-lg ${
                           msg.role === 'user'
-                            ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
+                            ? 'bg-gray-200 text-gray-900'
                             : 'bg-gray-100 text-gray-800'
                         }`}
                       >
@@ -547,8 +547,8 @@ export default function VoiceTutorPage() {
 
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
-            🎓 AI Voice Tutor
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            AI Voice Tutor
           </h1>
           <p className="text-gray-600">
             Real-time voice conversation powered by Azure AI
@@ -680,7 +680,7 @@ copy .env.example .env{'\n'}
           </div>
 
           {/* Info Box */}
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-200">
+          <div className="bg-gray-100 rounded-lg p-6 border border-gray-300">
             <h3 className="font-bold text-lg mb-3 text-gray-800">🎯 Using the Voice Tutor</h3>
             <div className="grid md:grid-cols-2 gap-4 text-sm text-gray-700">
               <div>

@@ -59,7 +59,7 @@ export default function ProgressDashboard() {
         <button
           onClick={loadProgress}
           disabled={loading}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+          className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50"
         >
           {loading ? 'Loading...' : 'Refresh'}
         </button>
@@ -69,17 +69,17 @@ export default function ProgressDashboard() {
         <div className="space-y-6">
           {/* Overview Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
               <div className="flex items-center justify-between mb-2">
-                <Calendar className="w-8 h-8 text-indigo-600" />
+                <Calendar className="w-8 h-8 text-gray-700" />
                 <span className="text-3xl font-bold">{data.overallProgress.currentStreak}</span>
               </div>
               <p className="text-gray-600">Day Streak 🔥</p>
             </div>
 
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
               <div className="flex items-center justify-between mb-2">
-                <BarChart className="w-8 h-8 text-green-600" />
+                <BarChart className="w-8 h-8 text-gray-700" />
                 <span className="text-3xl font-bold">
                   {Math.floor(data.overallProgress.totalStudyTime / 60)}h
                 </span>
@@ -87,17 +87,17 @@ export default function ProgressDashboard() {
               <p className="text-gray-600">Total Study Time</p>
             </div>
 
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
               <div className="flex items-center justify-between mb-2">
-                <Target className="w-8 h-8 text-blue-600" />
+                <Target className="w-8 h-8 text-gray-700" />
                 <span className="text-3xl font-bold">{data.overallProgress.sessionsCompleted}</span>
               </div>
               <p className="text-gray-600">Sessions Completed</p>
             </div>
 
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
               <div className="flex items-center justify-between mb-2">
-                <TrendingUp className="w-8 h-8 text-purple-600" />
+                <TrendingUp className="w-8 h-8 text-gray-700" />
                 <span className="text-3xl font-bold">{data.overallProgress.averageSessionLength}m</span>
               </div>
               <p className="text-gray-600">Avg Session</p>

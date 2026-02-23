@@ -121,7 +121,12 @@ export default function Navbar() {
             {/* Right Side - Desktop */}
             <div className="hidden lg:flex items-center gap-3">
               <SubscriptionBadge />
-              <AuthButton />
+              <Link
+                href="/signin"
+                className="px-4 py-2 text-gray-700 font-medium hover:text-gray-900 transition-colors"
+              >
+                Sign In
+              </Link>
             </div>
 
             {/* Mobile Menu Button */}
@@ -166,7 +171,13 @@ export default function Navbar() {
               {/* Auth & Subscription */}
               <div className="mb-6 space-y-3">
                 <SubscriptionBadge />
-                <AuthButton />
+                <Link
+                  href="/signin"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block w-full text-center px-4 py-2 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors"
+                >
+                  Sign In
+                </Link>
               </div>
 
               {/* Main Links */}

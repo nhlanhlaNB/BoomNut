@@ -200,15 +200,15 @@ export default function StudyPage() {
 
   if (studyMode === 'guide' && studyGuide) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-6">
+      <div className="min-h-screen bg-white p-6">
         <div className="max-w-4xl mx-auto">
           <button
             onClick={resetMode}
-            className="mb-4 px-4 py-2 text-blue-600 hover:text-blue-700"
+            className="mb-4 px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
           >
             ← Back to Study Modes
           </button>
-          <div className="bg-white rounded-xl shadow-lg p-8">
+          <div className="bg-gray-50 rounded-lg shadow-md p-8 border border-gray-200">
             <h1 className="text-3xl font-bold mb-6 text-gray-800">📚 Study Guide</h1>
             <div className="prose prose-lg max-w-none">
               <ReactMarkdown>{studyGuide}</ReactMarkdown>
@@ -221,15 +221,15 @@ export default function StudyPage() {
 
   if (studyMode === 'summary' && summary) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-6">
+      <div className="min-h-screen bg-white p-6">
         <div className="max-w-4xl mx-auto">
           <button
             onClick={resetMode}
-            className="mb-4 px-4 py-2 text-blue-600 hover:text-blue-700"
+            className="mb-4 px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
           >
             ← Back to Study Modes
           </button>
-          <div className="bg-white rounded-xl shadow-lg p-8">
+          <div className="bg-gray-50 rounded-lg shadow-md p-8 border border-gray-200">
             <h1 className="text-3xl font-bold mb-6 text-gray-800">📝 Summary</h1>
             <div className="prose prose-lg max-w-none">
               <ReactMarkdown>{summary}</ReactMarkdown>
@@ -242,7 +242,7 @@ export default function StudyPage() {
 
   // Main dashboard
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-white">
       {showPaywall && (
         <PaywallModal
           feature={paywallFeature.feature}
@@ -266,19 +266,19 @@ export default function StudyPage() {
             <AuthButton />
             <Link
               href="/tutor"
-              className="px-4 py-2 text-purple-600 hover:text-purple-700 font-medium"
+              className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium border-b-2 border-transparent hover:border-gray-400 transition"
             >
               AI Tutor
             </Link>
             <Link
               href="/study-rooms"
-              className="px-4 py-2 text-green-600 hover:text-green-700 font-medium"
+              className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium border-b-2 border-transparent hover:border-gray-400 transition"
             >
               Study Rooms
             </Link>
             <Link
               href="/"
-              className="px-4 py-2 text-blue-600 hover:text-blue-700 font-medium"
+              className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium border-b-2 border-transparent hover:border-gray-400 transition"
             >
               ← Home
             </Link>
@@ -286,11 +286,11 @@ export default function StudyPage() {
         </div>
 
         {/* Upload Section */}
-        <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
+        <div className="bg-gray-50 rounded-lg shadow-md p-8 mb-8 border border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <Upload className="w-6 h-6 text-blue-600" />
-              <h2 className="text-2xl font-bold text-gray-800">Upload Study Material</h2>
+              <Upload className="w-6 h-6 text-gray-700" />
+              <h2 className="text-2xl font-bold text-gray-900">Upload Study Material</h2>
             </div>
             {!isPro && user && (
               <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-100 px-3 py-1.5 rounded-full">
@@ -347,17 +347,17 @@ export default function StudyPage() {
             <button
               onClick={generateFlashcards}
               disabled={isLoading || (!isPro && studySetsUsed >= FREE_STUDY_SETS_LIMIT)}
-              className="relative bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="relative bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-all hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-200"
             >
               {!isPro && studySetsUsed >= FREE_STUDY_SETS_LIMIT && (
                 <div className="absolute top-3 right-3">
                   <Lock className="w-5 h-5 text-gray-400" />
                 </div>
               )}
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-                <Zap className="w-6 h-6 text-blue-600" />
+              <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center mb-4">
+                <Zap className="w-6 h-6 text-gray-700" />
               </div>
-              <h3 className="text-xl font-bold text-gray-800 mb-2">Flashcards</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Flashcards</h3>
               <p className="text-gray-600 text-sm">
                 {isPro ? 'Unlimited AI-powered flashcards' : 'Up to 10 flashcards (2 sets/week free)'}
               </p>
@@ -367,17 +367,17 @@ export default function StudyPage() {
             <button
               onClick={generateQuiz}
               disabled={isLoading || (!isPro && studySetsUsed >= FREE_STUDY_SETS_LIMIT)}
-              className="relative bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="relative bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-all hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-200"
             >
               {!isPro && studySetsUsed >= FREE_STUDY_SETS_LIMIT && (
                 <div className="absolute top-3 right-3">
                   <Lock className="w-5 h-5 text-gray-400" />
                 </div>
               )}
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-                <Brain className="w-6 h-6 text-purple-600" />
+              <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center mb-4">
+                <Brain className="w-6 h-6 text-gray-700" />
               </div>
-              <h3 className="text-xl font-bold text-gray-800 mb-2">Quiz</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Quiz</h3>
               <p className="text-gray-600 text-sm">
                 {isPro ? '10 AI-generated questions' : '5 questions (2 quizzes/week free)'}
               </p>
@@ -387,12 +387,12 @@ export default function StudyPage() {
             <button
               onClick={generateStudyGuide}
               disabled={isLoading}
-              className="relative bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="relative bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-all hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-200"
             >
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-                <BookOpen className="w-6 h-6 text-green-600" />
+              <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center mb-4">
+                <BookOpen className="w-6 h-6 text-gray-700" />
               </div>
-              <h3 className="text-xl font-bold text-gray-800 mb-2">Study Guide</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Study Guide</h3>
               <p className="text-gray-600 text-sm">
                 {isPro ? 'Comprehensive AI study guide' : 'Available on all plans'}
               </p>
@@ -402,12 +402,12 @@ export default function StudyPage() {
             <button
               onClick={generateSummary}
               disabled={isLoading}
-              className="relative bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="relative bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-all hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-200"
             >
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-4">
-                <Sparkles className="w-6 h-6 text-orange-600" />
+              <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center mb-4">
+                <Sparkles className="w-6 h-6 text-gray-700" />
               </div>
-              <h3 className="text-xl font-bold text-gray-800 mb-2">Summarize</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Summarize</h3>
               <p className="text-gray-600 text-sm">
                 {isPro ? 'Detailed AI summaries' : 'Available on all plans'}
               </p>
@@ -417,17 +417,17 @@ export default function StudyPage() {
 
         {/* Free tier info banner */}
         {!isPro && user && content && (
-          <div className="mt-6 bg-blue-50 border-2 border-blue-200 rounded-xl p-6">
+          <div className="mt-6 bg-gray-50 border-2 border-gray-300 rounded-lg p-6">
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
                   <Sparkles className="w-5 h-5" />
                   Free Plan Limits
                 </h3>
-                <p className="text-blue-800 text-sm mb-3">
+                <p className="text-gray-700 text-sm mb-3">
                   You're using the free plan with limited access. Upgrade to unlock unlimited study sets, more flashcards, and advanced features!
                 </p>
-                <ul className="text-sm text-blue-700 space-y-1 mb-4">
+                <ul className="text-sm text-gray-600 space-y-1 mb-4">
                   <li>✓ 2 study sets per week (flashcards/quizzes)</li>
                   <li>✓ 10 flashcards per set (vs 15 on Pro)</li>
                   <li>✓ 5 quiz questions (vs 10 on Pro)</li>
@@ -436,7 +436,7 @@ export default function StudyPage() {
               </div>
               <Link
                 href="/pricing"
-                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:opacity-90 transition-opacity font-semibold whitespace-nowrap"
+                className="px-6 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-semibold whitespace-nowrap"
               >
                 Upgrade Now
               </Link>

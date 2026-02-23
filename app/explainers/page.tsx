@@ -73,7 +73,7 @@ export default function ExplainersPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 p-4 md:p-8">
+    <main className="min-h-screen bg-white p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -88,12 +88,12 @@ export default function ExplainersPage() {
 
         {/* Title */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-100 to-teal-100 rounded-full text-sm font-bold text-green-700 mb-4">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full text-sm font-bold text-gray-700 mb-4">
             <Lightbulb className="w-4 h-4" />
             <span>Understand Any Concept</span>
           </div>
           <h1 className="text-5xl md:text-7xl font-black text-gray-900 mb-4">
-            Concept <span className="bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">Explainers</span> 💡
+            Concept <span className="text-gray-900 font-bold">Explainers</span>
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             Get clear, simple explanations for complex topics with examples, analogies, and visual aids
@@ -212,7 +212,7 @@ export default function ExplainersPage() {
               <button
                 onClick={explainTopic}
                 disabled={isExplaining || !topic.trim()}
-                className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-xl font-bold hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gray-900 text-white rounded-lg font-bold hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isExplaining ? (
                   <>
@@ -248,7 +248,7 @@ export default function ExplainersPage() {
                 </div>
 
                 {/* Simple Explanation */}
-                <div className="bg-gradient-to-br from-green-50 to-teal-50 rounded-2xl p-6">
+                <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
                   <h3 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
                     <Sparkles className="w-5 h-5 text-green-600" />
                     Quick Summary
