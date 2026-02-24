@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { auth, googleProvider } from '@/lib/firebase';
-import { signInWithPopup, signOut, onAuthStateChanged, User, createUserWithEmailAndPassword, signInWithEmailAndPassword, RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
+import { signInWithPopup, signOut, onAuthStateChanged, User, createUserWithEmailAndPassword, signInWithEmailAndPassword, RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, signInWithRedirect } from 'firebase/auth';
 import { LogIn, LogOut, User as UserIcon, Mail, X, Phone, Smartphone } from 'lucide-react';
 import SubscriptionBadge from './SubscriptionBadge';
 
@@ -44,8 +44,17 @@ export default function AuthButton() {
 
   const handleSignIn = async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
-      setShowAuthModal(false);
+      // Check if device is mobile
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      if (isMobile) {
+        // Use redirect for mobile devices (better UX)
+        await signInWithRedirect(auth, googleProvider);
+      } else {
+        // Use popup for desktop
+        await signInWithPopup(auth, googleProvider);
+        setShowAuthModal(false);
+      }
     } catch (error) {
       console.error('Error signing in:', error);
       alert('Failed to sign in. Please try again.');
