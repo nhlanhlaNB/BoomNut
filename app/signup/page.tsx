@@ -1,11 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Check } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Check, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import AuthButton from '@/components/AuthButton';
 
 export default function SignUpPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -16,12 +20,53 @@ export default function SignUpPage() {
     agreedToTerms: false,
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     setIsLoading(true);
-    // Add your sign-up logic here
-    setTimeout(() => setIsLoading(false), 1000);
+
+    try {
+      // Create user account
+      const { user } = await createUserWithEmailAndPassword(
+        auth,
+        formData.email,
+        formData.password
+      );
+
+      // Update profile with full name
+      await updateProfile(user, {
+        displayName: formData.fullName,
+      });
+
+      // Reset form
+      setFormData({
+        fullName: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+        agreedToTerms: false,
+      });
+
+      // Redirect to study dashboard
+      router.push('/study');
+    } catch (error: any) {
+      console.error('Sign up error:', error);
+      if (error.code === 'auth/email-already-in-use') {
+        setError('Email already registered. Please sign in instead.');
+      } else if (error.code === 'auth/invalid-email') {
+        setError('Invalid email address');
+      } else if (error.code === 'auth/weak-password') {
+        setError('Password must be at least 6 characters');
+      } else if (error.code === 'auth/operation-not-allowed') {
+        setError('Email registration is currently disabled');
+      } else {
+        setError(error.message || 'Sign up failed. Please try again.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const passwordStrength = formData.password.length > 0
@@ -62,7 +107,13 @@ export default function SignUpPage() {
             <AuthButton />
           </div>
 
-          {/* Divider */}
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <p className="text-red-800 text-sm">{error}</p>
+            </div>
+          )}
           <div className="flex items-center gap-4 mb-8">
             <div className="flex-1 h-px bg-gray-200"></div>
             <span className="text-gray-500 text-xs sm:text-sm">Or sign up with email</span>

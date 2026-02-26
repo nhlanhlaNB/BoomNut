@@ -1,21 +1,47 @@
 'use client';
 
 import Link from 'next/link';
-import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import AuthButton from '@/components/AuthButton';
 
 export default function SignInPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     setIsLoading(true);
-    // Add your sign-in logic here
-    setTimeout(() => setIsLoading(false), 1000);
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      setEmail('');
+      setPassword('');
+      router.push('/study');
+    } catch (error: any) {
+      console.error('Sign in error:', error);
+      if (error.code === 'auth/invalid-email') {
+        setError('Invalid email address');
+      } else if (error.code === 'auth/user-not-found') {
+        setError('No account found with this email');
+      } else if (error.code === 'auth/wrong-password') {
+        setError('Invalid password');
+      } else if (error.code === 'auth/too-many-requests') {
+        setError('Too many failed attempts. Please try again later.');
+      } else {
+        setError(error.message || 'Sign in failed. Please try again.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -46,7 +72,13 @@ export default function SignInPage() {
             <AuthButton />
           </div>
 
-          {/* Divider */}
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <p className="text-red-800 text-sm">{error}</p>
+            </div>
+          )}
           <div className="flex items-center gap-4 mb-8">
             <div className="flex-1 h-px bg-gray-200"></div>
             <span className="text-gray-500 text-xs sm:text-sm">Or continue with email</span>
