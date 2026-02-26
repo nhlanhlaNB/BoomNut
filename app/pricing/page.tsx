@@ -218,17 +218,7 @@ export default function PricingPage() {
         strategy="lazyOnload"
       />
 
-      <header className="z-10 p-4 md:p-6 bg-white/70 backdrop-blur-lg shadow-sm sticky top-0 border-b border-white/20">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-2 text-orange-600 hover:text-orange-700 transition-colors group">
-            <div className="p-2 bg-gradient-to-br from-orange-500 to-amber-600 rounded-lg group-hover:scale-110 transition-transform">
-              <Zap className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-bold text-lg hidden sm:inline bg-gradient-to-r from-orange-500 to-amber-600 bg-clip-text text-transparent">BoomNut</span>
-          </Link>
-          <AuthButton />
-        </div>
-      </header>
+      
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-8 md:py-16">
         {/* Header Section */}
