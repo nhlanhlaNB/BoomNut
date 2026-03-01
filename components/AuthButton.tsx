@@ -14,6 +14,7 @@ export default function AuthButton() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showSignInNotification, setShowSignInNotification] = useState(false);
+  const [shouldRedirect, setShouldRedirect] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email');
   const [email, setEmail] = useState('');
@@ -35,6 +36,15 @@ export default function AuthButton() {
       document.body.classList.remove('modal-open');
     };
   }, [showAuthModal]);
+
+  // Handle redirect after successful sign in
+  useEffect(() => {
+    if (shouldRedirect && user && !loading) {
+      // User is authenticated, redirect to home
+      router.push('/');
+      setShouldRedirect(false);
+    }
+  }, [shouldRedirect, user, loading, router]);
 
   // Auto-dismiss sign in notification
   useEffect(() => {
@@ -59,14 +69,14 @@ export default function AuthButton() {
         await signInWithPopup(auth, googleProvider);
         setShowAuthModal(false);
         setShowSignInNotification(true);
-        // Redirect to home page
-        setTimeout(() => {
-          router.push('/');
-        }, 500);
+        // Mark that we should redirect once auth state updates
+        setShouldRedirect(true);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error signing in:', error);
-      alert('Failed to sign in. Please try again.');
+      if (error?.code !== 'auth/popup-closed-by-user') {
+        alert('Failed to sign in. Please try again: ' + error.message);
+      }
     }
   };
 
@@ -84,10 +94,8 @@ export default function AuthButton() {
       setShowSignInNotification(true);
       setEmail('');
       setPassword('');
-      // Redirect to home page
-      setTimeout(() => {
-        router.push('/');
-      }, 500);
+      // Mark that we should redirect once auth state updates
+      setShouldRedirect(true);
     } catch (error: any) {
       console.error('Auth error:', error);
       setAuthError(error.message || 'Authentication failed');
@@ -125,10 +133,8 @@ export default function AuthButton() {
         setPhoneNumber('');
         setVerificationCode('');
         setConfirmationResult(null);
-        // Redirect to home page
-        setTimeout(() => {
-          router.push('/');
-        }, 500);
+        // Mark that we should redirect once auth state updates
+        setShouldRedirect(true);
       }
     } catch (error: any) {
       console.error('Phone auth error:', error);
