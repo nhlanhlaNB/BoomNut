@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/providers/AuthProvider";
 import { SubscriptionProvider } from "@/hooks/useSubscription";
 import Navbar from "@/components/Navbar";
 
@@ -19,10 +20,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <SubscriptionProvider>
-          <Navbar />
-          {children}
-        </SubscriptionProvider>
+        <AuthProvider>
+          <SubscriptionProvider>
+            <Navbar />
+            {children}
+          </SubscriptionProvider>
+        </AuthProvider>
       </body>
     </html>
   );
