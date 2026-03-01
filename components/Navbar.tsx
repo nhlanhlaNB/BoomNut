@@ -17,7 +17,6 @@ export default function Navbar() {
   const pathname = usePathname();
 
   const services = [
-    { name: 'Study Dashboard', href: '/study', icon: BookOpen, description: 'Flashcards, Quizzes & More' },
     { name: 'AI Tutor Chat', href: '/tutor', icon: Brain, description: '24/7 Personal AI Tutor' },
     { name: 'Voice Tutor', href: '/voice-tutor', icon: Mic, description: 'Speak & Learn' },
     { name: 'Voice Tutor WebRTC', href: '/voice-tutor-webrtc', icon: Video, description: 'Real-time Voice Learning' },
@@ -26,11 +25,12 @@ export default function Navbar() {
     { name: 'Essay Grading', href: '/essay-grading', icon: PenTool, description: 'AI Essay Feedback' },
     { name: 'Visual Analysis', href: '/visual-analysis', icon: Lightbulb, description: 'Image & Diagram Analysis' },
     { name: 'Explainers', href: '/explainers', icon: FileText, description: 'Concept Explanations' },
+    { name: 'Progress', href: '/progress', icon: TrendingUp, description: 'Track Your Learning Journey' },
   ];
 
   const mainLinks = [
     { name: 'Home', href: '/', icon: Home },
-    { name: 'Progress', href: '/progress', icon: TrendingUp },
+    { name: 'Study Dashboard', href: '/study', icon: BookOpen },
     { name: 'Study Plan', href: '/study-plan', icon: Target },
     { name: 'Study Rooms', href: '/study-rooms', icon: Users },
     { name: 'Pricing', href: '/pricing', icon: DollarSign },

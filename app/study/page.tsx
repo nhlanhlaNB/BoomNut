@@ -1,496 +1,305 @@
 'use client';
 
 import { useState } from 'react';
-import { Brain, FileText, Zap, BookOpen, GraduationCap, Upload, Sparkles, Lock } from 'lucide-react';
+import {
+  Brain, FileText, Zap, BookOpen, GraduationCap, Upload, Sparkles, Lock,
+  Mic, Video, Gamepad2, PenTool, Lightbulb, Users, TrendingUp, Target,
+  Home, Filter, ArrowRight
+} from 'lucide-react';
 import Link from 'next/link';
-import FlashcardViewer from '@/components/FlashcardViewer';
-import QuizViewer from '@/components/QuizViewer';
-import ReactMarkdown from 'react-markdown';
-import AuthButton from '@/components/AuthButton';
-import PaywallModal from '@/components/PaywallModal';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAuth } from '@/hooks/useAuth';
 
-type StudyMode = 'upload' | 'flashcards' | 'quiz' | 'guide' | 'summary' | null;
+type AppCategory = 'all' | 'learning' | 'tools' | 'premium';
+
+interface AppCard {
+  id: string;
+  name: string;
+  description: string;
+  icon: React.ReactNode;
+  href: string;
+  category: 'learning' | 'tools';
+  isPro?: boolean;
+  color: string;
+  gradient: string;
+}
 
 export default function StudyPage() {
   const { user } = useAuth();
-  const { isPro, canAccessFeature } = useSubscription();
-  const [studyMode, setStudyMode] = useState<StudyMode>(null);
-  const [content, setContent] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [flashcards, setFlashcards] = useState<any[]>([]);
-  const [quiz, setQuiz] = useState<any>(null);
-  const [studyGuide, setStudyGuide] = useState('');
-  const [summary, setSummary] = useState('');
-  const [file, setFile] = useState<File | null>(null);
-  const [showPaywall, setShowPaywall] = useState(false);
-  const [paywallFeature, setPaywallFeature] = useState({ feature: '', name: '', plan: 'pro' as 'pro' | 'premium' });
-  const [studySetsUsed, setStudySetsUsed] = useState(0);
-  const FREE_STUDY_SETS_LIMIT = 2;
+  const { isPro } = useSubscription();
+  const [selectedCategory, setSelectedCategory] = useState<AppCategory>('all');
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (!selectedFile) return;
+  const apps: AppCard[] = [
+    {
+      id: 'study-dashboard',
+      name: 'Study Dashboard',
+      description: 'Flashcards, Quizzes & More',
+      icon: <BookOpen className="w-12 h-12" />,
+      href: '/study',
+      category: 'learning',
+      color: 'blue',
+      gradient: 'from-blue-100 to-blue-200',
+    },
+    {
+      id: 'tutor',
+      name: 'AI Tutor Chat',
+      description: '24/7 Personal AI Tutor',
+      icon: <Brain className="w-12 h-12" />,
+      href: '/tutor',
+      category: 'learning',
+      color: 'purple',
+      gradient: 'from-purple-100 to-purple-200',
+    },
+    {
+      id: 'voice-tutor',
+      name: 'Voice Tutor',
+      description: 'Speak & Learn',
+      icon: <Mic className="w-12 h-12" />,
+      href: '/voice-tutor',
+      category: 'tools',
+      color: 'indigo',
+      gradient: 'from-indigo-100 to-indigo-200',
+      isPro: true,
+    },
+    {
+      id: 'voice-tutor-webrtc',
+      name: 'Voice Tutor WebRTC',
+      description: 'Real-time Voice Learning',
+      icon: <Video className="w-12 h-12" />,
+      href: '/voice-tutor-webrtc',
+      category: 'tools',
+      color: 'red',
+      gradient: 'from-red-100 to-red-200',
+      isPro: true,
+    },
+    {
+      id: 'live-lecture',
+      name: 'Live Lecture',
+      description: 'Record & Transcribe',
+      icon: <GraduationCap className="w-12 h-12" />,
+      href: '/live-lecture',
+      category: 'tools',
+      color: 'cyan',
+      gradient: 'from-cyan-100 to-cyan-200',
+      isPro: true,
+    },
+    {
+      id: 'arcade',
+      name: 'Study Arcade',
+      description: 'Gamified Learning',
+      icon: <Gamepad2 className="w-12 h-12" />,
+      href: '/arcade',
+      category: 'learning',
+      color: 'lime',
+      gradient: 'from-lime-100 to-lime-200',
+      isPro: true,
+    },
+    {
+      id: 'essay-grading',
+      name: 'Essay Grading',
+      description: 'AI Essay Feedback',
+      icon: <PenTool className="w-12 h-12" />,
+      href: '/essay-grading',
+      category: 'tools',
+      color: 'rose',
+      gradient: 'from-rose-100 to-rose-200',
+      isPro: true,
+    },
+    {
+      id: 'visual-analysis',
+      name: 'Visual Analysis',
+      description: 'Image & Diagram Analysis',
+      icon: <Lightbulb className="w-12 h-12" />,
+      href: '/visual-analysis',
+      category: 'tools',
+      color: 'violet',
+      gradient: 'from-violet-100 to-violet-200',
+      isPro: true,
+    },
+    {
+      id: 'explainers',
+      name: 'Explainers',
+      description: 'Concept Explanations',
+      icon: <Sparkles className="w-12 h-12" />,
+      href: '/explainers',
+      category: 'learning',
+      color: 'teal',
+      gradient: 'from-teal-100 to-teal-200',
+    },
+  ];
 
-    setFile(selectedFile);
-    setIsLoading(true);
+  // Filter apps based on selected category
+  const filteredApps = apps.filter(app => {
+    if (selectedCategory === 'all') return true;
+    if (selectedCategory === 'premium') return app.isPro;
+    return app.category === selectedCategory;
+  });
 
-    try {
-      const formData = new FormData();
-      formData.append('file', selectedFile);
+  const categories = [
+    { id: 'all', label: 'All Apps', count: apps.length },
+    { id: 'learning', label: 'Learning', count: apps.filter(a => a.category === 'learning').length },
+    { id: 'tools', label: 'Tools', count: apps.filter(a => a.category === 'tools').length },
+    { id: 'premium', label: 'Premium', count: apps.filter(a => a.isPro).length },
+  ];
 
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) throw new Error('Upload failed');
-
-      const data = await response.json();
-      setContent(data.content || '');
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Failed to upload file');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const generateFlashcards = async () => {
-    if (!content) {
-      alert('Please upload a file first');
-      return;
-    }
-
-    // Check free tier limits
-    if (!isPro && studySetsUsed >= FREE_STUDY_SETS_LIMIT) {
-      setPaywallFeature({ feature: 'unlimited-study-sets', name: 'Unlimited Flashcards', plan: 'pro' });
-      setShowPaywall(true);
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      // Free users get max 10 cards, Pro gets 15
-      const cardCount = isPro ? 15 : 10;
-      const response = await fetch('/api/flashcards', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, count: cardCount }),
-      });
-
-      if (!response.ok) throw new Error('Failed to generate flashcards');
-
-      const data = await response.json();
-      setFlashcards(data.flashcards || []);
-      setStudyMode('flashcards');
-      if (!isPro) setStudySetsUsed(prev => prev + 1);
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Failed to generate flashcards');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const generateQuiz = async () => {
-    if (!content) {
-      alert('Please upload a file first');
-      return;
-    }
-
-    // Check free tier limits
-    if (!isPro && studySetsUsed >= FREE_STUDY_SETS_LIMIT) {
-      setPaywallFeature({ feature: 'unlimited-tests', name: 'Unlimited Quizzes', plan: 'pro' });
-      setShowPaywall(true);
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      // Free users get 5 questions, Pro gets 10
-      const questionCount = isPro ? 10 : 5;
-      const response = await fetch('/api/quiz', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, questionCount, difficulty: 'medium' }),
-      });
-
-      if (!response.ok) throw new Error('Failed to generate quiz');
-
-      const data = await response.json();
-      setQuiz(data.quiz);
-      setStudyMode('quiz');
-      if (!isPro) setStudySetsUsed(prev => prev + 1);
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Failed to generate quiz');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const generateStudyGuide = async () => {
-    if (!content) {
-      alert('Please upload a file first');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const response = await fetch('/api/study-guide', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, format: 'comprehensive' }),
-      });
-
-      if (!response.ok) throw new Error('Failed to generate study guide');
-
-      const data = await response.json();
-      setStudyGuide(data.studyGuide);
-      setStudyMode('guide');
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Failed to generate study guide');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const generateSummary = async () => {
-    if (!content) {
-      alert('Please upload a file first');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const response = await fetch('/api/summarize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, length: 'medium' }),
-      });
-
-      if (!response.ok) throw new Error('Failed to generate summary');
-
-      const data = await response.json();
-      setSummary(data.summary);
-      setStudyMode('summary');
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Failed to generate summary');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const resetMode = () => {
-    setStudyMode(null);
-  };
-
-  // Render different views based on study mode
-  if (studyMode === 'flashcards' && flashcards.length > 0) {
-    return <FlashcardViewer flashcards={flashcards} onClose={resetMode} />;
-  }
-
-  if (studyMode === 'quiz' && quiz) {
-    return <QuizViewer quiz={quiz} onClose={resetMode} />;
-  }
-
-  if (studyMode === 'guide' && studyGuide) {
-    return (
-      <div className="min-h-screen bg-white p-6">
-        <div className="max-w-4xl mx-auto">
-          <button
-            onClick={resetMode}
-            className="mb-4 px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
-          >
-            ← Back to Study Modes
-          </button>
-          <div className="bg-gray-50 rounded-lg shadow-md p-8 border border-gray-200">
-            <h1 className="text-3xl font-bold mb-6 text-gray-800">📚 Study Guide</h1>
-            <div className="prose prose-lg max-w-none">
-              <ReactMarkdown>{studyGuide}</ReactMarkdown>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (studyMode === 'summary' && summary) {
-    return (
-      <div className="min-h-screen bg-white p-6">
-        <div className="max-w-4xl mx-auto">
-          <button
-            onClick={resetMode}
-            className="mb-4 px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
-          >
-            ← Back to Study Modes
-          </button>
-          <div className="bg-gray-50 rounded-lg shadow-md p-8 border border-gray-200">
-            <h1 className="text-3xl font-bold mb-6 text-gray-800">📝 Summary</h1>
-            <div className="prose prose-lg max-w-none">
-              <ReactMarkdown>{summary}</ReactMarkdown>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Main dashboard
   return (
-    <div className="min-h-screen bg-white">
-      {showPaywall && (
-        <PaywallModal
-          feature={paywallFeature.feature}
-          featureName={paywallFeature.name}
-          requiredPlan={paywallFeature.plan}
-        />
-      )}
-      
-      <div className="max-w-7xl mx-auto p-6">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-800 mb-2">
-              Study Dashboard
-            </h1>
-            <p className="text-gray-600">
-              Upload your materials and choose how you want to study
-            </p>
-          </div>
-          <div className="flex gap-4 items-center">
-            <AuthButton />
-            <Link
-              href="/tutor"
-              className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium border-b-2 border-transparent hover:border-gray-400 transition"
-            >
-              AI Tutor
-            </Link>
-            <Link
-              href="/study-rooms"
-              className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium border-b-2 border-transparent hover:border-gray-400 transition"
-            >
-              Study Rooms
-            </Link>
-            <Link
-              href="/"
-              className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium border-b-2 border-transparent hover:border-gray-400 transition"
-            >
-              ← Home
-            </Link>
-          </div>
-        </div>
-
-        {/* Upload Section */}
-        <div className="bg-gray-50 rounded-lg shadow-md p-8 mb-8 border border-gray-200">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <Upload className="w-6 h-6 text-gray-700" />
-              <h2 className="text-2xl font-bold text-gray-900">Upload Study Material</h2>
+    <main className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
+      {/* Header */}
+      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <Link href="/" className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-3 transition">
+                <Home className="w-4 h-4" />
+                <span className="text-sm font-medium">Back to Home</span>
+              </Link>
+              <h1 className="text-4xl md:text-5xl font-black text-gray-900">Study Dashboard</h1>
+              <p className="text-lg text-gray-600 mt-2">Welcome back, {user?.displayName?.split(' ')[0] || 'learner'}! 🎓</p>
             </div>
-            {!isPro && user && (
-              <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-100 px-3 py-1.5 rounded-full">
-                <Lock className="w-4 h-4" />
-                {studySetsUsed}/{FREE_STUDY_SETS_LIMIT} free study sets used this week
+            {!isPro && (
+              <div className="text-right">
+                <p className="text-sm text-gray-600 mb-2">📚 Free tier user</p>
+                <Link href="/pricing" className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium">
+                  Upgrade to Pro
+                </Link>
               </div>
             )}
           </div>
-          
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
-            <input
-              type="file"
-              onChange={handleFileSelect}
-              accept=".pdf,.doc,.docx,.txt"
-              className="hidden"
-              id="file-upload"
-              disabled={isLoading}
-            />
-            <label
-              htmlFor="file-upload"
-              className="cursor-pointer flex flex-col items-center"
-            >
-              {file ? (
-                <>
-                  <FileText className="w-16 h-16 text-green-500 mb-4" />
-                  <p className="text-lg font-medium text-gray-800">{file.name}</p>
-                  <p className="text-sm text-gray-500 mt-2">Click to change file</p>
-                </>
-              ) : (
-                <>
-                  <Upload className="w-16 h-16 text-gray-400 mb-4" />
-                  <p className="text-lg font-medium text-gray-800">
-                    Click to upload or drag and drop
-                  </p>
-                  <p className="text-sm text-gray-500 mt-2">
-                    PDF, DOC, DOCX, or TXT files
-                  </p>
-                </>
-              )}
-            </label>
-          </div>
+        </div>
+      </div>
 
-          {isLoading && (
-            <div className="mt-4 text-center text-blue-600">
-              Processing your file...
-            </div>
-          )}
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Filter Section */}
+        <div className="mb-12">
+          <div className="flex items-center gap-3 mb-6">
+            <Filter className="w-5 h-5 text-gray-600" />
+            <h2 className="text-xl font-bold text-gray-900">Filter Apps</h2>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {categories.map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id as AppCategory)}
+                className={`px-6 py-3 rounded-full font-semibold transition-all transform hover:scale-105 ${
+                  selectedCategory === cat.id
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                    : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-blue-600'
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  {cat.label}
+                  <span className="text-xs opacity-75">({cat.count})</span>
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Study Modes */}
-        {content && (
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Flashcards */}
-            <button
-              onClick={generateFlashcards}
-              disabled={isLoading || (!isPro && studySetsUsed >= FREE_STUDY_SETS_LIMIT)}
-              className="relative bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-all hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-200"
-            >
-              {!isPro && studySetsUsed >= FREE_STUDY_SETS_LIMIT && (
-                <div className="absolute top-3 right-3">
-                  <Lock className="w-5 h-5 text-gray-400" />
+        {/* Apps Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {filteredApps.map(app => (
+            <Link key={app.id} href={app.href}>
+              <div className={`
+                group relative w-full aspect-square rounded-xl overflow-hidden cursor-pointer
+                transform transition-all duration-300 hover:scale-105 hover:shadow-2xl
+                bg-gradient-to-b ${app.gradient}
+                flex flex-col
+              `}>
+                {/* Top - Image/Icon Area */}
+                <div className="flex-1 bg-gradient-to-b from-white/40 to-transparent flex items-center justify-center p-6">
+                  <div className="text-gray-600 group-hover:scale-110 transition-transform">
+                    {app.icon}
+                  </div>
                 </div>
-              )}
-              <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center mb-4">
-                <Zap className="w-6 h-6 text-gray-700" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Flashcards</h3>
-              <p className="text-gray-600 text-sm">
-                {isPro ? 'Unlimited AI-powered flashcards' : 'Up to 10 flashcards (2 sets/week free)'}
-              </p>
-            </button>
 
-            {/* Quiz */}
-            <button
-              onClick={generateQuiz}
-              disabled={isLoading || (!isPro && studySetsUsed >= FREE_STUDY_SETS_LIMIT)}
-              className="relative bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-all hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-200"
-            >
-              {!isPro && studySetsUsed >= FREE_STUDY_SETS_LIMIT && (
-                <div className="absolute top-3 right-3">
-                  <Lock className="w-5 h-5 text-gray-400" />
+                {/* Bottom - Content Area */}
+                <div className="flex-1 p-6 flex flex-col justify-between bg-gradient-to-t from-white/60 to-transparent backdrop-blur-sm">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">{app.name}</h3>
+                    <p className="text-sm text-gray-700 leading-relaxed">{app.description}</p>
+                  </div>
+
+                  {/* Badge area */}
+                  <div className="flex items-center justify-between">
+                    {app.isPro && !isPro ? (
+                      <div className="flex items-center gap-2 bg-white/50 backdrop-blur px-3 py-1.5 rounded-lg">
+                        <Lock className="w-3 h-3 text-gray-600" />
+                        <span className="text-xs text-gray-700 font-semibold">Pro</span>
+                      </div>
+                    ) : app.isPro ? (
+                      <div className="flex items-center gap-2 bg-yellow-200/50 backdrop-blur px-3 py-1.5 rounded-lg">
+                        <Sparkles className="w-3 h-3 text-yellow-700" />
+                        <span className="text-xs text-yellow-700 font-semibold">Pro</span>
+                      </div>
+                    ) : null}
+                    
+                    <ArrowRight className="w-4 h-4 text-gray-600 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                  </div>
                 </div>
-              )}
-              <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center mb-4">
-                <Brain className="w-6 h-6 text-gray-700" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Quiz</h3>
-              <p className="text-gray-600 text-sm">
-                {isPro ? '10 AI-generated questions' : '5 questions (2 quizzes/week free)'}
-              </p>
-            </button>
 
-            {/* Study Guide */}
-            <button
-              onClick={generateStudyGuide}
-              disabled={isLoading}
-              className="relative bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-all hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-200"
-            >
-              <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center mb-4">
-                <BookOpen className="w-6 h-6 text-gray-700" />
+                {/* Overlay for locked Pro features */}
+                {app.isPro && !isPro && (
+                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="text-center">
+                      <Lock className="w-8 h-8 text-white mx-auto mb-2" />
+                      <p className="text-white font-bold text-xs">Subscribe to unlock</p>
+                    </div>
+                  </div>
+                )}
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Study Guide</h3>
-              <p className="text-gray-600 text-sm">
-                {isPro ? 'Comprehensive AI study guide' : 'Available on all plans'}
-              </p>
-            </button>
+            </Link>
+          ))}
+        </div>
 
-            {/* Summary */}
-            <button
-              onClick={generateSummary}
-              disabled={isLoading}
-              className="relative bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-all hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-200"
-            >
-              <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center mb-4">
-                <Sparkles className="w-6 h-6 text-gray-700" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Summarize</h3>
-              <p className="text-gray-600 text-sm">
-                {isPro ? 'Detailed AI summaries' : 'Available on all plans'}
-              </p>
-            </button>
+        {/* Empty State */}
+        {filteredApps.length === 0 && (
+          <div className="text-center py-16">
+            <Sparkles className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-xl text-gray-600">No apps found in this category</p>
           </div>
         )}
 
-        {/* Free tier info banner */}
-        {!isPro && user && content && (
-          <div className="mt-6 bg-gray-50 border-2 border-gray-300 rounded-lg p-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5" />
-                  Free Plan Limits
-                </h3>
-                <p className="text-gray-700 text-sm mb-3">
-                  You're using the free plan with limited access. Upgrade to unlock unlimited study sets, more flashcards, and advanced features!
-                </p>
-                <ul className="text-sm text-gray-600 space-y-1 mb-4">
-                  <li>✓ 2 study sets per week (flashcards/quizzes)</li>
-                  <li>✓ 10 flashcards per set (vs 15 on Pro)</li>
-                  <li>✓ 5 quiz questions (vs 10 on Pro)</li>
-                  <li>✓ Unlimited summaries & study guides</li>
-                </ul>
-              </div>
-              <Link
-                href="/pricing"
-                className="px-6 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-semibold whitespace-nowrap"
-              >
-                Upgrade Now
-              </Link>
-            </div>
-          </div>
-        )}
-
-        {/* AI Tutor & Study Rooms Links */}
-        <div className="mt-8 grid md:grid-cols-2 gap-6">
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl shadow-lg p-8 text-white">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
-                  <GraduationCap className="w-8 h-8" />
-                </div>
+        {/* Stats Footer */}
+        <div className="mt-16 pt-8 border-t border-gray-200">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-lg transition">
+              <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-2xl font-bold mb-1">AI Tutor</h3>
-                  <p className="text-blue-100">
-                    Chat with your personal AI tutor for explanations
-                  </p>
+                  <p className="text-gray-600 text-sm">Available Apps</p>
+                  <p className="text-3xl font-bold text-gray-900">{apps.length}</p>
                 </div>
+                <Sparkles className="w-12 h-12 text-blue-500 opacity-50" />
               </div>
-              <Link
-                href="/tutor"
-                className="px-6 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-colors"
-              >
-                Start Chat
-              </Link>
             </div>
-          </div>
-
-          <div className="bg-gradient-to-r from-green-600 to-teal-600 rounded-xl shadow-lg p-8 text-white">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
-                  <Brain className="w-8 h-8" />
-                </div>
+            
+            <div className="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-lg transition">
+              <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-2xl font-bold mb-1">Study Rooms</h3>
-                  <p className="text-green-100">
-                    Learn together with friends and AI
-                  </p>
+                  <p className="text-gray-600 text-sm">Free Apps</p>
+                  <p className="text-3xl font-bold text-gray-900">{apps.filter(a => !a.isPro).length}</p>
                 </div>
+                <Upload className="w-12 h-12 text-green-500 opacity-50" />
               </div>
-              <Link
-                href="/study-rooms"
-                className="px-6 py-3 bg-white text-green-600 font-semibold rounded-lg hover:bg-green-50 transition-colors"
-              >
-                Join Room
-              </Link>
+            </div>
+            
+            <div className="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-lg transition">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-600 text-sm">Pro Features</p>
+                  <p className="text-3xl font-bold text-gray-900">{apps.filter(a => a.isPro).length}</p>
+                  {!isPro && (
+                    <Link href="/pricing" className="text-blue-600 text-xs font-semibold mt-2 hover:underline">
+                      Upgrade now →
+                    </Link>
+                  )}
+                </div>
+                <Sparkles className="w-12 h-12 text-purple-500 opacity-50" />
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
