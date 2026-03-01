@@ -36,7 +36,8 @@ export default function ExplainersPage() {
   ];
 
   const explainTopic = async () => {
-    if (!topic.trim()) {
+    const trimmedTopic = topic.trim();
+    if (!trimmedTopic) {
       alert('Please enter a topic to explain');
       return;
     }
@@ -47,7 +48,7 @@ export default function ExplainersPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          topic,
+          topic: trimmedTopic,
           subject,
           complexity,
           includeVisuals,
@@ -55,13 +56,16 @@ export default function ExplainersPage() {
         })
       });
 
-      if (!response.ok) throw new Error('Explanation failed');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Explanation failed');
+      }
 
       const data = await response.json();
       setExplanation(data.explanation);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error:', error);
-      alert('Failed to generate explanation. Please try again.');
+      alert(`Failed to generate explanation: ${error.message || 'Please try again.'}`);
     } finally {
       setIsExplaining(false);
     }
@@ -211,8 +215,8 @@ export default function ExplainersPage() {
               {/* Explain Button */}
               <button
                 onClick={explainTopic}
-                disabled={isExplaining || !topic.trim()}
-                className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gray-900 text-white rounded-lg font-bold hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isExplaining}
+                className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 {isExplaining ? (
                   <>

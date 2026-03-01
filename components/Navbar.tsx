@@ -6,15 +6,27 @@ import { usePathname } from 'next/navigation';
 import { 
   Menu, X, ChevronDown, Home, BookOpen, Brain, Mic, Video, 
   Gamepad2, FileText, Lightbulb, GraduationCap, PenTool, 
-  Users, TrendingUp, Target, DollarSign
+  Users, TrendingUp, Target, DollarSign, LogOut
 } from 'lucide-react';
 import AuthButton from './AuthButton';
 import SubscriptionBadge from './SubscriptionBadge';
+import { useAuth } from '@/hooks/useAuth';
+import { signOut } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 export default function Navbar() {
+  const { user, loading } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isServicesOpen, setIsServicesOpen] = useState(false);
   const pathname = usePathname();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  };
 
   const services = [
     { name: 'AI Tutor Chat', href: '/tutor', icon: Brain, description: '24/7 Personal AI Tutor' },
@@ -121,12 +133,24 @@ export default function Navbar() {
             {/* Right Side - Desktop */}
             <div className="hidden lg:flex items-center gap-3">
               <SubscriptionBadge />
-              <Link
-                href="/signin"
-                className="px-4 py-2 text-gray-700 font-medium hover:text-gray-900 transition-colors"
-              >
-                Sign In
-              </Link>
+              {!loading && (
+                user ? (
+                  <button
+                    onClick={handleSignOut}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign Out
+                  </button>
+                ) : (
+                  <Link
+                    href="/signin"
+                    className="px-4 py-2 text-gray-700 font-medium hover:text-gray-900 transition-colors"
+                  >
+                    Sign In
+                  </Link>
+                )
+              )}
             </div>
 
             {/* Mobile Menu Button */}
@@ -171,13 +195,28 @@ export default function Navbar() {
               {/* Auth & Subscription */}
               <div className="mb-6 space-y-3">
                 <SubscriptionBadge />
-                <Link
-                  href="/signin"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block w-full text-center px-4 py-2 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors"
-                >
-                  Sign In
-                </Link>
+                {!loading && (
+                  user ? (
+                    <button
+                      onClick={() => {
+                        handleSignOut();
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sign Out
+                    </button>
+                  ) : (
+                    <Link
+                      href="/signin"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="block w-full text-center px-4 py-2 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors"
+                    >
+                      Sign In
+                    </Link>
+                  )
+                )}
               </div>
 
               {/* Main Links */}

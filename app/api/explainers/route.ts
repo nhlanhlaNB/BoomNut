@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+import { createChatCompletion } from '@/lib/azureOpenAI';
 
 export async function POST(req: Request) {
   try {
@@ -20,22 +19,15 @@ export async function POST(req: Request) {
       expert: 'Explain at a graduate level - use advanced terminology and comprehensive analysis'
     };
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4-turbo-preview',
-        messages: [
-          {
-            role: 'system',
-            content: `You are an expert ${subject} educator who excels at making complex concepts accessible. ${complexityMap[complexity] || complexityMap.medium}. Your explanations are clear, engaging, and pedagogically sound.`
-          },
-          {
-            role: 'user',
-            content: `Explain this concept: "${topic}"
+    const completion = await createChatCompletion({
+      messages: [
+        {
+          role: 'system',
+          content: `You are an expert ${subject} educator who excels at making complex concepts accessible. ${complexityMap[complexity] || complexityMap.medium}. Your explanations are clear, engaging, and pedagogically sound. Always respond with valid JSON only.`
+        },
+        {
+          role: 'user',
+          content: `Explain this concept: "${topic}"
 
 Provide a comprehensive explanation as JSON with this structure:
 {
@@ -49,21 +41,15 @@ Provide a comprehensive explanation as JSON with this structure:
   "commonMistakes": ["mistake 1", "mistake 2", "mistake 3"],
   "relatedConcepts": ["concept 1", "concept 2", "concept 3"]
 }`
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 3000
-      }),
+        }
+      ],
+      maxTokens: 3000,
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      console.error('OpenAI API error:', error);
-      throw new Error('OpenAI API error');
+    const content = completion.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error('No content in response');
     }
-
-    const data = await response.json();
-    const content = data.choices[0].message.content;
     
     // Parse JSON from response
     const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -74,10 +60,20 @@ Provide a comprehensive explanation as JSON with this structure:
     const explanation = JSON.parse(jsonMatch[0]);
 
     return NextResponse.json({ explanation });
-  } catch (error) {
-    console.error('Explainer error:', error);
+  } catch (error: any) {
+    console.error('=== Explainer API Error ===');
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('========================');
+    
     return NextResponse.json(
-      { error: 'Failed to generate explanation' },
+      { 
+        error: error.message || 'Failed to generate explanation',
+        ...(process.env.NODE_ENV === 'development' && { 
+          details: error.stack,
+          type: error.constructor.name 
+        })
+      },
       { status: 500 }
     );
   }
