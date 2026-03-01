@@ -14,7 +14,7 @@ export default function AuthButton() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showSignInNotification, setShowSignInNotification] = useState(false);
-  const [shouldRedirect, setShouldRedirect] = useState(false);
+  const [lastAuthTime, setLastAuthTime] = useState<number | null>(null);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email');
   const [email, setEmail] = useState('');
@@ -37,14 +37,18 @@ export default function AuthButton() {
     };
   }, [showAuthModal]);
 
-  // Handle redirect after successful sign in
+  // Handle redirect and notification after successful sign in
   useEffect(() => {
-    if (shouldRedirect && user && !loading) {
-      // User is authenticated, redirect to home
-      router.push('/');
-      setShouldRedirect(false);
+    if (lastAuthTime && user && !loading) {
+      // User just signed in (lastAuthTime was recently set and user is now authenticated)
+      setShowSignInNotification(true);
+      const redirectTimer = setTimeout(() => {
+        router.push('/');
+      }, 800);
+      setLastAuthTime(null);
+      return () => clearTimeout(redirectTimer);
     }
-  }, [shouldRedirect, user, loading, router]);
+  }, [lastAuthTime, user, loading, router]);
 
   // Auto-dismiss sign in notification
   useEffect(() => {
@@ -68,9 +72,8 @@ export default function AuthButton() {
         // Use popup for desktop
         await signInWithPopup(auth, googleProvider);
         setShowAuthModal(false);
-        setShowSignInNotification(true);
-        // Mark that we should redirect once auth state updates
-        setShouldRedirect(true);
+        // Mark the time of sign in to trigger redirect when auth state updates
+        setLastAuthTime(Date.now());
       }
     } catch (error: any) {
       console.error('Error signing in:', error);
@@ -91,11 +94,10 @@ export default function AuthButton() {
         await signInWithEmailAndPassword(auth, email, password);
       }
       setShowAuthModal(false);
-      setShowSignInNotification(true);
+      // Mark the time of sign in to trigger redirect when auth state updates
+      setLastAuthTime(Date.now());
       setEmail('');
       setPassword('');
-      // Mark that we should redirect once auth state updates
-      setShouldRedirect(true);
     } catch (error: any) {
       console.error('Auth error:', error);
       setAuthError(error.message || 'Authentication failed');
@@ -129,12 +131,11 @@ export default function AuthButton() {
         // Verify code
         await confirmationResult.confirm(verificationCode);
         setShowAuthModal(false);
-        setShowSignInNotification(true);
+        // Mark the time of sign in to trigger redirect when auth state updates
+        setLastAuthTime(Date.now());
         setPhoneNumber('');
         setVerificationCode('');
         setConfirmationResult(null);
-        // Mark that we should redirect once auth state updates
-        setShouldRedirect(true);
       }
     } catch (error: any) {
       console.error('Phone auth error:', error);
