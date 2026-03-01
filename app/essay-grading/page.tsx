@@ -29,6 +29,7 @@ export default function EssayGradingPage() {
   const [isGrading, setIsGrading] = useState(false);
   const [result, setResult] = useState<GradingResult | null>(null);
   const [wordCount, setWordCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   const handleEssayChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value;
@@ -38,11 +39,17 @@ export default function EssayGradingPage() {
 
   const gradeEssay = async () => {
     if (!essay.trim()) {
-      alert('Please write or paste your essay first');
+      setError('Please write or paste your essay first');
+      return;
+    }
+
+    if (!subject.trim()) {
+      setError('Please select a subject');
       return;
     }
 
     setIsGrading(true);
+    setError(null);
     try {
       const response = await fetch('/api/essay-grading', {
         method: 'POST',
@@ -55,13 +62,22 @@ export default function EssayGradingPage() {
         })
       });
 
-      if (!response.ok) throw new Error('Grading failed');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Grading failed. Please try again.');
+      }
 
       const data = await response.json();
+      if (!data.result) {
+        throw new Error('Invalid response format from server');
+      }
       setResult(data.result);
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Failed to grade essay. Please try again.');
+      setError(null);
+    } catch (error: any) {
+      console.error('Grading error:', error);
+      const errorMessage = error.message || 'Failed to grade essay. Please try again.';
+      setError(errorMessage);
+      setResult(null);
     } finally {
       setIsGrading(false);
     }
@@ -72,6 +88,7 @@ export default function EssayGradingPage() {
     setPrompt('');
     setResult(null);
     setWordCount(0);
+    setError(null);
   };
 
   return (
@@ -110,6 +127,16 @@ export default function EssayGradingPage() {
                 <FileText className="w-6 h-6 text-blue-600" />
                 Your Essay
               </h2>
+
+              {/* Error Message */}
+              {error && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-red-800">{error}</p>
+                  </div>
+                </div>
+              )}
 
               {/* Settings */}
               <div className="grid grid-cols-2 gap-4 mb-6">

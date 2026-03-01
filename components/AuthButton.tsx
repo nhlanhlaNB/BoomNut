@@ -1,16 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { auth, googleProvider } from '@/lib/firebase';
-import { signInWithPopup, signOut, onAuthStateChanged, User, createUserWithEmailAndPassword, signInWithEmailAndPassword, RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, signInWithRedirect } from 'firebase/auth';
+import { signInWithPopup, signOut, User, createUserWithEmailAndPassword, signInWithEmailAndPassword, RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, signInWithRedirect } from 'firebase/auth';
 import { LogIn, LogOut, User as UserIcon, Mail, X, Phone, Smartphone } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 import SubscriptionBadge from './SubscriptionBadge';
 
 export default function AuthButton() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, loading } = useAuth();
+  const router = useRouter();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showSignInNotification, setShowSignInNotification] = useState(false);
+  const [shouldRedirect, setShouldRedirect] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email');
   const [email, setEmail] = useState('');
@@ -19,15 +23,6 @@ export default function AuthButton() {
   const [verificationCode, setVerificationCode] = useState('');
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [authError, setAuthError] = useState('');
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
 
   // Handle body scroll when modal opens/closes
   useEffect(() => {
@@ -42,6 +37,25 @@ export default function AuthButton() {
     };
   }, [showAuthModal]);
 
+  // Handle redirect after successful sign in
+  useEffect(() => {
+    if (shouldRedirect && user && !loading) {
+      // User is authenticated, redirect to home
+      router.push('/');
+      setShouldRedirect(false);
+    }
+  }, [shouldRedirect, user, loading, router]);
+
+  // Auto-dismiss sign in notification
+  useEffect(() => {
+    if (showSignInNotification) {
+      const timer = setTimeout(() => {
+        setShowSignInNotification(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showSignInNotification]);
+
   const handleSignIn = async () => {
     try {
       // Check if device is mobile
@@ -54,10 +68,15 @@ export default function AuthButton() {
         // Use popup for desktop
         await signInWithPopup(auth, googleProvider);
         setShowAuthModal(false);
+        setShowSignInNotification(true);
+        // Mark that we should redirect once auth state updates
+        setShouldRedirect(true);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error signing in:', error);
-      alert('Failed to sign in. Please try again.');
+      if (error?.code !== 'auth/popup-closed-by-user') {
+        alert('Failed to sign in. Please try again: ' + error.message);
+      }
     }
   };
 
@@ -72,8 +91,11 @@ export default function AuthButton() {
         await signInWithEmailAndPassword(auth, email, password);
       }
       setShowAuthModal(false);
+      setShowSignInNotification(true);
       setEmail('');
       setPassword('');
+      // Mark that we should redirect once auth state updates
+      setShouldRedirect(true);
     } catch (error: any) {
       console.error('Auth error:', error);
       setAuthError(error.message || 'Authentication failed');
@@ -107,9 +129,12 @@ export default function AuthButton() {
         // Verify code
         await confirmationResult.confirm(verificationCode);
         setShowAuthModal(false);
+        setShowSignInNotification(true);
         setPhoneNumber('');
         setVerificationCode('');
         setConfirmationResult(null);
+        // Mark that we should redirect once auth state updates
+        setShouldRedirect(true);
       }
     } catch (error: any) {
       console.error('Phone auth error:', error);
@@ -360,65 +385,74 @@ export default function AuthButton() {
   }
 
   return (
-    <div className="relative">
-      <button
-        onClick={() => setShowDropdown(!showDropdown)}
-        className="flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur-sm rounded-lg hover:bg-white transition-all shadow-sm"
-      >
-        {user.photoURL ? (
-          <img
-            src={user.photoURL}
-            alt={user.displayName || 'User'}
-            className="w-8 h-8 rounded-full border-2 border-blue-500"
-          />
-        ) : (
-          <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
-            {user.displayName?.charAt(0) || user.email?.charAt(0) || 'U'}
+    <>
+      <div className="relative">
+        <button
+          onClick={() => setShowDropdown(!showDropdown)}
+          className="flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur-sm rounded-lg hover:bg-white transition-all shadow-sm"
+        >
+          {user.photoURL ? (
+            <img
+              src={user.photoURL}
+              alt={user.displayName || 'User'}
+              className="w-8 h-8 rounded-full border-2 border-blue-500"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
+              {user.displayName?.charAt(0) || user.email?.charAt(0) || 'U'}
+            </div>
+          )}
+          <span className="font-medium text-gray-800 max-w-[150px] truncate">
+            {user.displayName || user.email}
+          </span>
+        </button>
+
+        {showDropdown && (
+          <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
+            <div className="px-4 py-3 border-b border-gray-200">
+              <p className="font-semibold text-gray-800">{user.displayName}</p>
+              <p className="text-sm text-gray-500 truncate">{user.email}</p>
+              <div className="mt-2">
+                <SubscriptionBadge />
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                setShowDropdown(false);
+                window.location.href = '/study';
+              }}
+              className="w-full flex items-center gap-2 px-4 py-2 hover:bg-gray-50 text-gray-700 transition-colors"
+            >
+              <UserIcon className="w-4 h-4" />
+              Study Dashboard
+            </button>
+            <button
+              onClick={() => {
+                setShowDropdown(false);
+                window.location.href = '/pricing';
+              }}
+              className="w-full flex items-center gap-2 px-4 py-2 hover:bg-gray-50 text-gray-700 transition-colors"
+            >
+              <LogIn className="w-4 h-4" />
+              Pricing
+            </button>
+            <button
+              onClick={handleSignOut}
+              className="w-full flex items-center gap-2 px-4 py-3 hover:bg-red-50 text-red-600 transition-colors border-t border-gray-200"
+            >
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </button>
           </div>
         )}
-        <span className="font-medium text-gray-800 max-w-[150px] truncate">
-          {user.displayName || user.email}
-        </span>
-      </button>
+      </div>
 
-      {showDropdown && (
-        <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
-          <div className="px-4 py-3 border-b border-gray-200">
-            <p className="font-semibold text-gray-800">{user.displayName}</p>
-            <p className="text-sm text-gray-500 truncate">{user.email}</p>
-            <div className="mt-2">
-              <SubscriptionBadge />
-            </div>
-          </div>
-          <button
-            onClick={() => {
-              setShowDropdown(false);
-              window.location.href = '/study';
-            }}
-            className="w-full flex items-center gap-2 px-4 py-2 hover:bg-gray-50 text-gray-700 transition-colors"
-          >
-            <UserIcon className="w-4 h-4" />
-            Study Dashboard
-          </button>
-          <button
-            onClick={() => {
-              setShowDropdown(false);
-              window.location.href = '/pricing';
-            }}
-            className="w-full flex items-center gap-2 px-4 py-2 hover:bg-gray-50 text-gray-700 transition-colors"
-          >
-            <LogIn className="w-4 h-4" />
-            Pricing
-          </button>
-          <button
-            onClick={handleSignOut}
-            className="w-full flex items-center gap-2 px-4 py-3 hover:bg-red-50 text-red-600 transition-colors border-t border-gray-200"
-          >
-            <LogOut className="w-4 h-4" />
-            Sign Out
-          </button>
+      {/* Sign In Notification */}
+      {showSignInNotification && (
+        <div className="fixed bottom-6 right-6 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg animate-fadeInUp z-50">
+          <span className="font-medium">Signed In</span>
         </div>
       )}
-    </div>
+    </>
   );
 }

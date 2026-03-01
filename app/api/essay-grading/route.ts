@@ -1,8 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { createChatCompletion } from '@/lib/azureOpenAI';
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const { essay, prompt, subject, gradeLevel } = await req.json();
 
@@ -13,27 +12,16 @@ export async function POST(req: Request) {
       );
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4-turbo-preview',
-        messages: [
-          {
-            role: 'system',
-            content: `You are an expert ${subject} teacher grading a ${gradeLevel} level essay. Provide comprehensive, constructive feedback that helps students improve. Grade on a standard A-F scale with + and - modifiers.`
-          },
-          {
-            role: 'user',
-            content: `Please grade this essay and provide detailed feedback:
+    if (!subject) {
+      return NextResponse.json(
+        { error: 'Subject is required' },
+        { status: 400 }
+      );
+    }
 
-${prompt ? `Prompt: ${prompt}\n\n` : ''}Essay:
-${essay}
+    const systemMessage = `You are an expert ${subject} teacher grading a ${gradeLevel || 'High School'} level essay. Provide comprehensive, constructive feedback that helps students improve. Grade on a standard A-F scale with + and - modifiers.
 
-Provide your response as JSON with this structure:
+Always respond with valid JSON only in this exact format:
 {
   "grade": "A/B+/B/C/etc",
   "score": 85,
@@ -46,36 +34,47 @@ Provide your response as JSON with this structure:
   "improvements": ["improvement 1", "improvement 2", "improvement 3"],
   "detailedFeedback": "Comprehensive paragraph explaining the grade...",
   "suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"]
-}`
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 2000
-      }),
+}`;
+
+    const userMessage = `Please grade this essay and provide detailed feedback:
+
+${prompt ? `Prompt: ${prompt}\n\n` : ''}Essay:
+${essay}`;
+
+    const completion = await createChatCompletion({
+      messages: [
+        { role: 'system', content: systemMessage },
+        { role: 'user', content: userMessage }
+      ],
+      temperature: 0.7,
+      maxTokens: 2000,
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      console.error('OpenAI API error:', error);
-      throw new Error('OpenAI API error');
+    const responseContent = completion.choices[0]?.message?.content;
+    
+    if (!responseContent) {
+      throw new Error('Empty response from AI model');
     }
 
-    const data = await response.json();
-    const content = data.choices[0].message.content;
-    
     // Parse JSON from response
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      throw new Error('Failed to parse grading response');
+      console.error('Failed to extract JSON from response:', responseContent);
+      throw new Error('Failed to parse grading response - invalid JSON format');
     }
 
     const result = JSON.parse(jsonMatch[0]);
 
     return NextResponse.json({ result });
-  } catch (error) {
-    console.error('Essay grading error:', error);
+  } catch (error: any) {
+    console.error('=== Essay Grading Error ===');
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('Full error:', error);
+    console.error('===========================');
+    
     return NextResponse.json(
-      { error: 'Failed to grade essay' },
+      { error: error.message || 'Failed to grade essay. Please try again.' },
       { status: 500 }
     );
   }
