@@ -55,8 +55,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'User ID required' }, { status: 400 });
     }
 
+    if (!db) {
+      console.warn('Firestore not configured; skipping subscription lookup.');
+      return NextResponse.json({ error: 'Firestore not configured' }, { status: 500 });
+    }
+
     // Get user's subscription from Firestore
-    const userRef = doc(db, 'users', userId);
+    const userRef = doc(db!, 'users', userId);
     const userDoc = await getDoc(userRef);
 
     if (!userDoc.exists()) {

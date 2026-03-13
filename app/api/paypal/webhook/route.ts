@@ -123,7 +123,11 @@ export async function POST(req: NextRequest) {
         const billingPeriod = planId.includes('YEARLY') ? 'yearly' : 'monthly';
 
         if (customId) {
-          const userRef = doc(db, 'users', customId);
+          if (!db) {
+            console.warn('Firestore not configured; webhook cannot update user.');
+            break;
+          }
+          const userRef = doc(db!, 'users', customId);
           await setDoc(userRef, {
             subscription: {
               plan: planName,
@@ -149,7 +153,11 @@ export async function POST(req: NextRequest) {
         const subscriptionId = subscription.id;
 
         // Find user by subscription ID
-        const usersRef = collection(db, 'users');
+        if (!db) {
+          console.warn('Firestore not configured; webhook cannot find user.');
+          break;
+        }
+        const usersRef = collection(db!, 'users');
         const q = query(usersRef, where('subscription.subscriptionId', '==', subscriptionId));
         const snapshot = await getDocs(q);
         
@@ -172,7 +180,11 @@ export async function POST(req: NextRequest) {
         const subscriptionId = subscription.id;
 
         // Find user by subscription ID
-        const usersRef = collection(db, 'users');
+        if (!db) {
+          console.warn('Firestore not configured; webhook cannot find user.');
+          break;
+        }
+        const usersRef = collection(db!, 'users');
         const q = query(usersRef, where('subscription.subscriptionId', '==', subscriptionId));
         const snapshot = await getDocs(q);
         
