@@ -86,6 +86,11 @@ export default function PricingPage() {
     if (!user) return;
 
     try {
+      if (!db) {
+        console.warn('Firestore not configured; cannot save subscription');
+        alert('Subscription activated but not saved due to backend configuration.');
+        return;
+      }
       const userRef = doc(db, 'users', user.uid);
       await setDoc(userRef, {
         subscription: {

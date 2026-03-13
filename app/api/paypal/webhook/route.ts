@@ -206,6 +206,10 @@ export async function POST(req: NextRequest) {
 
         if (subscriptionId) {
           // Update last successful payment
+          if (!db) {
+            console.warn('Firestore not configured; webhook cannot query users.');
+            break;
+          }
           const usersRef = collection(db, 'users');
           const q = query(usersRef, where('subscription.subscriptionId', '==', subscriptionId));
           const snapshot = await getDocs(q);
