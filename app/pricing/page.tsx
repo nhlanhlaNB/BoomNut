@@ -18,30 +18,6 @@ const plans = [
     icon: Sparkles,
     color: 'from-gray-400 to-gray-600',
     features: [
-      '5 AI tutor messages per day',
-      '2 study sets per week',
-      'Basic flashcards (10 cards max)',
-      'Limited practice tests',
-      'Text-only uploads',
-    ],
-    limitations: [
-      'No video/audio uploads',
-      'No live lecture assistant',
-      'No photo uploads',
-      'No handwritten notes scanning',
-    ],
-  },
-  {
-    name: 'Pro',
-    price: 10,
-    yearlyPrice: 5,
-    period: 'month',
-    icon: Zap,
-    color: 'from-blue-500 to-purple-600',
-    popular: true,
-    paypalPlanId: 'P-0EW71788K8993972RNFP4YOY', // Monthly plan ID
-    paypalYearlyPlanId: 'P-33A20854VN557325GNFP6CYQ', // Yearly plan ID ($5/month = $60/year)
-    features: [
       'Unlimited chat with Lisa AI tutor',
       'Unlimited study sets',
       'Unlimited AI practice tests & flashcards',

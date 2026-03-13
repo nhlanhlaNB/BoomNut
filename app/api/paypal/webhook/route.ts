@@ -206,23 +206,22 @@ export async function POST(req: NextRequest) {
 
         if (subscriptionId) {
           // Update last successful payment
-          if (!db) {
-            console.warn('Firestore not configured; webhook cannot query users.');
-            break;
-          }
-          const usersRef = collection(db, 'users');
-          const q = query(usersRef, where('subscription.subscriptionId', '==', subscriptionId));
-          const snapshot = await getDocs(q);
-          
-          if (!snapshot.empty) {
-            const userDoc = snapshot.docs[0];
-            await updateDoc(userDoc.ref, {
-              'subscription.lastPaymentDate': new Date(),
-              'subscription.status': 'active',
-            });
-
-            console.log(`Payment completed for user ${userDoc.id}`);
-          }
+            if (!db) {
+              console.warn('Firestore not configured; webhook cannot query users.');
+              break;
+            } else {
+              const usersRef = collection(db, 'users');
+              const q = query(usersRef, where('subscription.subscriptionId', '==', subscriptionId));
+              const snapshot = await getDocs(q);
+              if (!snapshot.empty) {
+                const userDoc = snapshot.docs[0];
+                await updateDoc(userDoc.ref, {
+                  'subscription.lastPaymentDate': new Date(),
+                  'subscription.status': 'active',
+                });
+                console.log(`Payment completed for user ${userDoc.id}`);
+              }
+            }
         }
         break;
       }
