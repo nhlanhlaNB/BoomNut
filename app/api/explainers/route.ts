@@ -19,19 +19,11 @@ export async function POST(req: Request) {
       expert: 'Explain at a graduate level - use advanced terminology and comprehensive analysis'
     };
 
-<<<<<<< Updated upstream
     const completion = await createChatCompletion({
       messages: [
         {
           role: 'system',
           content: `You are an expert ${subject} educator who excels at making complex concepts accessible. ${complexityMap[complexity] || complexityMap.medium}. Your explanations are clear, engaging, and pedagogically sound. Always respond with valid JSON only.`
-=======
-    const response = await createChatCompletion({
-      messages: [
-        {
-          role: 'system',
-          content: `You are an expert ${subject} educator who excels at making complex concepts accessible. ${complexityMap[complexity] || complexityMap.medium}. Your explanations are clear, engaging, and pedagogically sound.`
->>>>>>> Stashed changes
         },
         {
           role: 'user',
@@ -51,7 +43,7 @@ Provide a comprehensive explanation as JSON with this structure:
 }`
         }
       ],
-<<<<<<< Updated upstream
+      temperature: 0.7,
       maxTokens: 3000,
     });
 
@@ -59,13 +51,6 @@ Provide a comprehensive explanation as JSON with this structure:
     if (!content) {
       throw new Error('No content in response');
     }
-=======
-      temperature: 0.7,
-      maxTokens: 3000,
-    });
-
-    const content = response.choices[0]?.message?.content || '';
->>>>>>> Stashed changes
     
     // Parse JSON from response
     const jsonMatch = content.match(/\{[\s\S]*\}/);
