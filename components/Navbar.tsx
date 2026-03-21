@@ -22,7 +22,9 @@ export default function Navbar() {
 
   const handleSignOut = async () => {
     try {
-      await signOut(auth);
+      if (auth) {
+        await signOut(auth);
+      }
     } catch (error) {
       console.error('Sign out error:', error);
     }
