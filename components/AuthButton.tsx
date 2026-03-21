@@ -62,6 +62,10 @@ export default function AuthButton() {
 
   const handleSignIn = async () => {
     try {
+      if (!auth || !googleProvider) {
+        console.error('Auth or Google Provider not configured');
+        return;
+      }
       // Check if device is mobile
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
