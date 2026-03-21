@@ -91,6 +91,11 @@ export default function AuthButton() {
     e.preventDefault();
     setAuthError('');
     
+    if (!auth) {
+      setAuthError('Authentication service is not available');
+      return;
+    }
+    
     try {
       if (authMode === 'signup') {
         await createUserWithEmailAndPassword(auth, email, password);
