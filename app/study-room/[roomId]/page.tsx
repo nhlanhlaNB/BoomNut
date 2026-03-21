@@ -143,7 +143,7 @@ export default function StudyRoomPage() {
   }, [roomId]);
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading || !user) return;
+    if (!input.trim() || isLoading || !user || !db) return;
 
     const userMessage = {
       role: 'user',
@@ -209,6 +209,7 @@ export default function StudyRoomPage() {
   };
 
   const updateRoomSubject = async (newSubject: string) => {
+    if (!db) return;
     setSubject(newSubject);
     const roomRef = doc(db, 'studyRooms', roomId);
     await updateDoc(roomRef, { subject: newSubject });
