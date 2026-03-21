@@ -41,7 +41,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
+    if (!user || !db) {
       setPlan('free');
       setStatus(null);
       setSubscriptionId(null);

@@ -53,7 +53,7 @@ export default function StudyRoomPage() {
 
   // Initialize room and join
   useEffect(() => {
-    if (!user || authLoading) return;
+    if (!user || authLoading || !db) return;
 
     const initializeRoom = async () => {
       const roomRef = doc(db, 'studyRooms', roomId);
@@ -99,7 +99,7 @@ export default function StudyRoomPage() {
 
   // Listen to room updates
   useEffect(() => {
-    if (!roomId) return;
+    if (!roomId || !db) return;
 
     const roomRef = doc(db, 'studyRooms', roomId);
     const unsubscribe = onSnapshot(roomRef, (snapshot) => {
@@ -117,7 +117,7 @@ export default function StudyRoomPage() {
 
   // Listen to messages
   useEffect(() => {
-    if (!roomId) return;
+    if (!roomId || !db) return;
 
     const messagesRef = collection(db, 'studyRooms', roomId, 'messages');
     const q = query(messagesRef, orderBy('timestamp', 'asc'));
