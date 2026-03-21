@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-
-function getOpenAIClient() {
-  if (!process.env.OPENAI_API_KEY) return null;
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-}
+import { createChatCompletion } from '@/lib/azureOpenAI';
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,14 +9,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: 'Content is required' },
         { status: 400 }
-      );
-    }
-
-    const openai = getOpenAIClient();
-    if (!openai) {
-      return NextResponse.json(
-        { error: 'OpenAI API key not configured' },
-        { status: 500 }
       );
     }
 
@@ -60,8 +47,7 @@ Return as JSON in this format:
   "timeLimit": 30
 }`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
+    const response = await createChatCompletion({
       messages: [
         {
           role: 'system',
@@ -73,7 +59,7 @@ Return as JSON in this format:
         },
       ],
       temperature: 0.8,
-      response_format: { type: 'json_object' },
+      maxTokens: 2200,
     });
 
     const quiz = JSON.parse(response.choices[0]?.message?.content || '{}');
@@ -103,8 +89,6 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    const openai = getOpenAIClient();
-
     // Grade each answer
     let totalPoints = 0;
     let earnedPoints = 0;
@@ -119,11 +103,10 @@ export async function PUT(req: NextRequest) {
       let isCorrect = false;
       let feedback = '';
 
-      if (question.type === 'short-answer' && openai) {
+      if (question.type === 'short-answer') {
         // Use AI to grade short answer
         try {
-          const gradeResponse = await openai.chat.completions.create({
-          model: 'gpt-4-turbo-preview',
+          const gradeResponse = await createChatCompletion({
           messages: [
             {
               role: 'system',
@@ -140,7 +123,7 @@ Return JSON: {"score": 0.8, "feedback": "Good answer but...", "isCorrect": true}
             },
           ],
           temperature: 0.3,
-          response_format: { type: 'json_object' },
+          maxTokens: 250,
         });
 
         const grading = JSON.parse(gradeResponse.choices[0]?.message?.content || '{}');
@@ -183,32 +166,29 @@ Return JSON: {"score": 0.8, "feedback": "Good answer but...", "isCorrect": true}
     
     // Generate overall feedback
     let overallFeedback = '';
-    if (openai) {
-      try {
-        const feedbackResponse = await openai.chat.completions.create({
-          model: 'gpt-4-turbo-preview',
-          messages: [
-            {
-              role: 'system',
-              content: 'Provide encouraging, constructive feedback for a student based on their quiz performance.',
-            },
-            {
-              role: 'user',
-              content: `Student scored ${percentage.toFixed(1)}% (${earnedPoints}/${totalPoints} points). 
+    try {
+      const feedbackResponse = await createChatCompletion({
+        messages: [
+          {
+            role: 'system',
+            content: 'Provide encouraging, constructive feedback for a student based on their quiz performance.',
+          },
+          {
+            role: 'user',
+            content: `Student scored ${percentage.toFixed(1)}% (${earnedPoints}/${totalPoints} points). 
 Questions answered: ${gradedAnswers.length}
 Correct: ${gradedAnswers.filter(a => a.isCorrect).length}
 
 Provide brief, personalized feedback and study suggestions.`,
-            },
-          ],
-          temperature: 0.7,
-          max_tokens: 200,
-        });
+          },
+        ],
+        temperature: 0.7,
+        maxTokens: 200,
+      });
 
-        overallFeedback = feedbackResponse.choices[0]?.message?.content || '';
-      } catch (error) {
-        console.error('Failed to generate feedback:', error);
-      }
+      overallFeedback = feedbackResponse.choices[0]?.message?.content || '';
+    } catch (error) {
+      console.error('Failed to generate feedback:', error);
     }
     
     if (!overallFeedback) {

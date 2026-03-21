@@ -1,7 +1,7 @@
 # StudyFetch AI - Complete Feature Documentation
 
 ## 🎓 Overview
-An advanced AI-powered learning platform with comprehensive study tools, inspired by StudyFetch, built with Next.js 14, TypeScript, and OpenAI GPT-4.
+An advanced AI-powered learning platform with comprehensive study tools, inspired by StudyFetch, built with Next.js 14, TypeScript, and Azure OpenAI.
 
 ## ✨ All Features Implemented
 
@@ -482,7 +482,7 @@ Location: `prisma/schema-extended.prisma`
 ```bash
 Node.js 18+
 npm or yarn
-OpenAI API key
+Azure AI Project / Azure OpenAI API key
 ```
 
 ### Installation:
@@ -492,7 +492,7 @@ npm install
 
 # Set up environment
 cp .env.example .env.local
-# Add your OPENAI_API_KEY
+# Add your Azure AI Project + Azure OpenAI credentials
 
 # Run development server
 npm run dev
@@ -500,7 +500,23 @@ npm run dev
 
 ### Environment Variables:
 ```env
-OPENAI_API_KEY=sk-...
+AZURE_PROJECT_ENDPOINT=https://your-resource.services.ai.azure.com/api/projects/your-project
+AZURE_PROJECT_API_KEY=your_azure_ai_project_api_key
+AZURE_PROJECT_REGION=your-region
+
+AZURE_OPENAI_CHAT_DEPLOYMENT=your-chat-deployment
+AZURE_OPENAI_CHAT_VERSION=2025-12-11
+AZURE_OPENAI_CHAT_ENDPOINT=https://your-resource.cognitiveservices.azure.com/openai/deployments/your-chat-deployment/chat/completions?api-version=2024-05-01-preview
+AZURE_OPENAI_CHAT_KEY=your_azure_openai_key
+
+AZURE_OPENAI_AUDIO_DEPLOYMENT=your-audio-deployment
+AZURE_OPENAI_AUDIO_VERSION=2025-08-28
+AZURE_OPENAI_AUDIO_ENDPOINT=https://your-resource.cognitiveservices.azure.com
+AZURE_OPENAI_AUDIO_KEY=your_azure_openai_key
+
+AZURE_OPENAI_API_VERSION=2024-05-01-preview
+AZURE_SPEECH_KEY=your_azure_speech_key
+AZURE_SPEECH_REGION=your-region
 DATABASE_URL=file:./dev.db
 NEXT_PUBLIC_FIREBASE_API_KEY=...
 # Add other Firebase credentials
@@ -618,11 +634,11 @@ All features are fully implemented and ready to test. The platform provides a co
 
 ## 📚 Additional Resources
 
-- OpenAI API Docs: https://platform.openai.com/docs
+- Azure OpenAI Docs: https://learn.microsoft.com/azure/ai-services/openai/
 - Spaced Repetition: https://en.wikipedia.org/wiki/Spaced_repetition
 - Next.js Docs: https://nextjs.org/docs
 - Prisma Docs: https://www.prisma.io/docs
 
 ---
 
-Built with ❤️ using Next.js, TypeScript, OpenAI GPT-4, and Tailwind CSS
+Built with ❤️ using Next.js, TypeScript, Azure OpenAI, and Tailwind CSS

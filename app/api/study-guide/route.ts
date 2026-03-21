@@ -1,19 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Groq from 'groq-sdk';
-import OpenAI from 'openai';
-
-function getGroqClient() {
-  if (!process.env.GROQ_API_KEY) return null;
-  return new Groq({ apiKey: process.env.GROQ_API_KEY });
-}
-
-function getOpenRouterClient() {
-  if (!process.env.OPENROUTER_API_KEY) return null;
-  return new OpenAI({
-    apiKey: process.env.OPENROUTER_API_KEY,
-    baseURL: 'https://openrouter.ai/api/v1',
-  });
-}
+import { createChatCompletion } from '@/lib/azureOpenAI';
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,45 +26,17 @@ Format your response in clear, well-structured markdown with headings, bullet po
 
     const userPrompt = `Create a ${format} study guide from this content:\n\n${content}`;
 
-    const groq = getGroqClient();
-    
-    try {
-      // Try Groq first
-      if (!groq) throw new Error('Groq not configured');
-      const completion = await groq.chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 2000,
-      });
+    const completion = await createChatCompletion({
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      temperature: 0.7,
+      maxTokens: 2000,
+    });
 
-      const studyGuide = completion.choices[0]?.message?.content || 'Failed to generate study guide.';
-      return NextResponse.json({ studyGuide });
-    } catch (groqError) {
-      console.log('Groq failed, trying OpenRouter fallback:', groqError);
-      
-      const openrouter = getOpenRouterClient();
-      if (!openrouter) {
-        throw new Error('No AI provider configured. Please set GROQ_API_KEY or OPENROUTER_API_KEY.');
-      }
-      
-      // Fallback to OpenRouter
-      const completion = await openrouter.chat.completions.create({
-        model: 'deepseek/deepseek-v3',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 2000,
-      });
-
-      const studyGuide = completion.choices[0]?.message?.content || 'Failed to generate study guide.';
-      return NextResponse.json({ studyGuide });
-    }
+    const studyGuide = completion.choices[0]?.message?.content || 'Failed to generate study guide.';
+    return NextResponse.json({ studyGuide });
   } catch (error: any) {
     console.error('Study Guide Generation Error:', error);
     return NextResponse.json(

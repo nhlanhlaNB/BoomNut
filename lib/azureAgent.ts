@@ -3,7 +3,6 @@
  * Handles communication with Azure AI Projects for agent-based interactions
  */
 
-import { DefaultAzureCredential } from '@azure/identity';
 
 interface AgentConfig {
   endpoint: string;
@@ -20,17 +19,30 @@ interface AgentResponse {
 /**
  * Create or update an agent with the given configuration
  */
+function getAzureAgentConfig() {
+  const endpoint =
+    process.env.AZURE_PROJECT_ENDPOINT ||
+    process.env.AZURE_AI_ENDPOINT ||
+    '';
+  const apiKey = process.env.AZURE_PROJECT_API_KEY || '';
+
+  if (!apiKey) {
+    throw new Error('Azure AI Project API key not configured');
+  }
+
+  return { endpoint, apiKey };
+}
+
 export async function createAgent(config: AgentConfig) {
   try {
     // Note: Azure AI Projects SDK needs to be installed via Python
     // This is a REST API wrapper for Next.js
-    const credential = new DefaultAzureCredential();
-    const token = await credential.getToken('https://cognitiveservices.azure.com/.default');
+    const { apiKey } = getAzureAgentConfig();
 
     const response = await fetch(`${config.endpoint}/agents`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token.token}`,
+        'api-key': apiKey,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -60,13 +72,12 @@ export async function chatWithAgent(
   messages: Array<{ role: string; content: string }>
 ): Promise<AgentResponse> {
   try {
-    const credential = new DefaultAzureCredential();
-    const token = await credential.getToken('https://cognitiveservices.azure.com/.default');
+    const { apiKey } = getAzureAgentConfig();
 
     const response = await fetch(`${endpoint}/chat/completions`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token.token}`,
+        'api-key': apiKey,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

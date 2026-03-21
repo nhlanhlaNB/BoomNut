@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-
-function getOpenAIClient() {
-  if (!process.env.OPENAI_API_KEY) return null;
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-}
+import { createAudioTranscription, createChatCompletion } from '@/lib/azureOpenAI';
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,32 +12,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const openai = getOpenAIClient();
-    if (!openai) {
-      return NextResponse.json(
-        { error: 'OpenAI API key not configured' },
-        { status: 500 }
-      );
-    }
-
     // Convert base64 to buffer
     const audioBuffer = Buffer.from(audio.split(',')[1], 'base64');
     
     // Create a File object
     const audioFile = new File([audioBuffer], 'audio.webm', { type: 'audio/webm' });
 
-    // Transcribe with Whisper
-    const transcription = await openai.audio.transcriptions.create({
+    const transcription = await createAudioTranscription({
       file: audioFile,
-      model: 'whisper-1',
       language: language,
-      response_format: 'verbose_json',
-      timestamp_granularities: ['segment'],
     });
 
     // Generate AI notes from transcription
-    const notesResponse = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
+    const notesResponse = await createChatCompletion({
       messages: [
         {
           role: 'system',
@@ -60,14 +42,13 @@ Make the notes clear, concise, and easy to study from.`,
         },
       ],
       temperature: 0.7,
-      max_tokens: 2000,
+      maxTokens: 2000,
     });
 
     const notes = notesResponse.choices[0]?.message?.content || '';
 
     // Extract key concepts
-    const conceptsResponse = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
+    const conceptsResponse = await createChatCompletion({
       messages: [
         {
           role: 'system',
@@ -79,7 +60,7 @@ Make the notes clear, concise, and easy to study from.`,
         },
       ],
       temperature: 0.5,
-      response_format: { type: 'json_object' },
+      maxTokens: 250,
     });
 
     let keyConcepts = [];

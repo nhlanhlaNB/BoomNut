@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-
-function getOpenAIClient() {
-  if (!process.env.OPENAI_API_KEY) return null;
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-}
+import { createAudioTranscription, createChatCompletion } from '@/lib/azureOpenAI';
 
 let activeStream: any = null;
 let fullTranscription = '';
@@ -12,7 +7,7 @@ let fullTranscription = '';
 // Start live lecture transcription
 export async function POST(req: NextRequest) {
   try {
-    const { action, audio, language = 'en', sessionId } = await req.json();
+    const { action, audio, language = 'en', question } = await req.json();
 
     if (action === 'start') {
       // Start new session
@@ -23,15 +18,6 @@ export async function POST(req: NextRequest) {
         status: 'started',
         message: 'Live lecture session started',
       });
-    }
-
-    // All other actions require OpenAI
-    const openai = getOpenAIClient();
-    if (!openai) {
-      return NextResponse.json(
-        { error: 'OpenAI API key not configured' },
-        { status: 500 }
-      );
     }
 
     if (action === 'transcribe') {
@@ -56,24 +42,27 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Create a File-like object for OpenAI (Node.js doesn't have native File API)
-      const audioFile = new Blob([new Uint8Array(audioBuffer)], { type: 'audio/webm' }) as any;
-      audioFile.name = 'audio.webm';
+      const audioFile = new File([audioBuffer], 'audio.webm', { type: 'audio/webm' });
 
-      const transcription = await openai.audio.transcriptions.create({
+      const transcriptionResponse = await createAudioTranscription({
         file: audioFile,
-        model: 'whisper-1',
         language: language,
-        response_format: 'text',
       });
+      const transcription = transcriptionResponse?.text || '';
+
+      if (!transcription) {
+        return NextResponse.json(
+          { error: 'Transcription service returned empty output' },
+          { status: 502 }
+        );
+      }
 
       fullTranscription += ' ' + transcription;
 
       // Generate real-time notes from accumulated transcription
       let notes = '';
       if (fullTranscription.split(' ').length > 50) {
-        const notesResponse = await openai.chat.completions.create({
-          model: 'gpt-4-turbo-preview',
+        const notesResponse = await createChatCompletion({
           messages: [
             {
               role: 'system',
@@ -85,7 +74,7 @@ export async function POST(req: NextRequest) {
             },
           ],
           temperature: 0.5,
-          max_tokens: 500,
+          maxTokens: 500,
         });
 
         notes = notesResponse.choices[0]?.message?.content || '';
@@ -100,8 +89,6 @@ export async function POST(req: NextRequest) {
     
     if (action === 'question') {
       // Answer question about lecture
-      const { question } = await req.json();
-
       if (!question) {
         return NextResponse.json(
           { error: 'Question required' },
@@ -109,8 +96,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const answerResponse = await openai.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
+      const answerResponse = await createChatCompletion({
         messages: [
           {
             role: 'system',
@@ -122,7 +108,7 @@ export async function POST(req: NextRequest) {
           },
         ],
         temperature: 0.7,
-        max_tokens: 300,
+        maxTokens: 300,
       });
 
       const answer = answerResponse.choices[0]?.message?.content || '';
@@ -135,8 +121,7 @@ export async function POST(req: NextRequest) {
     
     if (action === 'end') {
       // End session and generate final notes
-      const finalNotesResponse = await openai.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
+      const finalNotesResponse = await createChatCompletion({
         messages: [
           {
             role: 'system',
@@ -148,14 +133,13 @@ export async function POST(req: NextRequest) {
           },
         ],
         temperature: 0.6,
-        max_tokens: 2000,
+        maxTokens: 2000,
       });
 
       const finalNotes = finalNotesResponse.choices[0]?.message?.content || '';
 
       // Generate summary
-      const summaryResponse = await openai.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
+      const summaryResponse = await createChatCompletion({
         messages: [
           {
             role: 'system',
@@ -167,7 +151,7 @@ export async function POST(req: NextRequest) {
           },
         ],
         temperature: 0.5,
-        max_tokens: 150,
+        maxTokens: 150,
       });
 
       const summary = summaryResponse.choices[0]?.message?.content || '';

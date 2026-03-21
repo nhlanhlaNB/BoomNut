@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-
-function getOpenAIClient() {
-  if (!process.env.OPENAI_API_KEY) return null;
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-}
+import { createAudioSpeech, createChatCompletion } from '@/lib/azureOpenAI';
 
 // Generate podcast/lecture from study materials
 export async function POST(req: NextRequest) {
@@ -24,14 +19,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const openai = getOpenAIClient();
-    if (!openai) {
-      return NextResponse.json(
-        { error: 'OpenAI API key not configured' },
-        { status: 500 }
-      );
-    }
-
     // Generate script for podcast/lecture
     const scriptPrompt = `Create a ${duration}-minute ${style} podcast/lecture script from the following content.
 
@@ -47,8 +34,7 @@ ${content}
 
 Create an engaging, well-paced script that effectively communicates the key concepts.`;
 
-    const scriptResponse = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
+    const scriptResponse = await createChatCompletion({
       messages: [
         {
           role: 'system',
@@ -60,7 +46,7 @@ Create an engaging, well-paced script that effectively communicates the key conc
         },
       ],
       temperature: 0.8,
-      max_tokens: duration * 200, // Roughly 150 words per minute
+      maxTokens: duration * 200, // Roughly 150 words per minute
     });
 
     const script = scriptResponse.choices[0]?.message?.content || '';
@@ -86,14 +72,8 @@ Create an engaging, well-paced script that effectively communicates the key conc
     const audioSegments = [];
     
     for (const chunk of chunks) {
-      const mp3 = await openai.audio.speech.create({
-        model: 'tts-1-hd',
-        voice: voice as any,
-        input: chunk,
-        speed: 1.0,
-      });
-
-      const buffer = Buffer.from(await mp3.arrayBuffer());
+      const audioResponse = await createAudioSpeech(chunk, voice);
+      const buffer = Buffer.from(await audioResponse.arrayBuffer());
       audioSegments.push(buffer.toString('base64'));
     }
 

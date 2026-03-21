@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { DefaultAzureCredential } from '@azure/identity';
 
 // Azure AI Projects configuration
-const AZURE_AI_ENDPOINT = process.env.AZURE_AI_ENDPOINT || 'https://redcow-resource.services.ai.azure.com/api/projects/redcow';
+const AZURE_AI_ENDPOINT =
+  process.env.AZURE_PROJECT_ENDPOINT ||
+  process.env.AZURE_AI_ENDPOINT ||
+  'https://redcow-resource.services.ai.azure.com/api/projects/redcow';
+const AZURE_API_KEY = process.env.AZURE_PROJECT_API_KEY;
 const AGENT_NAME = process.env.AZURE_AGENT_NAME || 'spark-e-tutor';
 const MODEL_DEPLOYMENT = process.env.AZURE_MODEL_DEPLOYMENT || 'gpt-4o';
 
@@ -13,9 +16,12 @@ export async function POST(request: NextRequest) {
     // Build system instructions based on mode and subject
     let instructions = getInstructions(mode, subject, language, uploadedFiles);
 
-    // Get Azure credential
-    const credential = new DefaultAzureCredential();
-    const token = await credential.getToken('https://cognitiveservices.azure.com/.default');
+    if (!AZURE_API_KEY) {
+      return NextResponse.json(
+        { error: 'Azure AI Project API key not configured' },
+        { status: 500 }
+      );
+    }
 
     // Format messages for Azure AI
     const formattedMessages = [
@@ -39,7 +45,7 @@ export async function POST(request: NextRequest) {
     const response = await fetch(`${AZURE_AI_ENDPOINT}/chat/completions`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token.token}`,
+        'api-key': AZURE_API_KEY,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -48,7 +54,7 @@ export async function POST(request: NextRequest) {
           name: AGENT_NAME,
           type: 'agent_reference',
         },
-        max_tokens: 2000,
+        max_completion_tokens: 2000,
         temperature: 0.7,
       }),
     });
@@ -68,37 +74,11 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Azure AI Agent error:', error);
-    
-    // Fallback to Groq if Azure fails
-    try {
-      const { Groq } = await import('groq-sdk');
-      const groq = new Groq({
-        apiKey: process.env.GROQ_API_KEY,
-      });
 
-      const { messages, subject } = await request.json();
-      const completion = await groq.chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          {
-            role: 'system',
-            content: `You are Spark.E, an expert AI tutor specializing in ${subject}. Explain concepts clearly and encourage learning.`,
-          },
-          ...messages,
-        ],
-        max_tokens: 2000,
-      });
-
-      return NextResponse.json({
-        message: completion.choices[0]?.message?.content || 'Error generating response',
-        fallback: true,
-      });
-    } catch (fallbackError) {
-      return NextResponse.json(
-        { error: 'Both Azure AI and fallback provider failed' },
-        { status: 500 }
-      );
-    }
+    return NextResponse.json(
+      { error: error.message || 'Azure AI request failed' },
+      { status: 500 }
+    );
   }
 }
 

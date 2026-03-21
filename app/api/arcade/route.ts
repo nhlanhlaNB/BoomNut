@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+import { createChatCompletion } from '@/lib/azureOpenAI';
 
 export async function POST(req: Request) {
   try {
@@ -8,35 +7,22 @@ export async function POST(req: Request) {
 
     if (action === 'generate-question') {
       // Generate a quiz question for arcade mode
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: 'gpt-4-turbo-preview',
-          messages: [
-            {
-              role: 'system',
-              content: `You are a game question generator. Generate fun, engaging multiple-choice questions for educational games. Difficulty level ${difficulty}: 1=easy, 2=medium, 3=hard. Keep questions concise and answers clear.`
-            },
-            {
-              role: 'user',
-              content: `Generate 1 multiple-choice question about ${topic} with 4 options. Format as JSON: {"question": "...", "options": ["A", "B", "C", "D"], "correctAnswer": "..."}`
-            }
-          ],
-          temperature: 0.8,
-          max_tokens: 300
-        }),
+      const response = await createChatCompletion({
+        messages: [
+          {
+            role: 'system',
+            content: `You are a game question generator. Generate fun, engaging multiple-choice questions for educational games. Difficulty level ${difficulty}: 1=easy, 2=medium, 3=hard. Keep questions concise and answers clear.`
+          },
+          {
+            role: 'user',
+            content: `Generate 1 multiple-choice question about ${topic} with 4 options. Format as JSON: {"question": "...", "options": ["A", "B", "C", "D"], "correctAnswer": "..."}`
+          }
+        ],
+        temperature: 0.8,
+        maxTokens: 300,
       });
 
-      if (!response.ok) {
-        throw new Error('OpenAI API error');
-      }
-
-      const data = await response.json();
-      const content = data.choices[0].message.content;
+      const content = response.choices[0]?.message?.content || '';
       
       // Parse JSON from response
       const jsonMatch = content.match(/\{[\s\S]*\}/);

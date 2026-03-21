@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-
-function getOpenAIClient() {
-  if (!process.env.OPENAI_API_KEY) return null;
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-}
+import { createAudioSpeech, createChatCompletion } from '@/lib/azureOpenAI';
 
 // Generate educational video script and assets
 export async function POST(req: NextRequest) {
@@ -21,14 +16,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: 'Content is required' },
         { status: 400 }
-      );
-    }
-
-    const openai = getOpenAIClient();
-    if (!openai) {
-      return NextResponse.json(
-        { error: 'OpenAI API key not configured' },
-        { status: 500 }
       );
     }
 
@@ -65,8 +52,7 @@ Format as JSON:
   "visualAssets": ["Asset 1", "Asset 2"]
 }`;
 
-    const scriptResponse = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
+    const scriptResponse = await createChatCompletion({
       messages: [
         {
           role: 'system',
@@ -78,8 +64,7 @@ Format as JSON:
         },
       ],
       temperature: 0.8,
-      max_tokens: 3000,
-      response_format: { type: 'json_object' },
+      maxTokens: 3000,
     });
 
     const videoScript = JSON.parse(scriptResponse.choices[0]?.message?.content || '{}');
@@ -112,14 +97,8 @@ Format as JSON:
       // In production, you'd combine all chunks
       if (chunks.length > 0) {
         try {
-          const mp3 = await openai.audio.speech.create({
-            model: 'tts-1-hd',
-            voice: 'onyx',
-            input: chunks[0],
-            speed: 0.95,
-          });
-
-          const buffer = Buffer.from(await mp3.arrayBuffer());
+          const audioResponse = await createAudioSpeech(chunks[0], 'onyx');
+          const buffer = Buffer.from(await audioResponse.arrayBuffer());
           audioUrl = `data:audio/mp3;base64,${buffer.toString('base64')}`;
         } catch (error) {
           console.error('Audio generation error:', error);
