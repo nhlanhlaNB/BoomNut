@@ -28,6 +28,10 @@ export default function SignUpPage() {
     setIsLoading(true);
 
     try {
+      if (!auth) {
+        setError('Authentication service not configured');
+        return;
+      }
       // Create user account
       const { user } = await createUserWithEmailAndPassword(
         auth,
