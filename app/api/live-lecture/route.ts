@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const audioFile = new File([audioBuffer], 'audio.webm', { type: 'audio/webm' });
+      const audioFile = new File([new Uint8Array(audioBuffer)], 'audio.webm', { type: 'audio/webm' });
 
       const transcriptionResponse = await createAudioTranscription({
         file: audioFile,
