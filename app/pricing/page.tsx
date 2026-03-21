@@ -34,6 +34,7 @@ const plans = [
     period: 'month',
     icon: Crown,
     color: 'from-yellow-500 to-orange-600',
+    popular: true,
     paypalPlanId: 'P-8W509033WG9931346NFP5YAQ', // Premium monthly plan ID
     paypalYearlyPlanId: 'P-3NC19032VG801351ENFP56MY', // Premium yearly plan ID ($10/month = $120/year)
     features: [
