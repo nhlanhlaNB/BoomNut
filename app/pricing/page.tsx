@@ -26,6 +26,7 @@ const plans = [
       'Priority AI response',
       'Advanced study analytics',
     ],
+    limitations: [] as string[],
   },
   {
     name: 'Premium',
@@ -47,6 +48,7 @@ const plans = [
       'Custom AI tutor personality',
       'Priority support',
     ],
+    limitations: [] as string[],
   },
 ];
 
@@ -161,6 +163,10 @@ export default function PricingPage() {
     try {
       // In a real app, you would integrate with Stripe or another payment processor
       // For now, we'll just update the user's subscription in Firestore
+      if (!db) {
+        alert('Database not configured');
+        return;
+      }
       
       const userRef = doc(db, 'users', user.uid);
       await setDoc(userRef, {
@@ -333,7 +339,7 @@ export default function PricingPage() {
                     {plan.features.map((feature, idx) => (
                       <li key={idx} className="flex items-start gap-3 group/item">
                         <div className="flex-shrink-0 w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center mt-0.5 group-hover/item:scale-110 transition-transform">
-                          <Check className="w-3 h-3 sm:w-4 sm:h-4 text-white font-bold" />
+                          <Check className="w-3 h-3 sm: string, idx: numbersm:h-4 text-white font-bold" />
                         </div>
                         <span className="text-sm sm:text-base text-gray-700 font-medium leading-relaxed">{feature}</span>
                       </li>
