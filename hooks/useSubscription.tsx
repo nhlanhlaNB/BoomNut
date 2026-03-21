@@ -50,7 +50,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const userRef = doc(db, 'users', user.uid);
+    const userRef = doc(db!, 'users', user.uid);
     const unsubscribe = onSnapshot(userRef, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();

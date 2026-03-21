@@ -70,7 +70,7 @@ export default function PricingPage() {
         alert('Subscription activated but not saved due to backend configuration.');
         return;
       }
-      const userRef = doc(db, 'users', user.uid);
+      const userRef = doc(db!, 'users', user.uid);
       await setDoc(userRef, {
         subscription: {
           plan: planName.toLowerCase(),
@@ -168,7 +168,7 @@ export default function PricingPage() {
         return;
       }
       
-      const userRef = doc(db, 'users', user.uid);
+      const userRef = doc(db!, 'users', user.uid);
       await setDoc(userRef, {
         subscription: {
           plan: planName.toLowerCase(),
