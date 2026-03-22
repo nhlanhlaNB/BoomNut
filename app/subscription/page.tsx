@@ -179,7 +179,7 @@ export default function SubscriptionManagementPage() {
           <h3 className="text-xl font-bold text-gray-900 mb-4">Features Access</h3>
           <div className="grid md:grid-cols-2 gap-4">
             {[
-              { name: 'AI Tutor Chat', feature: 'unlimited-chat', free: '5 messages/day', paid: 'Unlimited' },
+              { name: 'AI Tutor Chat', feature: 'unlimited-chat', free: '20 messages/day', paid: 'Unlimited' },
               { name: 'Study Sets', feature: 'unlimited-study-sets', free: '2/week', paid: 'Unlimited' },
               { name: 'Practice Tests', feature: 'unlimited-tests', free: 'Limited', paid: 'Unlimited' },
               { name: 'Video/Audio Upload', feature: 'video-audio-upload', free: '❌', paid: '✅' },

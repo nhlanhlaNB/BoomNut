@@ -19,7 +19,7 @@ const plans = [
     color: 'from-gray-400 to-gray-600',
     popular: false,
     features: [
-      '5 AI tutor messages per day',
+      '20 AI tutor messages per day',
       '2 study sets per week',
       'Basic flashcards (10 cards max)',
       'Limited practice tests',

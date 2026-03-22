@@ -32,7 +32,7 @@ export default function TutorPage() {
   const [messageCount, setMessageCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const FREE_MESSAGE_LIMIT = 5;
+  const FREE_MESSAGE_LIMIT = 20;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
