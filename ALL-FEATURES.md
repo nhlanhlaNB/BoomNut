@@ -183,7 +183,7 @@
 - **Framework:** Next.js 14+ (App Router)
 - **Language:** TypeScript
 - **Styling:** Tailwind CSS
-- **AI:** OpenAI GPT-4 Turbo, Whisper, TTS
+- **AI:** Azure OpenAI (chat + audio deployments)
 - **Auth:** Firebase Authentication
 - **Database:** Prisma (SQLite/PostgreSQL)
 - **Payment:** PayPal Integration
@@ -196,7 +196,7 @@
 npm install
 
 # Set up environment
-# Add OPENAI_API_KEY to .env.local
+# Add Azure AI Project + Azure OpenAI credentials to .env.local
 
 # Run development server
 npm run dev

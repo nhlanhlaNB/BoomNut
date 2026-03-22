@@ -5,7 +5,7 @@
 
 interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
-  content: string;
+  content: any;
 }
 
 interface ChatCompletionOptions {
@@ -52,7 +52,7 @@ function getAzureConfig(deploymentType?: 'chat' | 'audio') {
 export async function createChatCompletion(options: ChatCompletionOptions) {
   const {
     messages,
-    temperature = 0.7,
+    temperature = 1,
     maxTokens = 2000,
     stream = false,
   } = options;
@@ -79,6 +79,7 @@ export async function createChatCompletion(options: ChatCompletionOptions) {
     },
     body: JSON.stringify({
       messages,
+      temperature,
       max_completion_tokens: maxTokens,
       stream,
     }),
@@ -98,7 +99,7 @@ export async function createChatCompletion(options: ChatCompletionOptions) {
 export async function streamChatCompletion(options: ChatCompletionOptions) {
   const {
     messages,
-    temperature = 0.7,
+    temperature = 1,
     maxTokens = 2000,
   } = options;
 
@@ -116,7 +117,7 @@ export async function streamChatCompletion(options: ChatCompletionOptions) {
     body: JSON.stringify({
       messages,
       temperature,
-      max_tokens: maxTokens,
+      max_completion_tokens: maxTokens,
       stream: true,
     }),
   });

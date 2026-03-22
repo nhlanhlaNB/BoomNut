@@ -62,6 +62,10 @@ export default function AuthButton() {
 
   const handleSignIn = async () => {
     try {
+      if (!auth || !googleProvider) {
+        console.error('Auth or Google Provider not configured');
+        return;
+      }
       // Check if device is mobile
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
@@ -87,6 +91,11 @@ export default function AuthButton() {
     e.preventDefault();
     setAuthError('');
     
+    if (!auth) {
+      setAuthError('Authentication service is not available');
+      return;
+    }
+    
     try {
       if (authMode === 'signup') {
         await createUserWithEmailAndPassword(auth, email, password);
@@ -105,6 +114,11 @@ export default function AuthButton() {
   };
 
   const setupRecaptcha = () => {
+    if (!auth) {
+      setAuthError('Authentication service is not available');
+      return;
+    }
+    
     if (!(window as any).recaptchaVerifier) {
       (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
         size: 'invisible',
@@ -118,6 +132,11 @@ export default function AuthButton() {
   const handlePhoneAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
+
+    if (!auth) {
+      setAuthError('Authentication service is not available');
+      return;
+    }
 
     try {
       if (!confirmationResult) {
@@ -148,6 +167,10 @@ export default function AuthButton() {
   };
 
   const handleSignOut = async () => {
+    if (!auth) {
+      console.error('Auth not available');
+      return;
+    }
     try {
       await signOut(auth);
       setShowDropdown(false);

@@ -29,8 +29,7 @@ export default function SignUpPage() {
 
     try {
       if (!auth) {
-        setError('Authentication service not available. Please try again later.');
-        setIsLoading(false);
+        setError('Authentication service not configured');
         return;
       }
       // Create user account

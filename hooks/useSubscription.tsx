@@ -41,7 +41,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
+    if (!user || !db) {
       setPlan('free');
       setStatus(null);
       setSubscriptionId(null);
@@ -50,7 +50,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const userRef = doc(db, 'users', user.uid);
+    const userRef = doc(db!, 'users', user.uid);
     const unsubscribe = onSnapshot(userRef, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();

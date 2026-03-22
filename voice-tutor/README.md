@@ -136,8 +136,8 @@ Press `Ctrl+C` to gracefully end the tutoring session.
 
 In your `.env` file, you can change the model based on your needs:
 
-| Use Case | Model | Benefits |
-|----------|-------|----------|
+| Use Case | Azure OpenAI Deployment | Benefits |
+|----------|-------------------------|----------|
 | Best balanced tutor | `gpt-4o` or `gpt-4.1` | Strong reasoning for complex explanations |
 | Faster, cost-effective | `gpt-4o-mini` or `gpt-5-mini` | Good for simpler Q&A |
 | Maximum speed/low cost | `gpt-5-nano` | Lightweight, quick responses |
@@ -209,7 +209,6 @@ This voice tutor can be integrated into the main Next.js app:
 
 - [Azure AI Voice Live API Documentation](https://learn.microsoft.com/en-us/azure/ai-services/openai/realtime-audio-quickstart)
 - [Microsoft Foundry](https://learn.microsoft.com/en-us/azure/ai-studio/)
-- [OpenAI Realtime API](https://platform.openai.com/docs/guides/realtime)
 
 ## 🆘 Support
 

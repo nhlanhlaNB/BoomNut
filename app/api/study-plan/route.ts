@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-
-function getOpenAIClient() {
-  if (!process.env.OPENAI_API_KEY) return null;
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-}
+import { createChatCompletion } from '@/lib/azureOpenAI';
 
 // Generate study plan
 export async function POST(req: NextRequest) {
@@ -73,16 +68,7 @@ Return as JSON in this format:
   "resources": ["Resource 1", "Resource 2"]
 }`;
 
-    const openai = getOpenAIClient();
-    if (!openai) {
-      return NextResponse.json(
-        { error: 'OpenAI API key not configured' },
-        { status: 500 }
-      );
-    }
-
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
+    const response = await createChatCompletion({
       messages: [
         {
           role: 'system',
@@ -94,8 +80,7 @@ Return as JSON in this format:
         },
       ],
       temperature: 0.7,
-      response_format: { type: 'json_object' },
-      max_tokens: 3000,
+      maxTokens: 3000,
     });
 
     const studyPlan = JSON.parse(response.choices[0]?.message?.content || '{}');

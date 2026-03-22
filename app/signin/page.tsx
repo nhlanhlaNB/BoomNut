@@ -23,8 +23,7 @@ export default function SignInPage() {
 
     try {
       if (!auth) {
-        setError('Authentication service not available. Please try again later.');
-        setIsLoading(false);
+        setError('Authentication service not configured');
         return;
       }
       await signInWithEmailAndPassword(auth, email, password);

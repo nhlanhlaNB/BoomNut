@@ -7,7 +7,7 @@ Next.js 14+ AI learning platform with multiple study modes including flashcards,
 - Next.js 14+ (App Router)
 - TypeScript
 - Tailwind CSS
-- OpenAI API (GPT-4 Turbo + Whisper + TTS)
+- Azure OpenAI (chat + audio deployments)
 - React Hooks for state management
 - File upload processing
 
@@ -43,7 +43,7 @@ Next.js 14+ AI learning platform with multiple study modes including flashcards,
 - `/tutor` - AI tutor chat interface
 
 ## Next Steps
-1. Add your OpenAI API key to `.env.local`
+1. Add your Azure AI Project + Azure OpenAI credentials to `.env.local`
 2. Run `npm run dev`
 3. Test all study modes
 4. Optional: Add Firebase for user authentication

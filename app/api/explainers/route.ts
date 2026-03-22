@@ -43,6 +43,7 @@ Provide a comprehensive explanation as JSON with this structure:
 }`
         }
       ],
+      temperature: 0.7,
       maxTokens: 3000,
     });
 

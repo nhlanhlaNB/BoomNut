@@ -5,9 +5,11 @@
  * Initializes agents for different learning modes
  */
 
-const { DefaultAzureCredential } = require('@azure/identity');
-
-const AZURE_AI_ENDPOINT = process.env.AZURE_AI_ENDPOINT || 'https://redcow-resource.services.ai.azure.com/api/projects/redcow';
+const AZURE_AI_ENDPOINT =
+  process.env.AZURE_PROJECT_ENDPOINT ||
+  process.env.AZURE_AI_ENDPOINT ||
+  'https://redcow-resource.services.ai.azure.com/api/projects/redcow';
+const AZURE_API_KEY = process.env.AZURE_PROJECT_API_KEY;
 const MODEL_DEPLOYMENT = process.env.AZURE_MODEL_DEPLOYMENT || 'gpt-4o';
 
 const AGENTS = [
@@ -63,13 +65,14 @@ const AGENTS = [
 
 async function createAgent(agentConfig) {
   try {
-    const credential = new DefaultAzureCredential();
-    const token = await credential.getToken('https://cognitiveservices.azure.com/.default');
+    if (!AZURE_API_KEY) {
+      throw new Error('Azure AI Project API key not configured');
+    }
 
     const response = await fetch(`${AZURE_AI_ENDPOINT}/agents`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token.token}`,
+        'api-key': AZURE_API_KEY,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

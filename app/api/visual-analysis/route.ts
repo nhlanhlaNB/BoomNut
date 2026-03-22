@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-
-function getOpenAIClient() {
-  if (!process.env.OPENAI_API_KEY) return null;
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-}
+import { createChatCompletion } from '@/lib/azureOpenAI';
 
 // Analyze image/diagram
 export async function POST(req: NextRequest) {
@@ -15,14 +10,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: 'Image is required' },
         { status: 400 }
-      );
-    }
-
-    const openai = getOpenAIClient();
-    if (!openai) {
-      return NextResponse.json(
-        { error: 'OpenAI API key not configured' },
-        { status: 500 }
       );
     }
 
@@ -49,18 +36,16 @@ export async function POST(req: NextRequest) {
       },
     ];
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4-vision-preview',
+    const response = await createChatCompletion({
       messages,
-      max_tokens: 1000,
+      maxTokens: 1000,
       temperature: 0.7,
     });
 
     const explanation = response.choices[0]?.message?.content || '';
 
     // Generate follow-up questions
-    const followUpResponse = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
+    const followUpResponse = await createChatCompletion({
       messages: [
         {
           role: 'system',
@@ -72,7 +57,7 @@ export async function POST(req: NextRequest) {
         },
       ],
       temperature: 0.7,
-      response_format: { type: 'json_object' },
+      maxTokens: 300,
     });
 
     let followUpQuestions = [];

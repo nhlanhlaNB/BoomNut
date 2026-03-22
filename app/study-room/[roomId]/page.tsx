@@ -53,14 +53,10 @@ export default function StudyRoomPage() {
 
   // Initialize room and join
   useEffect(() => {
-    if (!user || authLoading) return;
+    if (!user || authLoading || !db) return;
 
     const initializeRoom = async () => {
-      if (!db) {
-        setRoomExists(false);
-        return;
-      }
-      const roomRef = doc(db, 'studyRooms', roomId);
+      const roomRef = doc(db!, 'studyRooms', roomId);
       const roomSnap = await getDoc(roomRef);
 
       if (!roomSnap.exists()) {
@@ -105,7 +101,7 @@ export default function StudyRoomPage() {
   useEffect(() => {
     if (!roomId || !db) return;
 
-    const roomRef = doc(db, 'studyRooms', roomId);
+    const roomRef = doc(db!, 'studyRooms', roomId);
     const unsubscribe = onSnapshot(roomRef, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
@@ -117,13 +113,13 @@ export default function StudyRoomPage() {
     });
 
     return () => unsubscribe();
-  }, [roomId, db]);
+  }, [roomId]);
 
   // Listen to messages
   useEffect(() => {
-    if (!roomId) return;
+    if (!roomId || !db) return;
 
-    const messagesRef = collection(db, 'studyRooms', roomId, 'messages');
+    const messagesRef = collection(db!, 'studyRooms', roomId, 'messages');
     const q = query(messagesRef, orderBy('timestamp', 'asc'));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -147,7 +143,7 @@ export default function StudyRoomPage() {
   }, [roomId]);
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading || !user) return;
+    if (!input.trim() || isLoading || !user || !db) return;
 
     const userMessage = {
       role: 'user',
@@ -163,7 +159,7 @@ export default function StudyRoomPage() {
 
     try {
       // Add user message to Firestore
-      const messagesRef = collection(db, 'studyRooms', roomId, 'messages');
+      const messagesRef = collection(db!, 'studyRooms', roomId, 'messages');
       await addDoc(messagesRef, userMessage);
 
       // Get AI response
@@ -213,8 +209,9 @@ export default function StudyRoomPage() {
   };
 
   const updateRoomSubject = async (newSubject: string) => {
+    if (!db) return;
     setSubject(newSubject);
-    const roomRef = doc(db, 'studyRooms', roomId);
+    const roomRef = doc(db!, 'studyRooms', roomId);
     await updateDoc(roomRef, { subject: newSubject });
   };
 
