@@ -14,6 +14,8 @@ export default function VoiceTutorPage() {
   const [showSetup, setShowSetup] = useState(false);
   const [isTutorSpeaking, setIsTutorSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [isPressingButton, setIsPressingButton] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -78,6 +80,17 @@ export default function VoiceTutorPage() {
       }
     };
   }, []);
+
+  // Timer for recording duration
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isPressingButton) {
+      interval = setInterval(() => {
+        setRecordingTime(prev => prev + 0.1);
+      }, 100);
+    }
+    return () => clearInterval(interval);
+  }, [isPressingButton]);
 
   const startListening = () => {
     if (recognitionRef.current && !isTutorSpeaking && isConnected) {
@@ -316,6 +329,98 @@ export default function VoiceTutorPage() {
     setTranscript([]);
   };
 
+  const startPressToSpeak = async () => {
+    try {
+      // Don't start if tutor is speaking or already recording
+      if (isTutorSpeaking || isPressingButton) return;
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        chunks.push(event.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        try {
+          // Stop all tracks
+          stream.getTracks().forEach(track => track.stop());
+
+          // Only process if there's audio (chunks exist)
+          if (chunks.length === 0) {
+            console.warn('No audio chunks recorded');
+            setIsPressingButton(false);
+            setRecordingTime(0);
+            return;
+          }
+
+          const audioBlob = new Blob(chunks, { type: 'audio/wav' });
+          console.log('Audio blob created:', audioBlob.size, 'bytes');
+          
+          // Send audio to speech-to-text API
+          const formData = new FormData();
+          formData.append('audio', audioBlob, 'audio.wav');
+
+          console.log('Sending audio to transcribe API...');
+          setIsLoading(true);
+          
+          const response = await fetch('/api/transcribe', {
+            method: 'POST',
+            body: formData,
+          });
+
+          console.log('Transcribe response status:', response.status);
+          const data = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(data.error || 'Transcription failed');
+          }
+          
+          console.log('Transcribed text:', data.transcript);
+          
+          if (data.transcript && data.transcript.trim().length > 0) {
+            setCurrentSpeaking('user');
+            setIsPressingButton(false);
+            setRecordingTime(0);
+            // Add user message to transcript and get AI response
+            await handleUserSpeech(data.transcript);
+          } else {
+            setError('No speech detected. Please try again.');
+            setIsPressingButton(false);
+            setRecordingTime(0);
+          }
+        } catch (error: any) {
+          console.error('Error in transcribe onstop:', error);
+          setError(`Transcription failed: ${error.message || 'Unknown error'}`);
+          setIsPressingButton(false);
+          setRecordingTime(0);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      mediaRecorderRef.current = mediaRecorder;
+      mediaRecorder.start();
+      setIsPressingButton(true);
+      setCurrentSpeaking('user');
+      setError(null); // Clear any previous errors
+    } catch (error: any) {
+      console.error('Error starting press-to-speak:', error);
+      setError('Could not access microphone. Please check permissions.');
+      setIsPressingButton(false);
+    }
+  };
+
+  const stopPressToSpeak = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      console.log('Stopping media recorder... audio will be processed');
+      mediaRecorderRef.current.stop();
+      // Don't set isPressingButton to false here - let onstop handler do it
+      // This ensures we're in loading state while transcribing
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white p-6">
       <div className="max-w-6xl mx-auto">
@@ -422,6 +527,48 @@ export default function VoiceTutorPage() {
                     </>
                   )}
                 </button>
+
+                {/* Press to Speak Button */}
+                {isRecording && (
+                  <div className="space-y-2">
+                    <button
+                      onMouseDown={startPressToSpeak}
+                      onMouseUp={stopPressToSpeak}
+                      onMouseLeave={stopPressToSpeak}
+                      onTouchStart={startPressToSpeak}
+                      onTouchEnd={stopPressToSpeak}
+                      disabled={isTutorSpeaking || isLoading}
+                      className={`flex flex-col items-center justify-center gap-2 w-full py-8 px-4 rounded-xl font-bold transition-all text-lg ${
+                        isLoading
+                          ? 'bg-yellow-500 text-white shadow-lg'
+                          : isPressingButton
+                          ? 'bg-red-500 hover:bg-red-600 text-white shadow-lg scale-95'
+                          : 'bg-blue-600 hover:bg-blue-700 text-white shadow-md'
+                      } disabled:opacity-50 disabled:cursor-not-allowed active:scale-95`}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader className="w-8 h-8 animate-spin" />
+                          <span>Processing speech...</span>
+                        </>
+                      ) : isPressingButton ? (
+                        <>
+                          <Mic className="w-8 h-8" />
+                          <span>Hold & Speak...</span>
+                          <span className="text-sm font-normal">{recordingTime.toFixed(1)}s</span>
+                        </>
+                      ) : (
+                        <>
+                          <Mic className="w-8 h-8" />
+                          <span>Press to Speak</span>
+                        </>
+                      )}
+                    </button>
+                    <p className="text-xs text-gray-500 text-center">
+                      {isLoading ? '⏳ Wait for transcription...' : 'Hold button • Speak • Release to send'}
+                    </p>
+                  </div>
+                )}
 
                 <button
                   onClick={toggleMute}
