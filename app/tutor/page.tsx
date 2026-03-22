@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, Mic, MicOff, Upload, Download, BookOpen, Home, Lock } from 'lucide-react';
 import Link from 'next/link';
 import ChatMessage from '@/components/ChatMessage';
-import FileUpload from '@/components/FileUpload';
+import FileUpload, { type UploadedFileData } from '@/components/FileUpload';
 import VoiceRecorder from '@/components/VoiceRecorder';
 import SubjectSelector from '@/components/SubjectSelector';
 import AuthButton from '@/components/AuthButton';
@@ -26,7 +26,7 @@ export default function TutorPage() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [subject, setSubject] = useState('General');
-  const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFileData[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [messageCount, setMessageCount] = useState(0);
@@ -73,7 +73,10 @@ export default function TutorPage() {
             content: m.content,
           })),
           subject,
-          uploadedFiles,
+          fileContents: uploadedFiles.map(f => ({
+            filename: f.filename,
+            content: f.content,
+          })),
         }),
       });
 
@@ -110,8 +113,12 @@ export default function TutorPage() {
     }
   };
 
-  const handleFileUpload = (filename: string) => {
-    setUploadedFiles(prev => [...prev, filename]);
+  const handleFileUpload = (fileData: UploadedFileData) => {
+    setUploadedFiles(prev => [...prev, fileData]);
+  };
+
+  const handleRemoveFile = (filename: string) => {
+    setUploadedFiles(prev => prev.filter(f => f.filename !== filename));
   };
 
   const handleVoiceInput = (transcript: string) => {

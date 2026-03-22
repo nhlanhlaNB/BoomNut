@@ -41,7 +41,6 @@ Make the notes clear, concise, and easy to study from.`,
           content: `Create study notes from this lecture:\n\n${transcription.text}`,
         },
       ],
-      temperature: 0.7,
       maxTokens: 2000,
     });
 
@@ -59,7 +58,6 @@ Make the notes clear, concise, and easy to study from.`,
           content: transcription.text,
         },
       ],
-      temperature: 0.5,
       maxTokens: 250,
     });
 

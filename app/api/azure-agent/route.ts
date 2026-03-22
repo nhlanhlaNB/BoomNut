@@ -55,7 +55,6 @@ export async function POST(request: NextRequest) {
           type: 'agent_reference',
         },
         max_completion_tokens: 2000,
-        temperature: 0.7,
       }),
     });
 

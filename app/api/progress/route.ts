@@ -109,7 +109,6 @@ Return as JSON: {"recommendations": ["Recommendation 1", "Recommendation 2", ...
             content: recommendationsPrompt,
           },
         ],
-        temperature: 0.7,
         maxTokens: 350,
       });
 

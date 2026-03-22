@@ -45,7 +45,6 @@ Make questions that:
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ],
-      temperature: 0.8,
       maxTokens: 1800,
     });
 

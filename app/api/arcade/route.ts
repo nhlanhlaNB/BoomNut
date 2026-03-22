@@ -18,7 +18,6 @@ export async function POST(req: Request) {
             content: `Generate 1 multiple-choice question about ${topic} with 4 options. Format as JSON: {"question": "...", "options": ["A", "B", "C", "D"], "correctAnswer": "..."}`
           }
         ],
-        temperature: 0.8,
         maxTokens: 300,
       });
 

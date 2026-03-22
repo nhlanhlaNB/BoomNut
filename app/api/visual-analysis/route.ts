@@ -39,7 +39,6 @@ export async function POST(req: NextRequest) {
     const response = await createChatCompletion({
       messages,
       maxTokens: 1000,
-      temperature: 0.7,
     });
 
     const explanation = response.choices[0]?.message?.content || '';
@@ -56,7 +55,7 @@ export async function POST(req: NextRequest) {
           content: `Visual analysis: ${explanation}\n\nGenerate 3 follow-up questions. Return as JSON: {"questions": ["Q1", "Q2", "Q3"]}`,
         },
       ],
-      temperature: 0.7,
+
       maxTokens: 300,
     });
 

@@ -58,7 +58,6 @@ Return as JSON in this format:
           content: prompt,
         },
       ],
-      temperature: 0.8,
       maxTokens: 2200,
     });
 
@@ -122,7 +121,7 @@ Points: ${question.points}
 Return JSON: {"score": 0.8, "feedback": "Good answer but...", "isCorrect": true}`,
             },
           ],
-          temperature: 0.3,
+
           maxTokens: 250,
         });
 
@@ -182,7 +181,7 @@ Correct: ${gradedAnswers.filter(a => a.isCorrect).length}
 Provide brief, personalized feedback and study suggestions.`,
           },
         ],
-        temperature: 0.7,
+
         maxTokens: 200,
       });
 

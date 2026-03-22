@@ -3,7 +3,7 @@ import { createChatCompletion } from '@/lib/azureOpenAI';
 
 export async function POST(request: NextRequest) {
   try {
-    const { messages, subject, uploadedFiles, image, language = 'en' } = await request.json();
+    const { messages, subject, uploadedFiles, fileContents, image, language = 'en' } = await request.json();
 
     // Validate messages
     if (!Array.isArray(messages)) {
@@ -30,7 +30,14 @@ When grading:
 3. Point out areas for improvement
 4. Give specific, actionable suggestions`;
 
-    if (uploadedFiles && uploadedFiles.length > 0) {
+    // Add file content context if provided
+    if (fileContents && fileContents.length > 0) {
+      const filesContext = fileContents
+        .map((fc: any, idx: number) => `File ${idx + 1} (${fc.filename}):\n${fc.content}`)
+        .join('\n\n---\n\n');
+      
+      systemMessage += `\n\nThe student has uploaded the following study materials that are available for reference:\n\n${filesContext}`;
+    } else if (uploadedFiles && uploadedFiles.length > 0) {
       systemMessage += `\n\nThe student has uploaded study materials: ${uploadedFiles.join(', ')}. Reference these materials when answering questions.`;
     }
 

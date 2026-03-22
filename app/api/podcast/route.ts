@@ -45,7 +45,6 @@ Create an engaging, well-paced script that effectively communicates the key conc
           content: scriptPrompt,
         },
       ],
-      temperature: 0.8,
       maxTokens: duration * 200, // Roughly 150 words per minute
     });
 

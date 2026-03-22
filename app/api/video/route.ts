@@ -63,7 +63,6 @@ Format as JSON:
           content: scriptPrompt,
         },
       ],
-      temperature: 0.8,
       maxTokens: 3000,
     });
 

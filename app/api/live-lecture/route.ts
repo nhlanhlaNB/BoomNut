@@ -73,7 +73,6 @@ export async function POST(req: NextRequest) {
               content: `Transcription so far:\n${fullTranscription}\n\nProvide updated notes.`,
             },
           ],
-          temperature: 0.5,
           maxTokens: 500,
         });
 
@@ -107,7 +106,6 @@ export async function POST(req: NextRequest) {
             content: `Lecture context:\n${fullTranscription}\n\nStudent question: ${question}`,
           },
         ],
-        temperature: 0.7,
         maxTokens: 300,
       });
 
@@ -132,7 +130,6 @@ export async function POST(req: NextRequest) {
             content: fullTranscription,
           },
         ],
-        temperature: 0.6,
         maxTokens: 2000,
       });
 
@@ -150,7 +147,6 @@ export async function POST(req: NextRequest) {
             content: fullTranscription,
           },
         ],
-        temperature: 0.5,
         maxTokens: 150,
       });
 

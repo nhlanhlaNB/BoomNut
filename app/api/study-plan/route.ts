@@ -79,7 +79,7 @@ Return as JSON in this format:
           content: prompt,
         },
       ],
-      temperature: 0.7,
+
       maxTokens: 3000,
     });
 

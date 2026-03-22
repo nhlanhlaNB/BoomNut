@@ -60,6 +60,9 @@ export async function createChatCompletion(options: ChatCompletionOptions) {
   const { endpoint, apiKey, apiVersion } = getAzureConfig('chat');
   const deployment = process.env.AZURE_OPENAI_CHAT_DEPLOYMENT || 'gpt-5.2-chat';
 
+  // gpt-5.2 only supports temperature=1, so force it
+  const finalTemperature = deployment.includes('gpt-5.2') ? 1 : temperature;
+
   // If endpoint already includes the deployment path (Azure AI Foundry Target URI), use it directly
   // Otherwise, construct the traditional Azure OpenAI URL
   let url: string;
@@ -79,7 +82,7 @@ export async function createChatCompletion(options: ChatCompletionOptions) {
     },
     body: JSON.stringify({
       messages,
-      temperature,
+      temperature: finalTemperature,
       max_completion_tokens: maxTokens,
       stream,
     }),
@@ -106,6 +109,9 @@ export async function streamChatCompletion(options: ChatCompletionOptions) {
   const { endpoint, apiKey, apiVersion } = getAzureConfig('chat');
   const deployment = process.env.AZURE_OPENAI_CHAT_DEPLOYMENT || 'gpt-5.2-chat';
 
+  // gpt-5.2 only supports temperature=1, so force it
+  const finalTemperature = deployment.includes('gpt-5.2') ? 1 : temperature;
+
   const url = `${endpoint}/openai/deployments/${deployment}/chat/completions?api-version=${apiVersion}`;
 
   const response = await fetch(url, {
@@ -116,7 +122,7 @@ export async function streamChatCompletion(options: ChatCompletionOptions) {
     },
     body: JSON.stringify({
       messages,
-      temperature,
+      temperature: finalTemperature,
       max_completion_tokens: maxTokens,
       stream: true,
     }),

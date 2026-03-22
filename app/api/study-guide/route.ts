@@ -31,7 +31,6 @@ Format your response in clear, well-structured markdown with headings, bullet po
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ],
-      temperature: 0.7,
       maxTokens: 2000,
     });
 

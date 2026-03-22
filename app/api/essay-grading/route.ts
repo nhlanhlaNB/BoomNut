@@ -46,7 +46,6 @@ ${essay}`;
         { role: 'system', content: systemMessage },
         { role: 'user', content: userMessage }
       ],
-      temperature: 0.7,
       maxTokens: 2000,
     });
 

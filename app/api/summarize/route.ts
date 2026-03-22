@@ -37,7 +37,6 @@ Format in markdown with appropriate headings and emphasis.`;
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ],
-      temperature: 0.5,
       maxTokens: 1500,
     });
 
