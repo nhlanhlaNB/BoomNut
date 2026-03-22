@@ -334,90 +334,199 @@ export default function VoiceTutorPage() {
       // Don't start if tutor is speaking or already recording
       if (isTutorSpeaking || isPressingButton) return;
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      const chunks: Blob[] = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        chunks.push(event.data);
-      };
-
-      mediaRecorder.onstop = async () => {
-        try {
-          // Stop all tracks
-          stream.getTracks().forEach(track => track.stop());
-
-          // Only process if there's audio (chunks exist)
-          if (chunks.length === 0) {
-            console.warn('No audio chunks recorded');
-            setIsPressingButton(false);
-            setRecordingTime(0);
-            return;
-          }
-
-          const audioBlob = new Blob(chunks, { type: 'audio/wav' });
-          console.log('Audio blob created:', audioBlob.size, 'bytes');
-          
-          // Send audio to speech-to-text API
-          const formData = new FormData();
-          formData.append('audio', audioBlob, 'audio.wav');
-
-          console.log('Sending audio to transcribe API...');
-          setIsLoading(true);
-          
-          const response = await fetch('/api/transcribe', {
-            method: 'POST',
-            body: formData,
-          });
-
-          console.log('Transcribe response status:', response.status);
-          const data = await response.json();
-          
-          if (!response.ok) {
-            throw new Error(data.error || 'Transcription failed');
-          }
-          
-          console.log('Transcribed text:', data.transcript);
-          
-          if (data.transcript && data.transcript.trim().length > 0) {
-            setCurrentSpeaking('user');
-            setIsPressingButton(false);
-            setRecordingTime(0);
-            // Add user message to transcript and get AI response
-            await handleUserSpeech(data.transcript);
-          } else {
-            setError('No speech detected. Please try again.');
-            setIsPressingButton(false);
-            setRecordingTime(0);
-          }
-        } catch (error: any) {
-          console.error('Error in transcribe onstop:', error);
-          setError(`Transcription failed: ${error.message || 'Unknown error'}`);
-          setIsPressingButton(false);
-          setRecordingTime(0);
-        } finally {
-          setIsLoading(false);
+      // First, try to get microphone access
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
         }
+      });
+      
+      console.log('[Voice] Microphone stream acquired');
+
+      // Use Web Audio API for better control
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const processor = audioContext.createScriptProcessor(4096, 1, 1);
+      const source = audioContext.createMediaStreamSource(stream);
+      const audioData: Float32Array[] = [];
+
+      processor.onaudioprocess = (event) => {
+        const inputData = event.inputBuffer.getChannelData(0);
+        audioData.push(new Float32Array(inputData));
+        console.log('[Voice] Captured audio chunk, total chunks:', audioData.length);
       };
 
-      mediaRecorderRef.current = mediaRecorder;
-      mediaRecorder.start();
+      source.connect(processor);
+      processor.connect(audioContext.destination);
+
+      // Store references
+      mediaRecorderRef.current = {
+        stream,
+        audioContext,
+        processor,
+        source,
+        audioData,
+        state: 'recording'
+      } as any;
+
       setIsPressingButton(true);
       setCurrentSpeaking('user');
-      setError(null); // Clear any previous errors
+      setError(null);
+      console.log('[Voice] Started recording with Web Audio API');
     } catch (error: any) {
-      console.error('Error starting press-to-speak:', error);
-      setError('Could not access microphone. Please check permissions.');
+      console.error('[Voice] Error starting press-to-speak:', error);
+      setError(`Microphone error: ${error.message}`);
       setIsPressingButton(false);
     }
   };
 
-  const stopPressToSpeak = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      console.log('Stopping media recorder... audio will be processed');
-      mediaRecorderRef.current.stop();
-      // Don't set isPressingButton to false here - let onstop handler do it
-      // This ensures we're in loading state while transcribing
+  const stopPressToSpeak = async () => {
+    if (!mediaRecorderRef.current || (mediaRecorderRef.current as any).state === 'inactive') return;
+
+    try {
+      console.log('[Voice] Stopping recording...');
+      
+      const ref = mediaRecorderRef.current as any;
+      const { stream, audioContext, processor, source, audioData } = ref;
+
+      // Mark as inactive immediately to prevent double calls
+      ref.state = 'inactive';
+
+      // Stop the stream and processors
+      source.disconnect();
+      processor.disconnect();
+      stream.getTracks().forEach((track: any) => track.stop());
+      
+      // Close audio context safely
+      try {
+        if (audioContext && audioContext.state !== 'closed') {
+          audioContext.close();
+        }
+      } catch (e) {
+        console.warn('[Voice] Audio context close error:', e);
+      }
+
+      console.log(`[Voice] Recording stopped. Captured ${audioData.length} chunks`);
+
+      if (audioData.length === 0) {
+        console.error('[Voice] No audio data captured');
+        setError('No audio captured. Please speak louder or check microphone.');
+        setIsPressingButton(false);
+        return;
+      }
+
+      // Convert audio data to WAV format
+      const wavBlob = encodeWAV(audioData, audioContext.sampleRate);
+      console.log('[Voice] WAV blob created:', wavBlob.size, 'bytes');
+
+      // Send to transcription API
+      const formData = new FormData();
+      formData.append('audio', wavBlob, 'audio.wav');
+
+      console.log('[Voice] Sending audio to transcribe API...');
+      setIsLoading(true);
+
+      const response = await fetch('/api/transcribe', {
+        method: 'POST',
+        body: formData,
+      });
+
+      console.log('[Voice] Transcribe response status:', response.status);
+      
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('[Voice] API error response:', text);
+        throw new Error(`API returned ${response.status}: ${text}`);
+      }
+
+      const data = await response.json();
+      console.log('[Voice] Transcribed text:', data.transcript);
+
+      if (data.transcript && data.transcript.trim().length > 0) {
+        setCurrentSpeaking('user');
+        setIsPressingButton(false);
+        setRecordingTime(0);
+        await handleUserSpeech(data.transcript);
+      } else {
+        setError('No speech detected. Please speak clearly and try again.');
+        setIsPressingButton(false);
+        setRecordingTime(0);
+      }
+    } catch (error: any) {
+      console.error('[Voice] Error in stopPressToSpeak:', error);
+      setError(`Error: ${error.message || 'Failed to process audio'}`);
+      setIsPressingButton(false);
+      setRecordingTime(0);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Helper function to encode audio data to WAV format
+  const encodeWAV = (audioData: Float32Array[], sampleRate: number): Blob => {
+    const channelData = audioData;
+    const length = channelData.reduce((sum, arr) => sum + arr.length, 0);
+    const audioBuffer = new Float32Array(length);
+    let offset = 0;
+    for (const data of channelData) {
+      audioBuffer.set(data, offset);
+      offset += data.length;
+    }
+
+    // Convert to PCM16
+    const pcm = new Int16Array(audioBuffer.length);
+    for (let i = 0; i < audioBuffer.length; i++) {
+      const s = Math.max(-1, Math.min(1, audioBuffer[i]));
+      pcm[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+    }
+
+    // Create WAV header
+    const wavHeader = createWavHeader(pcm.length * 2, sampleRate);
+    const blob = new Blob([wavHeader, pcm.buffer], { type: 'audio/wav' });
+    return blob;
+  };
+
+  // Helper to create WAV file header
+  const createWavHeader = (audioLength: number, sampleRate: number): ArrayBuffer => {
+    const buffer = new ArrayBuffer(44);
+    const view = new DataView(buffer);
+    const channels = 1;
+    const bitDepth = 16;
+
+    // RIFF identifier
+    writeString(view, 0, 'RIFF');
+    // file length
+    view.setUint32(4, 36 + audioLength, true);
+    // RIFF type
+    writeString(view, 8, 'WAVE');
+    // format chunk identifier
+    writeString(view, 12, 'fmt ');
+    // format chunk length
+    view.setUint32(16, 16, true);
+    // sample format (raw)
+    view.setUint16(20, 1, true);
+    // channel count
+    view.setUint16(22, channels, true);
+    // sample rate
+    view.setUint32(24, sampleRate, true);
+    // byte rate
+    view.setUint32(28, sampleRate * 2 * channels, true);
+    // block-align
+    view.setUint16(32, channels * bitDepth / 8, true);
+    // bits per sample
+    view.setUint16(34, bitDepth, true);
+    // data chunk identifier
+    writeString(view, 36, 'data');
+    // data chunk length
+    view.setUint32(40, audioLength, true);
+
+    return buffer;
+  };
+
+  const writeString = (view: DataView, offset: number, string: string) => {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i));
     }
   };
 
