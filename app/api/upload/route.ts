@@ -1,98 +1,95 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir, readFile } from 'fs/promises';
-import { join, extname } from 'path';
-import { existsSync } from 'fs';
+import { extname } from 'path';
 
 /**
  * Extract text content from uploaded files
  * Supports: .txt, .md, .json, .pdf (basic), and other text formats
+ * Processes files in memory (no disk writes for production compatibility)
  */
-async function extractTextFromFile(filepath: string, filename: string): Promise<string> {
+async function extractTextFromFile(fileContent: Buffer, filename: string): Promise<string> {
   const ext = extname(filename).toLowerCase();
   
   try {
     if (ext === '.txt' || ext === '.md' || ext === '.json') {
-      return await readFile(filepath, 'utf-8');
+      const text = fileContent.toString('utf-8');
+      return text.slice(0, 50000); // Limit to 50KB
     } 
     else if (ext === '.pdf') {
       try {
         // Try to use pdf-parse if available
         const pdf = require('pdf-parse');
-        const dataBuffer = await readFile(filepath);
-        const data = await pdf(dataBuffer);
-        return data.text || 'Unable to extract text from PDF';
+        const data = await pdf(fileContent);
+        return (data.text || 'Unable to extract text from PDF').slice(0, 50000);
       } catch (e) {
-        // Fallback: return basic PDF info
-        const content = await readFile(filepath, 'latin1');
-        // Very basic text extraction - just get readable characters
+        // Fallback: extract basic text from PDF binary
+        const content = fileContent.toString('latin1');
         const text = content
           .replace(/[^\w\s.,!?:\-'"()]/g, ' ')
           .split(/\s+/)
-          .filter(word => word.length > 0)
+          .filter((word: string) => word.length > 0)
           .join(' ')
-          .slice(0, 5000);
+          .slice(0, 10000);
         return text || 'PDF file uploaded (text extraction requires pdf-parse library)';
       }
     }
     else {
       // For other formats, try to read as UTF-8
       try {
-        const content = await readFile(filepath, 'utf-8');
-        return content.slice(0, 10000);
+        const content = fileContent.toString('utf-8');
+        return content.slice(0, 50000);
       } catch (e) {
         return `File type ${ext} uploaded (binary or unsupported format for text extraction)`;
       }
     }
   } catch (error) {
-    console.error('Error extracting text:', error);
+    console.error('[Upload] Error extracting text:', error);
     return `Error extracting content: ${error instanceof Error ? error.message : 'Unknown error'}`;
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('[Upload] Received upload request');
+    
     const formData = await request.formData();
     const file = formData.get('file') as File;
 
     if (!file) {
+      console.error('[Upload] No file in formData');
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
+    console.log(`[Upload] File received: ${file.name}, size: ${file.size}, type: ${file.type}`);
+
+    // Read file into memory
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Create uploads directory if it doesn't exist
-    const uploadDir = join(process.cwd(), 'public', 'uploads');
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
+    console.log(`[Upload] Buffer created: ${buffer.length} bytes`);
 
-    // Generate unique filename
-    const filename = `${Date.now()}-${file.name}`;
-    const filepath = join(uploadDir, filename);
-
-    // Save file
-    await writeFile(filepath, buffer);
-
-    // Extract text content from the file
+    // Extract text content from the file (in memory)
     let fileContent = '';
     try {
-      fileContent = await extractTextFromFile(filepath, filename);
+      fileContent = await extractTextFromFile(buffer, file.name);
+      console.log(`[Upload] Text extracted: ${fileContent.length} characters`);
     } catch (extractError) {
-      console.error('Error extracting file content:', extractError);
+      console.error('[Upload] Error extracting file content:', extractError);
       fileContent = 'File uploaded successfully (unable to extract text preview)';
     }
 
-    return NextResponse.json({
+    const response = {
       success: true,
-      filename,
+      filename: file.name,
       size: file.size,
       type: file.type,
       content: fileContent,
       contentPreview: fileContent.slice(0, 500), // First 500 chars for preview
-    });
+    };
+
+    console.log('[Upload] Returning success response');
+    return NextResponse.json(response);
   } catch (error: any) {
-    console.error('Upload error:', error);
+    console.error('[Upload] Error:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to upload file' },
       { status: 500 }
