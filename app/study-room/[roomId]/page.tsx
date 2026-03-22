@@ -56,6 +56,10 @@ export default function StudyRoomPage() {
     if (!user || authLoading) return;
 
     const initializeRoom = async () => {
+      if (!db) {
+        setRoomExists(false);
+        return;
+      }
       const roomRef = doc(db, 'studyRooms', roomId);
       const roomSnap = await getDoc(roomRef);
 
@@ -99,7 +103,7 @@ export default function StudyRoomPage() {
 
   // Listen to room updates
   useEffect(() => {
-    if (!roomId) return;
+    if (!roomId || !db) return;
 
     const roomRef = doc(db, 'studyRooms', roomId);
     const unsubscribe = onSnapshot(roomRef, (snapshot) => {
@@ -113,7 +117,7 @@ export default function StudyRoomPage() {
     });
 
     return () => unsubscribe();
-  }, [roomId]);
+  }, [roomId, db]);
 
   // Listen to messages
   useEffect(() => {

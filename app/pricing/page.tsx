@@ -17,6 +17,31 @@ const plans = [
     period: 'forever',
     icon: Sparkles,
     color: 'from-gray-400 to-gray-600',
+    popular: false,
+    features: [
+      '5 AI tutor messages per day',
+      '2 study sets per week',
+      'Basic flashcards (10 cards max)',
+      'Limited practice tests',
+      'Text-only uploads',
+    ],
+    limitations: [
+      'No video/audio uploads',
+      'No live lecture assistant',
+      'No photo uploads',
+      'No handwritten notes scanning',
+    ],
+    paypalPlanId: '',
+    paypalYearlyPlanId: '',
+  },
+  {
+    name: 'Pro',
+    price: 10,
+    yearlyPrice: 5,
+    period: 'month',
+    icon: Zap,
+    color: 'from-blue-500 to-purple-600',
+    popular: true,
     features: [
       'Unlimited chat with Lisa AI tutor',
       'Unlimited study sets',
@@ -26,6 +51,9 @@ const plans = [
       'Priority AI response',
       'Advanced study analytics',
     ],
+    limitations: [],
+    paypalPlanId: 'P-7N509033WG9931346NFP5YAQ', // Pro monthly plan ID
+    paypalYearlyPlanId: 'P-2NC19032VG801351ENFP56MY', // Pro yearly plan ID ($5/month = $60/year)
   },
   {
     name: 'Premium',
@@ -34,8 +62,7 @@ const plans = [
     period: 'month',
     icon: Crown,
     color: 'from-yellow-500 to-orange-600',
-    paypalPlanId: 'P-8W509033WG9931346NFP5YAQ', // Premium monthly plan ID
-    paypalYearlyPlanId: 'P-3NC19032VG801351ENFP56MY', // Premium yearly plan ID ($10/month = $120/year)
+    popular: false,
     features: [
       'Everything in Pro, plus:',
       'Live Lecture Assistant with real-time notes',
@@ -46,6 +73,9 @@ const plans = [
       'Custom AI tutor personality',
       'Priority support',
     ],
+    limitations: [],
+    paypalPlanId: 'P-8W509033WG9931346NFP5YAQ', // Premium monthly plan ID
+    paypalYearlyPlanId: 'P-3NC19032VG801351ENFP56MY', // Premium yearly plan ID ($10/month = $120/year)
   },
 ];
 
@@ -160,7 +190,10 @@ export default function PricingPage() {
     try {
       // In a real app, you would integrate with Stripe or another payment processor
       // For now, we'll just update the user's subscription in Firestore
-      
+      if (!db) {
+        alert('Database not configured. Please try again later.');
+        return;
+      }
       const userRef = doc(db, 'users', user.uid);
       await setDoc(userRef, {
         subscription: {
@@ -172,7 +205,6 @@ export default function PricingPage() {
         name: user.displayName,
         photoURL: user.photoURL,
       }, { merge: true });
-
       alert(`Successfully subscribed to ${planName} plan!`);
       router.push('/');
     } catch (error) {
