@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { rtdb } from '@/lib/firebase';
 import { ref, get, update } from 'firebase/database';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     const userId = req.nextUrl.searchParams.get('userId');

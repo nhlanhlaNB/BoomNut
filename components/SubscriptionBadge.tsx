@@ -5,25 +5,25 @@ import { Crown, Zap, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 
 export default function SubscriptionBadge() {
-  const { plan, loading, status, nextBillingDate } = useSubscription();
+  const { subscription, loading } = useSubscription();
 
   if (loading) return null;
 
   // Show warning for inactive subscriptions
-  if (status && status !== 'active' && plan !== 'free') {
+  if (subscription?.status && subscription.status !== 'active') {
     return (
       <Link
         href="/pricing"
         className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-red-500 to-orange-600 text-white rounded-full text-sm font-medium hover:opacity-90 transition-opacity animate-pulse"
-        title={`Subscription ${status}. Click to manage.`}
+        title={`Subscription ${subscription.status}. Click to manage.`}
       >
         <AlertCircle className="w-4 h-4" />
-        {status === 'payment_failed' ? 'Payment Failed' : 'Inactive'}
+        Renew Subscription
       </Link>
     );
   }
 
-  if (plan === 'free') {
+  if (subscription?.plan === 'free') {
     return (
       <Link
         href="/pricing"
@@ -35,11 +35,11 @@ export default function SubscriptionBadge() {
     );
   }
 
-  if (plan === 'pro') {
+  if (subscription?.plan === 'pro') {
     return (
       <div 
         className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full text-sm font-medium"
-        title={nextBillingDate ? `Next billing: ${nextBillingDate.toLocaleDateString()}` : 'Pro Plan Active'}
+        title={subscription.endDate ? `Next billing: ${new Date(subscription.endDate).toLocaleDateString()}` : 'Pro Plan Active'}
       >
         <Zap className="w-4 h-4" />
         Pro
@@ -47,11 +47,11 @@ export default function SubscriptionBadge() {
     );
   }
 
-  if (plan === 'premium') {
+  if (subscription?.plan === 'premium') {
     return (
       <div 
         className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-yellow-500 to-orange-600 text-white rounded-full text-sm font-medium"
-        title={nextBillingDate ? `Next billing: ${nextBillingDate.toLocaleDateString()}` : 'Premium Plan Active'}
+        title={subscription.endDate ? `Next billing: ${new Date(subscription.endDate).toLocaleDateString()}` : 'Premium Plan Active'}
       >
         <Crown className="w-4 h-4" />
         Premium

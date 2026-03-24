@@ -10,6 +10,8 @@ interface SubscriptionStatus {
   daysRemaining?: number;
   endDate?: string;
   startDate?: string;
+  email?: string;
+  subscriptionId?: string;
 }
 
 export function useSubscription() {

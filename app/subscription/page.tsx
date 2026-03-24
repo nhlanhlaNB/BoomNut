@@ -10,7 +10,7 @@ import { Crown, Zap, CheckCircle, XCircle, AlertCircle, ArrowLeft, RefreshCw } f
 export default function SubscriptionManagementPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const { plan, status, subscriptionId, nextBillingDate, loading, verifySubscription } = useSubscription();
+  const { subscription, isActive, loading, error } = useSubscription();
   const [verifying, setVerifying] = useState(false);
   const [lastVerified, setLastVerified] = useState<Date | null>(null);
 
@@ -23,10 +23,9 @@ export default function SubscriptionManagementPage() {
   const handleVerifySubscription = async () => {
     setVerifying(true);
     try {
-      await verifySubscription();
       setLastVerified(new Date());
-    } catch (error) {
-      console.error('Error verifying subscription:', error);
+    } catch (error_) {
+      console.error('Error verifying subscription:', error_);
     } finally {
       setVerifying(false);
     }
@@ -44,21 +43,21 @@ export default function SubscriptionManagementPage() {
   }
 
   const getStatusColor = () => {
+    const status = subscription?.status;
     switch (status) {
       case 'active': return 'text-green-600 bg-green-50';
-      case 'cancelled': return 'text-orange-600 bg-orange-50';
-      case 'suspended': return 'text-red-600 bg-red-50';
-      case 'payment_failed': return 'text-red-600 bg-red-50';
+      case 'expired': return 'text-orange-600 bg-orange-50';
+      case 'no_subscription': return 'text-gray-600 bg-gray-50';
       default: return 'text-gray-600 bg-gray-50';
     }
   };
 
   const getStatusIcon = () => {
+    const status = subscription?.status;
     switch (status) {
       case 'active': return <CheckCircle className="w-5 h-5" />;
-      case 'cancelled':
-      case 'suspended': return <XCircle className="w-5 h-5" />;
-      case 'payment_failed': return <AlertCircle className="w-5 h-5" />;
+      case 'expired': return <XCircle className="w-5 h-5" />;
+      case 'no_subscription': return <AlertCircle className="w-5 h-5" />;
       default: return null;
     }
   };
@@ -87,11 +86,11 @@ export default function SubscriptionManagementPage() {
         <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-6">
           <div className="flex items-start justify-between mb-6">
             <div className="flex items-center gap-3">
-              {plan === 'premium' ? (
+              {subscription?.plan === 'premium' ? (
                 <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-xl flex items-center justify-center">
                   <Crown className="w-6 h-6 text-white" />
                 </div>
-              ) : plan === 'pro' ? (
+              ) : subscription?.plan === 'pro' ? (
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
                   <Zap className="w-6 h-6 text-white" />
                 </div>
@@ -102,17 +101,17 @@ export default function SubscriptionManagementPage() {
               )}
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 capitalize">
-                  {plan} Plan
+                  {subscription?.plan || 'free'} Plan
                 </h2>
-                {status && (
+                {subscription?.status && (
                   <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium mt-1 ${getStatusColor()}`}>
                     {getStatusIcon()}
-                    <span className="capitalize">{status}</span>
+                    <span className="capitalize">{subscription.status}</span>
                   </div>
                 )}
               </div>
             </div>
-            {plan !== 'free' && (
+            {subscription?.plan !== 'free' && (
               <button
                 onClick={handleVerifySubscription}
                 disabled={verifying}
@@ -125,20 +124,20 @@ export default function SubscriptionManagementPage() {
           </div>
 
           {/* Subscription Details */}
-          {plan !== 'free' && subscriptionId && (
+          {subscription?.plan !== 'free' && subscription?.subscriptionId && (
             <div className="border-t border-gray-200 pt-6 space-y-4">
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Subscription ID</p>
                   <p className="text-sm font-mono text-gray-900 bg-gray-50 p-2 rounded">
-                    {subscriptionId}
+                    {subscription.subscriptionId}
                   </p>
                 </div>
-                {nextBillingDate && (
+                {subscription?.endDate && (
                   <div>
-                    <p className="text-sm text-gray-500 mb-1">Next Billing Date</p>
+                    <p className="text-sm text-gray-500 mb-1">Expires On</p>
                     <p className="text-sm font-semibold text-gray-900">
-                      {nextBillingDate.toLocaleDateString('en-US', { 
+                      {new Date(subscription.endDate).toLocaleDateString('en-US', { 
                         year: 'numeric', 
                         month: 'long', 
                         day: 'numeric' 
@@ -158,7 +157,7 @@ export default function SubscriptionManagementPage() {
           )}
 
           {/* Free Plan CTA */}
-          {plan === 'free' && (
+          {subscription?.plan === 'free' && (
             <div className="border-t border-gray-200 pt-6">
               <p className="text-gray-600 mb-4">
                 You're currently on the free plan. Upgrade to unlock premium features!
@@ -188,8 +187,8 @@ export default function SubscriptionManagementPage() {
               { name: 'Handwritten Notes', feature: 'handwritten-notes', free: '❌', paid: 'Premium only' },
               { name: 'Study Room Hosting', feature: 'study-room-hosting', free: '❌', paid: 'Premium only' },
             ].map((item) => {
-              const hasAccess = plan === 'premium' || 
-                (plan === 'pro' && !item.feature.includes('lecture') && !item.feature.includes('handwritten') && !item.feature.includes('study-room'));
+              const hasAccess = subscription?.plan === 'premium' || 
+                (subscription?.plan === 'pro' && !item.feature.includes('lecture') && !item.feature.includes('handwritten') && !item.feature.includes('study-room'));
               
               return (
                 <div 
@@ -205,7 +204,7 @@ export default function SubscriptionManagementPage() {
                     )}
                   </div>
                   <p className="text-sm text-gray-600 mt-1">
-                    {plan === 'free' ? `Free: ${item.free}` : hasAccess ? item.paid : 'Not included'}
+                    {subscription?.plan === 'free' ? `Free: ${item.free}` : hasAccess ? item.paid : 'Not included'}
                   </p>
                 </div>
               );
@@ -214,7 +213,7 @@ export default function SubscriptionManagementPage() {
         </div>
 
         {/* Actions */}
-        {plan !== 'free' && (
+        {subscription?.plan !== 'free' && (
           <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
             <h3 className="text-xl font-bold text-gray-900 mb-4">Manage Subscription</h3>
             <div className="space-y-3">

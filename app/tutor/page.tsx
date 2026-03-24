@@ -21,7 +21,7 @@ type Message = {
 
 export default function TutorPage() {
   const { user } = useAuth();
-  const { plan, isPro } = useSubscription();
+  const { isActive } = useSubscription();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -46,7 +46,7 @@ export default function TutorPage() {
     if (!input.trim() || isLoading) return;
 
     // Check free tier limit
-    if (!isPro && messageCount >= FREE_MESSAGE_LIMIT) {
+    if (!isActive && messageCount >= FREE_MESSAGE_LIMIT) {
       setShowPaywall(true);
       return;
     }
@@ -61,7 +61,7 @@ export default function TutorPage() {
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
-    if (!isPro) setMessageCount(prev => prev + 1);
+    if (!isActive) setMessageCount(prev => prev + 1);
 
     try {
       const response = await fetch('/api/chat', {
@@ -165,7 +165,7 @@ export default function TutorPage() {
         {/* Messages Container */}
         <div className="flex-1 overflow-y-auto mb-4 space-y-4 bg-white rounded-lg shadow p-4">
           {/* Free tier usage indicator */}
-          {!isPro && user && (
+          {!isActive && user && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">

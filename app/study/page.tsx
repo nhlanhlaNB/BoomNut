@@ -156,7 +156,7 @@ export default function StudyPage() {
               <h1 className="text-4xl md:text-5xl font-black text-gray-900">Study Dashboard</h1>
               <p className="text-lg text-gray-600 mt-2">Welcome back, {user?.displayName?.split(' ')[0] || 'learner'}! 🎓</p>
             </div>
-            {!isPro && (
+            {!isActive && (
               <div className="text-right">
                 <p className="text-sm text-gray-600 mb-2">📚 Free tier user</p>
                 <Link href="/pricing" className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium">
