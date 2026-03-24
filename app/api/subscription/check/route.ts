@@ -16,8 +16,9 @@ export async function GET(req: NextRequest) {
     }
 
     if (!rtdb) {
+      console.error('❌ [SUBSCRIPTION CHECK] Firebase Realtime Database not configured. Missing NEXT_PUBLIC_FIREBASE_DATABASE_URL in .env.local');
       return NextResponse.json(
-        { error: 'Database not configured' },
+        { error: 'Database not configured - Please add NEXT_PUBLIC_FIREBASE_DATABASE_URL to .env.local' },
         { status: 500 }
       );
     }
