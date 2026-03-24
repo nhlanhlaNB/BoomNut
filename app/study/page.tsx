@@ -26,7 +26,7 @@ interface AppCard {
 
 export default function StudyPage() {
   const { user } = useAuth();
-  const { isPro } = useSubscription();
+  const { isActive, subscription, loading } = useSubscription();
   const [selectedCategory, setSelectedCategory] = useState<AppCategory>('all');
 
   const apps: AppCard[] = [
@@ -222,7 +222,7 @@ export default function StudyPage() {
 
                   {/* Badge area */}
                   <div className="flex items-center justify-between">
-                    {app.isPro && !isPro ? (
+                    {app.isPro && !isActive ? (
                       <div className="flex items-center gap-2 bg-white/50 backdrop-blur px-3 py-1.5 rounded-lg">
                         <Lock className="w-3 h-3 text-gray-600" />
                         <span className="text-xs text-gray-700 font-semibold">Pro</span>
@@ -239,7 +239,7 @@ export default function StudyPage() {
                 </div>
 
                 {/* Overlay for locked Pro features */}
-                {app.isPro && !isPro && (
+                {app.isPro && !isActive && (
                   <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <div className="text-center">
                       <Lock className="w-8 h-8 text-white mx-auto mb-2" />
@@ -288,7 +288,7 @@ export default function StudyPage() {
                 <div>
                   <p className="text-gray-600 text-sm">Pro Features</p>
                   <p className="text-3xl font-bold text-gray-900">{apps.filter(a => a.isPro).length}</p>
-                  {!isPro && (
+                  {!isActive && (
                     <Link href="/pricing" className="text-blue-600 text-xs font-semibold mt-2 hover:underline">
                       Upgrade now →
                     </Link>

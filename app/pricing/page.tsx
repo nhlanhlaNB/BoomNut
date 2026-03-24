@@ -3,8 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Script from 'next/script';
-import { Check, Sparkles, Zap, Crown, Home, Star, TrendingUp, Users, Award } from 'lucide-react';
+import { Check, Sparkles, Zap, Crown, Home, Star, TrendingUp, Users, Award, Clock, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useSubscription } from '@/hooks/useSubscription';
 import { db } from '@/lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
@@ -19,71 +20,37 @@ const plans = [
     color: 'from-gray-400 to-gray-600',
     popular: false,
     features: [
-      '20 AI tutor messages per day',
-      '2 study sets per week',
-      'Basic flashcards (10 cards max)',
+      '20 AI messages/day',
+      '2 study sets/week',
+      'Basic flashcards',
       'Limited practice tests',
-      'Text-only uploads',
-    ],
-    limitations: [
-      'No video/audio uploads',
-      'No live lecture assistant',
-      'No photo uploads',
-      'No handwritten notes scanning',
+      'Text uploads only',
     ],
     paypalPlanId: '',
-    paypalYearlyPlanId: '',
   },
   {
-    name: 'Pro',
-    price: 10,
-    yearlyPrice: 5,
-    period: 'month',
+    name: 'Basic',
+    price: 3,
+    period: '30 days',
     icon: Zap,
-    color: 'from-blue-500 to-purple-600',
+    color: 'from-emerald-500 to-teal-600',
     popular: true,
     features: [
-      'Unlimited chat with Lisa AI tutor',
+      'Unlimited AI chat',
       'Unlimited study sets',
-      'Unlimited AI practice tests & flashcards',
+      'Unlimited flashcards',
       'Video & audio uploads',
-      'Photo upload support',
-      'Priority AI response',
-      'Advanced study analytics',
-    ],
-    limitations: [],
-    paypalPlanId: 'P-7N509033WG9931346NFP5YAQ', // Pro monthly plan ID
-    paypalYearlyPlanId: 'P-2NC19032VG801351ENFP56MY', // Pro yearly plan ID ($5/month = $60/year)
-  },
-  {
-    name: 'Premium',
-    price: 15,
-    yearlyPrice: 10,
-    period: 'month',
-    icon: Crown,
-    color: 'from-yellow-500 to-orange-600',
-    popular: false,
-    features: [
-      'Everything in Pro, plus:',
-      'Live Lecture Assistant with real-time notes',
-      'Handwritten notes scanning & digitization',
-      'Advanced OCR for complex equations',
-      'Study room hosting (unlimited participants)',
-      'Export to PDF, Word, Notion',
-      'Custom AI tutor personality',
       'Priority support',
     ],
-    limitations: [],
-    paypalPlanId: 'P-8W509033WG9931346NFP5YAQ', // Premium monthly plan ID
-    paypalYearlyPlanId: 'P-3NC19032VG801351ENFP56MY', // Premium yearly plan ID ($10/month = $120/year)
+    paypalPlanId: 'P-51711759R0127122YNHA4ITY', // $3 30-day plan
   },
 ];
 
 export default function PricingPage() {
   const { user } = useAuth();
+  const { subscription, isActive, showPaymentButton, daysRemaining, createSubscription, clearSubscription } = useSubscription();
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
-  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [paypalLoaded, setPaypalLoaded] = useState(false);
   const paypalButtonsRef = useRef<{ [key: string]: any }>({});
 
@@ -92,26 +59,8 @@ export default function PricingPage() {
     if (!user) return;
 
     try {
-      if (!db) {
-        console.warn('Firestore not configured; cannot save subscription');
-        alert('Subscription activated but not saved due to backend configuration.');
-        return;
-      }
-      const userRef = doc(db, 'users', user.uid);
-      await setDoc(userRef, {
-        subscription: {
-          plan: planName.toLowerCase(),
-          subscriptionId: subscriptionId,
-          startDate: new Date(),
-          status: 'active',
-          billingPeriod: billingPeriod,
-        },
-        email: user.email,
-        name: user.displayName,
-        photoURL: user.photoURL,
-      }, { merge: true });
-
-      alert(`Successfully subscribed to ${planName} plan! Subscription ID: ${subscriptionId}`);
+      await createSubscription(planName.toLowerCase(), subscriptionId);
+      alert(`Successfully subscribed to ${planName} plan for 30 days! Your subscription will expire automatically.`);
       router.push('/');
     } catch (error) {
       console.error('Error saving subscription:', error);
@@ -132,22 +81,18 @@ export default function PricingPage() {
         
         if (!container || paypalButtonsRef.current[plan.name]) return;
 
-        const planId = billingPeriod === 'yearly' && plan.paypalYearlyPlanId 
-          ? plan.paypalYearlyPlanId 
-          : plan.paypalPlanId;
-
         try {
           const buttons = (window as any).paypal.Buttons({
             style: {
               shape: 'rect',
               color: plan.popular ? 'blue' : 'gold',
               layout: 'vertical',
-              label: 'subscribe'
+              label: 'pay'
             },
             createSubscription: function(data: any, actions: any) {
               return actions.subscription.create({
-                plan_id: planId,
-                custom_id: user?.uid // Store user ID for webhook processing
+                plan_id: plan.paypalPlanId,
+                custom_id: user?.uid
               });
             },
             onApprove: function(data: any, actions: any) {
@@ -167,7 +112,7 @@ export default function PricingPage() {
       });
     };
 
-    // Clear existing buttons when billing period changes
+    // Clear existing buttons
     Object.values(paypalButtonsRef.current).forEach((button: any) => {
       if (button && button.close) {
         button.close();
@@ -177,43 +122,7 @@ export default function PricingPage() {
 
     // Re-initialize buttons
     initializePayPalButtons();
-  }, [paypalLoaded, billingPeriod, user]);
-
-  const handleSubscribe = async (planName: string) => {
-    if (!user) {
-      alert('Please sign in to subscribe');
-      return;
-    }
-
-    setLoading(planName);
-
-    try {
-      // In a real app, you would integrate with Stripe or another payment processor
-      // For now, we'll just update the user's subscription in Firestore
-      if (!db) {
-        alert('Database not configured. Please try again later.');
-        return;
-      }
-      const userRef = doc(db, 'users', user.uid);
-      await setDoc(userRef, {
-        subscription: {
-          plan: planName.toLowerCase(),
-          startDate: new Date(),
-          status: 'active',
-        },
-        email: user.email,
-        name: user.displayName,
-        photoURL: user.photoURL,
-      }, { merge: true });
-      alert(`Successfully subscribed to ${planName} plan!`);
-      router.push('/');
-    } catch (error) {
-      console.error('Error subscribing:', error);
-      alert('Failed to subscribe. Please try again.');
-    } finally {
-      setLoading(null);
-    }
-  };
+  }, [paypalLoaded, user]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -238,121 +147,90 @@ export default function PricingPage() {
       </header>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-8 md:py-16">
-        {/* Header Section */}
-        <div className="text-center mb-12 md:mb-16 space-y-6">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full border border-gray-300">
-            <Star className="w-4 h-4 text-gray-700" />
-            <span className="text-sm font-semibold text-gray-700">Trusted by 10,000+ students</span>
+        {/* Subscription Status Banner */}
+        {user && isActive && (
+          <div className="mb-8 p-4 bg-green-50 border-2 border-green-200 rounded-xl flex items-start gap-3">
+            <Clock className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="font-bold text-green-900">Active Subscription</p>
+              <p className="text-sm text-green-800">{daysRemaining} days remaining • Plan: {subscription?.plan?.toUpperCase()}</p>
+              <p className="text-xs text-green-700 mt-1">Your subscription will automatically expire on {subscription?.endDate ? new Date(subscription.endDate).toLocaleDateString() : 'TBD'}</p>
+            </div>
           </div>
-          
-          <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold text-gray-900 leading-tight">
-            Supercharge Your Learning
+        )}
+
+        {/* Header Section */}
+        <div className="text-center mb-8 md:mb-10 space-y-3">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 leading-tight">
+            Choose Your Plan
           </h1>
           
-          <p className="text-lg sm:text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            Join thousands of students achieving their goals with AI-powered study tools
+          <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
+            Pick the perfect plan for your learning journey
           </p>
-          
-          {/* Billing Toggle */}
-          <div className="inline-flex items-center gap-2 sm:gap-4 bg-white rounded-full p-1.5 sm:p-2 shadow-md border border-gray-300">
-            <button
-              onClick={() => setBillingPeriod('monthly')}
-              className={`px-4 sm:px-8 py-2 sm:py-3 rounded-full font-bold text-sm sm:text-base transition-all duration-300 ${
-                billingPeriod === 'monthly'
-                  ? 'bg-gray-900 text-white shadow-lg'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Monthly
-            </button>
-            <button
-              onClick={() => setBillingPeriod('yearly')}
-              className={`px-4 sm:px-8 py-2 sm:py-3 rounded-full font-bold text-sm sm:text-base transition-all duration-300 relative ${
-                billingPeriod === 'yearly'
-                  ? 'bg-gray-900 text-white shadow-lg'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Yearly
-              <span className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs bg-gray-700 text-white px-3 py-1 rounded-full font-bold shadow-lg">
-                Save up to 50%!
-              </span>
-            </button>
-          </div>
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 mb-16 max-w-3xl mx-auto">
           {plans.map((plan, index) => {
             const Icon = plan.icon;
-            const displayPrice = billingPeriod === 'yearly' && plan.yearlyPrice 
-              ? plan.yearlyPrice 
-              : plan.price;
-            const totalYearly = plan.yearlyPrice ? plan.yearlyPrice * 12 : null;
-            const savings = plan.price > 0 && plan.yearlyPrice 
-              ? Math.round(((plan.price - plan.yearlyPrice) / plan.price) * 100)
-              : 0;
+            const isBasicPlan = plan.name === 'Basic';
+            const isUserSubscribed = isActive && subscription?.plan?.toLowerCase() === plan.name.toLowerCase();
+            const showPayButton = plan.price > 0 && showPaymentButton && !isUserSubscribed;
             
             return (
               <div
                 key={plan.name}
-                className={`relative group transform transition-all duration-500 hover:scale-105 ${
-                  plan.popular ? 'md:-mt-4 md:scale-110' : ''
-                }`}
+                className={`relative group transform transition-all duration-500 hover:scale-105`}
               >
                 {plan.popular && (
-                  <div className="absolute -top-4 sm:-top-6 left-1/2 transform -translate-x-1/2 z-10">
-                    <div className="bg-gray-900 text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-bold shadow-lg flex items-center gap-1.5">
-                      <Award className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span>MOST POPULAR</span>
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
+                    <div className="bg-gray-900 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
+                      <Award className="w-3 h-3" />
+                      <span>POPULAR</span>
                     </div>
                   </div>
                 )}
 
                 <div
-                  className={`relative bg-white rounded-lg shadow-md p-6 sm:p-8 border h-full flex flex-col ${
+                  className={`relative bg-white rounded-lg shadow-md p-5 sm:p-6 border h-full flex flex-col ${
                     plan.popular 
                       ? 'border-gray-400 shadow-lg' 
                       : 'border-gray-200 hover:border-gray-400'
                   }`}
                 >
                   {/* Icon & Badge */}
-                  <div className="flex items-start justify-between mb-4 sm:mb-6">
-                    <div className={`w-14 h-14 sm:w-16 sm:h-16 bg-gray-300 rounded-lg flex items-center justify-center shadow-md group-hover:scale-110 transition-transform`}>
-                      <Icon className="w-7 h-7 sm:w-9 sm:h-9 text-gray-700" />
+                  <div className="flex items-start justify-between mb-3">
+                    <div className={`w-12 h-12 bg-gradient-to-br ${plan.color} rounded-lg flex items-center justify-center shadow-md group-hover:scale-110 transition-transform`}>
+                      <Icon className="w-6 h-6 text-white" />
                     </div>
-                    {billingPeriod === 'yearly' && savings > 0 && (
-                      <div className="bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-xs font-bold">
-                        Save {savings}%
+                    {isUserSubscribed && (
+                      <div className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs font-bold">
+                        ✓ Active
                       </div>
                     )}
                   </div>
 
                   {/* Plan Name */}
-                  <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{plan.name}</h3>
+                  <h3 className="text-xl font-bold text-gray-900 mb-1">{plan.name}</h3>
                   
                   {/* Price */}
-                  <div className="mb-6">
+                  <div className="mb-4">
                     {plan.price === 0 ? (
                       <div>
-                        <span className="text-4xl sm:text-5xl font-bold text-gray-900">Free</span>
+                        <span className="text-3xl font-bold text-gray-900">Free</span>
                       </div>
                     ) : (
                       <>
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-5xl sm:text-6xl font-bold text-gray-900">
-                            ${displayPrice}
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-4xl font-bold text-gray-900">
+                            ${plan.price}
                           </span>
-                          <span className="text-xl text-gray-500">/month</span>
+                          <span className="text-sm text-gray-500">/{plan.period}</span>
                         </div>
-                        {billingPeriod === 'yearly' && totalYearly && (
-                          <div className="text-sm text-gray-600 mt-2 font-medium">
-                            ${totalYearly} billed annually
-                          </div>
-                        )}
-                        {billingPeriod === 'monthly' && (
-                          <div className="text-xs text-gray-500 mt-1">
-                            or ${plan.price * 12}/year
+                        {isBasicPlan && (
+                          <div className="text-sm text-emerald-600 mt-2 font-bold">
+                            📆 Auto-expires after 30 days
                           </div>
                         )}
                       </>
@@ -360,21 +238,13 @@ export default function PricingPage() {
                   </div>
 
                   {/* Features */}
-                  <ul className="space-y-3 sm:space-y-4 mb-8 flex-grow">
+                  <ul className="space-y-2 mb-5 flex-grow">
                     {plan.features.map((feature, idx) => (
-                      <li key={idx} className="flex items-start gap-3 group/item">
-                        <div className="flex-shrink-0 w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center mt-0.5 group-hover/item:scale-110 transition-transform">
-                          <Check className="w-3 h-3 sm:w-4 sm:h-4 text-white font-bold" />
+                      <li key={idx} className="flex items-start gap-2 group/item">
+                        <div className="flex-shrink-0 w-4 h-4 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center mt-0.5 group-hover/item:scale-110 transition-transform">
+                          <Check className="w-2.5 h-2.5 text-white font-bold" />
                         </div>
-                        <span className="text-sm sm:text-base text-gray-700 font-medium leading-relaxed">{feature}</span>
-                      </li>
-                    ))}
-                    {plan.limitations?.map((limitation, idx) => (
-                      <li key={idx} className="flex items-start gap-3 opacity-50">
-                        <div className="flex-shrink-0 w-5 h-5 sm:w-6 sm:h-6 bg-red-100 rounded-full flex items-center justify-center mt-0.5">
-                          <span className="text-red-500 text-xs sm:text-sm">✕</span>
-                        </div>
-                        <span className="text-sm sm:text-base text-gray-500 line-through">{limitation}</span>
+                        <span className="text-xs sm:text-sm text-gray-700 font-medium leading-snug">{feature}</span>
                       </li>
                     ))}
                   </ul>
@@ -383,27 +253,44 @@ export default function PricingPage() {
                   {plan.price === 0 ? (
                     <button
                       disabled
-                      className="w-full py-3 sm:py-4 rounded-2xl font-bold text-sm sm:text-base bg-gray-100 text-gray-400 cursor-not-allowed"
+                      className="w-full py-2 sm:py-3 rounded-lg font-bold text-xs sm:text-sm bg-gray-100 text-gray-400 cursor-not-allowed"
                     >
                       Current Plan
                     </button>
+                  ) : isUserSubscribed ? (
+                    <button
+                      disabled
+                      className="w-full py-2 sm:py-3 rounded-lg font-bold text-xs sm:text-sm bg-green-100 text-green-700 cursor-not-allowed flex items-center justify-center gap-1"
+                    >
+                      ✓ Active
+                    </button>
+                  ) : !user ? (
+                    <button
+                      onClick={() => alert('Please sign in to subscribe')}
+                      className={`w-full py-2 sm:py-3 rounded-lg font-bold text-xs sm:text-sm transition-all duration-300 transform hover:scale-105 hover:shadow-2xl ${
+                        plan.popular
+                          ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white shadow-xl'
+                          : 'bg-gradient-to-r from-gray-800 to-gray-900 text-white hover:from-gray-700 hover:to-gray-800'
+                      }`}
+                    >
+                      Get Started
+                    </button>
+                  ) : !showPayButton && subscription && subscription.status !== 'no_subscription' ? (
+                    <button
+                      onClick={async () => {
+                        try {
+                          await clearSubscription?.();
+                          alert('Test data cleared!');
+                        } catch (error) {
+                          alert('Failed to clear subscription. Please try again.');
+                        }
+                      }}
+                      className="w-full py-2 sm:py-3 rounded-lg font-bold text-xs sm:text-sm bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors"
+                    >
+                      Clear Test Data
+                    </button>
                   ) : (
-                    <div>
-                      {!user ? (
-                        <button
-                          onClick={() => alert('Please sign in to subscribe')}
-                          className={`w-full py-3 sm:py-4 rounded-2xl font-bold text-sm sm:text-base transition-all duration-300 transform hover:scale-105 hover:shadow-2xl ${
-                            plan.popular
-                              ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-xl'
-                              : 'bg-gradient-to-r from-gray-800 to-gray-900 text-white hover:from-gray-700 hover:to-gray-800'
-                          }`}
-                        >
-                          Get Started
-                        </button>
-                      ) : (
-                        <div id={`paypal-button-container-${plan.name.toLowerCase()}`} className="w-full"></div>
-                      )}
-                    </div>
+                    <div id={`paypal-button-container-${plan.name.toLowerCase()}`} className="w-full"></div>
                   )}
                 </div>
               </div>

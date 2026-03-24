@@ -2,6 +2,7 @@ import { initializeApp, getApps } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { getDatabase } from "firebase/database";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY,
@@ -28,6 +29,7 @@ if (isConfigured) {
 export const auth = app ? getAuth(app) : null;
 export const googleProvider = app ? new GoogleAuthProvider() : null;
 export const db = app ? getFirestore(app) : null;
+export const rtdb = app ? getDatabase(app) : null;
 export const storage = app ? getStorage(app) : null;
 
 export default app;

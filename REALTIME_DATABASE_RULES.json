@@ -1,0 +1,153 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": "$uid === auth.uid",
+        "subscription": {
+          ".read": "$uid === auth.uid",
+          ".write": "$uid === auth.uid || !auth.exists()",
+          ".validate": "newData.hasChildren(['plan', 'status', 'email'])"
+        },
+        "settings": {
+          ".read": "$uid === auth.uid",
+          ".write": "$uid === auth.uid"
+        },
+        "preferences": {
+          ".read": "$uid === auth.uid",
+          ".write": "$uid === auth.uid"
+        }
+      }
+    },
+    "subscriptions": {
+      "$subId": {
+        ".read": "root.child('users').child(auth.uid).child('subscription').child($subId).exists() || !auth.exists()",
+        ".write": "!auth.exists() || auth.uid === root.child('users').child($subId).child('userId').val()",
+        ".validate": "newData.hasChildren(['userId', 'status', 'email', 'plan'])"
+      }
+    },
+    "chatSessions": {
+      "$sessionId": {
+        ".read": "auth.uid === data.child('userId').val()",
+        ".write": "auth.uid === data.child('userId').val() || (auth.uid === newData.child('userId').val() && !data.exists())",
+        "messages": {
+          "$messageId": {
+            ".read": "auth.uid === root.child('chatSessions').child($sessionId).child('userId').val()",
+            ".write": "auth.uid === newData.child('userId').val()",
+            ".validate": "newData.hasChildren(['text', 'userId', 'timestamp'])"
+          }
+        }
+      }
+    },
+    "studySets": {
+      "$setId": {
+        ".read": "auth.uid === data.child('userId').val() || data.child('isPublic').val() === true",
+        ".write": "auth.uid === data.child('userId').val() || (auth.uid === newData.child('userId').val() && !data.exists())",
+        "cards": {
+          "$cardId": {
+            ".read": "auth.uid === root.child('studySets').child($setId).child('userId').val()",
+            ".write": "auth.uid === root.child('studySets').child($setId).child('userId').val()"
+          }
+        },
+        "reviews": {
+          "$reviewId": {
+            ".read": "auth.uid === root.child('studySets').child($setId).child('userId').val()",
+            ".write": "auth.uid === root.child('studySets').child($setId).child('userId').val()"
+          }
+        }
+      }
+    },
+    "quizzes": {
+      "$quizId": {
+        ".read": "auth.uid === data.child('userId').val() || data.child('isPublic').val() === true",
+        ".write": "auth.uid === data.child('userId').val() || (auth.uid === newData.child('userId').val() && !data.exists())",
+        "attempts": {
+          "$attemptId": {
+            ".read": "auth.uid === root.child('quizzes').child($quizId).child('userId').val()",
+            ".write": "auth.uid === root.child('quizzes').child($quizId).child('userId').val()"
+          }
+        }
+      }
+    },
+    "studyGuides": {
+      "$guideId": {
+        ".read": "auth.uid === data.child('userId').val() || data.child('isPublic').val() === true",
+        ".write": "auth.uid === data.child('userId').val() || (auth.uid === newData.child('userId').val() && !data.exists())",
+        "sections": {
+          "$sectionId": {
+            ".read": "auth.uid === root.child('studyGuides').child($guideId).child('userId').val()",
+            ".write": "auth.uid === root.child('studyGuides').child($guideId).child('userId').val()"
+          }
+        }
+      }
+    },
+    "documents": {
+      "$docId": {
+        ".read": "auth.uid === data.child('userId').val() || data.child('isPublic').val() === true",
+        ".write": "auth.uid === data.child('userId').val() || (auth.uid === newData.child('userId').val() && !data.exists())"
+      }
+    },
+    "progress": {
+      "$progressId": {
+        ".read": "auth.uid === data.child('userId').val()",
+        ".write": "auth.uid === data.child('userId').val() || (auth.uid === newData.child('userId').val() && !data.exists())"
+      }
+    },
+    "studyRooms": {
+      "$roomId": {
+        ".read": "auth.uid === data.child('creatorId').val() || data.child('isPublic').val() === true",
+        ".write": "auth.uid === data.child('creatorId').val() || (auth.uid === newData.child('creatorId').val() && !data.exists())",
+        "messages": {
+          "$messageId": {
+            ".read": "auth.exists()",
+            ".write": "auth.uid === newData.child('userId').val()"
+          }
+        },
+        "participants": {
+          "$participantId": {
+            ".read": "auth.exists()",
+            ".write": "auth.uid === root.child('studyRooms').child($roomId).child('creatorId').val()"
+          }
+        }
+      }
+    },
+    "communityPosts": {
+      "$postId": {
+        ".read": "auth.uid === data.child('userId').val() || data.child('isPublic').val() === true",
+        ".write": "auth.uid === data.child('userId').val() || (auth.uid === newData.child('userId').val() && !data.exists())",
+        "comments": {
+          "$commentId": {
+            ".read": "auth.uid === data.child('userId').val() || data.child('isPublic').val() === true",
+            ".write": "auth.uid === newData.child('userId').val()"
+          }
+        },
+        "likes": {
+          "$likeerId": {
+            ".read": true,
+            ".write": "auth.uid === $likeerId"
+          }
+        }
+      }
+    },
+    "notifications": {
+      "$notifId": {
+        ".read": "auth.uid === data.child('userId').val()",
+        ".write": "!auth.exists() || auth.uid === data.child('userId').val()"
+      }
+    },
+    "activityLogs": {
+      "$logId": {
+        ".read": "auth.uid === data.child('userId').val()",
+        ".write": "auth.uid === newData.child('userId').val()",
+        ".indexOn": ["userId", "timestamp"]
+      }
+    },
+    "paymentHistory": {
+      "$paymentId": {
+        ".read": "auth.uid === data.child('userId').val()",
+        ".write": "!auth.exists()",
+        ".validate": "newData.hasChildren(['userId', 'amount', 'status', 'timestamp'])"
+      }
+    }
+  }
+}
