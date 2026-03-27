@@ -5,11 +5,13 @@ import { useParams, useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, query, orderBy, onSnapshot, doc, updateDoc, arrayUnion, getDoc, setDoc } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
-import { Send, Users, Copy, CheckCircle, Home, Sparkles } from 'lucide-react';
+import { useSubscription } from '@/hooks/useSubscription';
+import { Send, Users, Copy, CheckCircle, Home, Sparkles, Lock } from 'lucide-react';
 import Link from 'next/link';
 import ChatMessage from '@/components/ChatMessage';
 import SubjectSelector from '@/components/SubjectSelector';
 import AuthButton from '@/components/AuthButton';
+import PaywallModal from '@/components/PaywallModal';
 
 type Message = {
   id: string;
@@ -33,6 +35,7 @@ export default function StudyRoomPage() {
   const router = useRouter();
   const roomId = params.roomId as string;
   const { user, loading: authLoading } = useAuth();
+  const { isActive } = useSubscription();
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -41,7 +44,31 @@ export default function StudyRoomPage() {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [copied, setCopied] = useState(false);
   const [roomExists, setRoomExists] = useState(true);
+  const [messageCount, setMessageCount] = useState(0);
+  const [showPaywall, setShowPaywall] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const FREE_MESSAGE_LIMIT = 2;
+
+  // Fetch message usage from database on load
+  useEffect(() => {
+    if (!user || isActive) return; // Don't track for paid users
+
+    const fetchUsage = async () => {
+      try {
+        const response = await fetch(`/api/usage/track?userId=${user.uid}&appName=studyRoom`);
+        if (response.ok) {
+          const data = await response.json();
+          setMessageCount(data.messageCount);
+          console.log('[STUDY ROOM] Loaded usage:', data);
+        }
+      } catch (error) {
+        console.error('[STUDY ROOM] Error fetching usage:', error);
+      }
+    };
+
+    fetchUsage();
+  }, [user, isActive]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -145,6 +172,12 @@ export default function StudyRoomPage() {
   const handleSend = async () => {
     if (!input.trim() || isLoading || !user || !db) return;
 
+    // Check free tier limit
+    if (!isActive && messageCount >= FREE_MESSAGE_LIMIT) {
+      setShowPaywall(true);
+      return;
+    }
+
     const userMessage = {
       role: 'user',
       content: input,
@@ -156,6 +189,28 @@ export default function StudyRoomPage() {
 
     setInput('');
     setIsLoading(true);
+    
+    // Track usage for free tier users
+    if (!isActive && user) {
+      try {
+        const trackResponse = await fetch('/api/usage/track', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.uid,
+            appName: 'studyRoom'
+          })
+        });
+        
+        if (trackResponse.ok) {
+          const trackData = await trackResponse.json();
+          setMessageCount(trackData.messageCount);
+          console.log('[STUDY ROOM] Usage tracked:', trackData);
+        }
+      } catch (error) {
+        console.error('[STUDY ROOM] Error tracking usage:', error);
+      }
+    }
 
     try {
       // Add user message to Firestore
@@ -312,6 +367,25 @@ export default function StudyRoomPage() {
         {/* Chat Area */}
         <div className="flex-1 flex flex-col">
           <div className="flex-1 overflow-y-auto mb-4 space-y-4 bg-white rounded-lg shadow p-4">
+            {/* Free tier usage indicator */}
+            {!isActive && user && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-blue-600" />
+                    <span className="text-sm text-blue-800">
+                      Free Plan: {messageCount}/{FREE_MESSAGE_LIMIT} messages used
+                    </span>
+                  </div>
+                  <Link
+                    href="/pricing"
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium underline"
+                  >
+                    Upgrade
+                  </Link>
+                </div>
+              </div>
+            )}
             {messages.length === 0 ? (
               <div className="text-center py-20">
                 <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -382,6 +456,15 @@ export default function StudyRoomPage() {
           </div>
         </div>
       </div>
+
+      {/* Paywall Modal */}
+      {showPaywall && (
+        <PaywallModal 
+          onClose={() => setShowPaywall(false)} 
+          currentUsage={messageCount}
+          limit={FREE_MESSAGE_LIMIT}
+        />
+      )}
     </div>
   );
 }

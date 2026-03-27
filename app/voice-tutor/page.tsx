@@ -1,9 +1,15 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Mic, MicOff, Volume2, VolumeX, Settings, AlertCircle, CheckCircle, Loader } from 'lucide-react';
+import { Mic, MicOff, Volume2, VolumeX, Settings, AlertCircle, CheckCircle, Loader, Lock } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useSubscription } from '@/hooks/useSubscription';
+import PaywallModal from '@/components/PaywallModal';
 
 export default function VoiceTutorPage() {
+  const { user } = useAuth();
+  const { isActive } = useSubscription();
+
   const [isRecording, setIsRecording] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
@@ -16,6 +22,30 @@ export default function VoiceTutorPage() {
   const [isListening, setIsListening] = useState(false);
   const [isPressingButton, setIsPressingButton] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [messageCount, setMessageCount] = useState(0);
+  const [showPaywall, setShowPaywall] = useState(false);
+
+  const FREE_MESSAGE_LIMIT = 2;
+
+  // Fetch message usage from database on load
+  useEffect(() => {
+    if (!user || isActive) return; // Don't track for paid users
+
+    const fetchUsage = async () => {
+      try {
+        const response = await fetch(`/api/usage/track?userId=${user.uid}&appName=voiceTutor`);
+        if (response.ok) {
+          const data = await response.json();
+          setMessageCount(data.messageCount);
+          console.log('[VOICE TUTOR] Loaded usage:', data);
+        }
+      } catch (error) {
+        console.error('[VOICE TUTOR] Error fetching usage:', error);
+      }
+    };
+
+    fetchUsage();
+  }, [user, isActive]);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -124,11 +154,40 @@ export default function VoiceTutorPage() {
     // Only process if there's actual content
     if (!text || text.trim().length === 0) return;
     
+    // Check free tier message limit
+    if (!isActive && messageCount >= FREE_MESSAGE_LIMIT) {
+      setShowPaywall(true);
+      setIsListening(false);
+      return;
+    }
+    
     // Stop listening while processing
     stopListening();
     
     setTranscript(prev => [...prev, { role: 'user', content: text }]);
     setCurrentSpeaking(null);
+    
+    // Track usage for free tier users
+    if (!isActive && user) {
+      try {
+        const trackResponse = await fetch('/api/usage/track', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.uid,
+            appName: 'voiceTutor'
+          })
+        });
+        
+        if (trackResponse.ok) {
+          const trackData = await trackResponse.json();
+          setMessageCount(trackData.messageCount);
+          console.log('[VOICE TUTOR] Usage tracked:', trackData);
+        }
+      } catch (error) {
+        console.error('[VOICE TUTOR] Error tracking usage:', error);
+      }
+    }
     
     // Send to AI tutor
     await getAIResponse(text);
@@ -611,6 +670,26 @@ export default function VoiceTutorPage() {
                 </div>
               )}
 
+              {/* Free tier usage indicator */}
+              {!isActive && user && (
+                <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Lock className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm text-blue-800">
+                        Free Plan: {messageCount}/{FREE_MESSAGE_LIMIT} messages used
+                      </span>
+                    </div>
+                    <a
+                      href="/pricing"
+                      className="text-sm text-blue-600 hover:text-blue-700 font-medium underline"
+                    >
+                      Upgrade
+                    </a>
+                  </div>
+                </div>
+              )}
+
               {/* Controls */}
               <div className="space-y-3">
                 <button
@@ -962,6 +1041,15 @@ copy .env.example .env{'\n'}
           </div>
         </div>
       </div>
+
+      {/* Paywall Modal */}
+      {showPaywall && (
+        <PaywallModal 
+          onClose={() => setShowPaywall(false)} 
+          currentUsage={messageCount}
+          limit={FREE_MESSAGE_LIMIT}
+        />
+      )}
     </div>
   );
 }

@@ -32,7 +32,27 @@ export default function TutorPage() {
   const [messageCount, setMessageCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const FREE_MESSAGE_LIMIT = 20;
+  const FREE_MESSAGE_LIMIT = 2;
+
+  // Fetch message usage from database on load
+  useEffect(() => {
+    if (!user || isActive) return; // Don't track for paid users
+
+    const fetchUsage = async () => {
+      try {
+        const response = await fetch(`/api/usage/track?userId=${user.uid}&appName=tutor`);
+        if (response.ok) {
+          const data = await response.json();
+          setMessageCount(data.messageCount);
+          console.log('[TUTOR] Loaded usage:', data);
+        }
+      } catch (error) {
+        console.error('[TUTOR] Error fetching usage:', error);
+      }
+    };
+
+    fetchUsage();
+  }, [user, isActive]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -61,7 +81,28 @@ export default function TutorPage() {
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
-    if (!isActive) setMessageCount(prev => prev + 1);
+    
+    // Track usage for free tier users
+    if (!isActive && user) {
+      try {
+        const trackResponse = await fetch('/api/usage/track', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.uid,
+            appName: 'tutor'
+          })
+        });
+        
+        if (trackResponse.ok) {
+          const trackData = await trackResponse.json();
+          setMessageCount(trackData.messageCount);
+          console.log('[TUTOR] Usage tracked:', trackData);
+        }
+      } catch (error) {
+        console.error('[TUTOR] Error tracking usage:', error);
+      }
+    }
 
     try {
       const response = await fetch('/api/chat', {
