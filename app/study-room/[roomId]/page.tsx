@@ -460,9 +460,9 @@ export default function StudyRoomPage() {
       {/* Paywall Modal */}
       {showPaywall && (
         <PaywallModal 
-          onClose={() => setShowPaywall(false)} 
-          currentUsage={messageCount}
-          limit={FREE_MESSAGE_LIMIT}
+          feature="unlimited-study-room"
+          featureName="Unlimited Study Room Chat"
+          requiredPlan="pro"
         />
       )}
     </div>

@@ -1045,9 +1045,9 @@ copy .env.example .env{'\n'}
       {/* Paywall Modal */}
       {showPaywall && (
         <PaywallModal 
-          onClose={() => setShowPaywall(false)} 
-          currentUsage={messageCount}
-          limit={FREE_MESSAGE_LIMIT}
+          feature="unlimited-voice-tutor"
+          featureName="Unlimited Voice Tutor Chat"
+          requiredPlan="pro"
         />
       )}
     </div>
