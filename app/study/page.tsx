@@ -40,7 +40,7 @@ export default function StudyPage() {
       category: 'learning',
       color: 'blue',
       gradient: 'from-blue-600 to-blue-800',
-      bgImage: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      bgImage: 'url(https://t4.ftcdn.net/jpg/04/26/81/25/360_F_426812570_B2dNNbd6gwOh3jXoZEjYDkrE2mUAuqiv.jpg)',
     },
     {
       id: 'tutor',
@@ -51,7 +51,7 @@ export default function StudyPage() {
       category: 'learning',
       color: 'purple',
       gradient: 'from-purple-600 to-purple-800',
-      bgImage: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      bgImage: 'url(https://img.freepik.com/premium-photo/humanoid-robot-teaching-classroom-diverse-students_1175634-5778.jpg)',
     },
     {
       id: 'voice-tutor',
@@ -62,7 +62,7 @@ export default function StudyPage() {
       category: 'tools',
       color: 'indigo',
       gradient: 'from-indigo-600 to-indigo-800',
-      bgImage: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      bgImage: 'url(https://tse3.mm.bing.net/th/id/OIP.84gpn3MaeVNNU-4CRvrAWwHaEK?rs=1&pid=ImgDetMain&o=7&rm=3)',
       isPro: true,
     },
     {
@@ -74,7 +74,7 @@ export default function StudyPage() {
       category: 'tools',
       color: 'red',
       gradient: 'from-red-600 to-red-800',
-      bgImage: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+      bgImage: 'url(https://tse3.mm.bing.net/th/id/OIP.YpXRHkQUT4nayqYoIESADQHaHa?rs=1&pid=ImgDetMain&o=7&rm=3)',
       isPro: true,
     },
     {
@@ -86,7 +86,7 @@ export default function StudyPage() {
       category: 'tools',
       color: 'cyan',
       gradient: 'from-cyan-600 to-cyan-800',
-      bgImage: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+      bgImage: 'url(https://allfortheai.com/wp-content/uploads/2024/04/Article-17.-Website.8.jpg)',
       isPro: true,
     },
     {
@@ -98,7 +98,7 @@ export default function StudyPage() {
       category: 'learning',
       color: 'lime',
       gradient: 'from-lime-600 to-lime-800',
-      bgImage: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+      bgImage: 'url(https://t4.ftcdn.net/jpg/05/85/31/79/360_F_585317906_FYykH76pqcwV3UIA3oSiS3lxtGRro2gx.jpg)',
       isPro: true,
     },
     {
@@ -110,7 +110,7 @@ export default function StudyPage() {
       category: 'tools',
       color: 'rose',
       gradient: 'from-rose-600 to-rose-800',
-      bgImage: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+      bgImage: 'url(https://www.kangaroos.ai/wp-content/uploads/elementor/thumbs/ai-essay-1-qr09cwn5772nowa41vvu2nzhhafv7qa0wmhb8ld6ce.jpg)',
       isPro: true,
     },
     {
@@ -122,7 +122,7 @@ export default function StudyPage() {
       category: 'tools',
       color: 'violet',
       gradient: 'from-violet-600 to-violet-800',
-      bgImage: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      bgImage: 'url(https://pixel-earth.com/wp-content/uploads/2024/12/Leonardo_Kino_XL_ai_drawing_0.jpg)',
       isPro: true,
     },
     {
@@ -134,7 +134,7 @@ export default function StudyPage() {
       category: 'learning',
       color: 'teal',
       gradient: 'from-teal-600 to-teal-800',
-      bgImage: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+      bgImage: 'url(https://cdn.analyticsvidhya.com/wp-content/uploads/2023/05/ai-drawing-1.png)',
     },
   ];
 
@@ -218,10 +218,10 @@ export default function StudyPage() {
               `}>
                 {/* Banner/Image Area - Top */}
                 <div 
-                  className="w-full h-40 flex items-center justify-center text-white font-bold text-lg relative overflow-hidden"
-                  style={{ background: app.bgImage }}
+                  className="w-full h-40 flex items-center justify-center text-white font-bold text-lg relative overflow-hidden bg-cover bg-center"
+                  style={{ backgroundImage: app.bgImage }}
                 >
-                  <div className="absolute inset-0 opacity-20 group-hover:opacity-30 transition-opacity" />
+                  <div className="absolute inset-0 bg-black/40 opacity-20 group-hover:opacity-30 transition-opacity" />
                   <div className="relative z-10 text-white drop-shadow-lg text-3xl">
                     {app.icon}
                   </div>
