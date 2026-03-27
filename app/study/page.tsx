@@ -22,6 +22,7 @@ interface AppCard {
   isPro?: boolean;
   color: string;
   gradient: string;
+  bgImage: string;
 }
 
 export default function StudyPage() {
@@ -38,7 +39,8 @@ export default function StudyPage() {
       href: '/study',
       category: 'learning',
       color: 'blue',
-      gradient: 'from-blue-100 to-blue-200',
+      gradient: 'from-blue-600 to-blue-800',
+      bgImage: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     },
     {
       id: 'tutor',
@@ -48,7 +50,8 @@ export default function StudyPage() {
       href: '/tutor',
       category: 'learning',
       color: 'purple',
-      gradient: 'from-purple-100 to-purple-200',
+      gradient: 'from-purple-600 to-purple-800',
+      bgImage: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     },
     {
       id: 'voice-tutor',
@@ -58,7 +61,8 @@ export default function StudyPage() {
       href: '/voice-tutor',
       category: 'tools',
       color: 'indigo',
-      gradient: 'from-indigo-100 to-indigo-200',
+      gradient: 'from-indigo-600 to-indigo-800',
+      bgImage: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       isPro: true,
     },
     {
@@ -69,7 +73,8 @@ export default function StudyPage() {
       href: '/voice-tutor-webrtc',
       category: 'tools',
       color: 'red',
-      gradient: 'from-red-100 to-red-200',
+      gradient: 'from-red-600 to-red-800',
+      bgImage: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
       isPro: true,
     },
     {
@@ -80,7 +85,8 @@ export default function StudyPage() {
       href: '/live-lecture',
       category: 'tools',
       color: 'cyan',
-      gradient: 'from-cyan-100 to-cyan-200',
+      gradient: 'from-cyan-600 to-cyan-800',
+      bgImage: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
       isPro: true,
     },
     {
@@ -91,7 +97,8 @@ export default function StudyPage() {
       href: '/arcade',
       category: 'learning',
       color: 'lime',
-      gradient: 'from-lime-100 to-lime-200',
+      gradient: 'from-lime-600 to-lime-800',
+      bgImage: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
       isPro: true,
     },
     {
@@ -102,7 +109,8 @@ export default function StudyPage() {
       href: '/essay-grading',
       category: 'tools',
       color: 'rose',
-      gradient: 'from-rose-100 to-rose-200',
+      gradient: 'from-rose-600 to-rose-800',
+      bgImage: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
       isPro: true,
     },
     {
@@ -113,7 +121,8 @@ export default function StudyPage() {
       href: '/visual-analysis',
       category: 'tools',
       color: 'violet',
-      gradient: 'from-violet-100 to-violet-200',
+      gradient: 'from-violet-600 to-violet-800',
+      bgImage: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       isPro: true,
     },
     {
@@ -124,7 +133,8 @@ export default function StudyPage() {
       href: '/explainers',
       category: 'learning',
       color: 'teal',
-      gradient: 'from-teal-100 to-teal-200',
+      gradient: 'from-teal-600 to-teal-800',
+      bgImage: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
     },
   ];
 
@@ -197,53 +207,57 @@ export default function StudyPage() {
         </div>
 
         {/* Apps Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredApps.map(app => (
             <Link key={app.id} href={app.href}>
               <div className={`
-                group relative w-full aspect-square rounded-xl overflow-hidden cursor-pointer
-                transform transition-all duration-300 hover:scale-105 hover:shadow-2xl
-                bg-gradient-to-b ${app.gradient}
-                flex flex-col
+                group relative w-full overflow-hidden rounded-2xl cursor-pointer
+                transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-2
+                bg-white shadow-lg
+                flex flex-col h-full
               `}>
-                {/* Top - Image/Icon Area */}
-                <div className="flex-1 bg-gradient-to-b from-white/40 to-transparent flex items-center justify-center p-6">
-                  <div className="text-gray-600 group-hover:scale-110 transition-transform">
+                {/* Banner/Image Area - Top */}
+                <div 
+                  className="w-full h-40 flex items-center justify-center text-white font-bold text-lg relative overflow-hidden"
+                  style={{ background: app.bgImage }}
+                >
+                  <div className="absolute inset-0 opacity-20 group-hover:opacity-30 transition-opacity" />
+                  <div className="relative z-10 text-white drop-shadow-lg text-3xl">
                     {app.icon}
                   </div>
                 </div>
 
-                {/* Bottom - Content Area */}
-                <div className="flex-1 p-6 flex flex-col justify-between bg-gradient-to-t from-white/60 to-transparent backdrop-blur-sm">
+                {/* Content Area - Bottom */}
+                <div className="flex-1 p-6 flex flex-col justify-between bg-white">
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-1">{app.name}</h3>
-                    <p className="text-sm text-gray-700 leading-relaxed">{app.description}</p>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">{app.name}</h3>
+                    <p className="text-sm text-gray-600 leading-relaxed">{app.description}</p>
                   </div>
 
                   {/* Badge area */}
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between pt-4 mt-auto">
                     {app.isPro && !isActive ? (
-                      <div className="flex items-center gap-2 bg-white/50 backdrop-blur px-3 py-1.5 rounded-lg">
+                      <div className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-lg">
                         <Lock className="w-3 h-3 text-gray-600" />
                         <span className="text-xs text-gray-700 font-semibold">Pro</span>
                       </div>
                     ) : app.isPro ? (
-                      <div className="flex items-center gap-2 bg-yellow-200/50 backdrop-blur px-3 py-1.5 rounded-lg">
-                        <Sparkles className="w-3 h-3 text-yellow-700" />
+                      <div className="flex items-center gap-2 bg-yellow-100 px-3 py-1.5 rounded-lg">
+                        <Sparkles className="w-3 h-3 text-yellow-600" />
                         <span className="text-xs text-yellow-700 font-semibold">Pro</span>
                       </div>
                     ) : null}
                     
-                    <ArrowRight className="w-4 h-4 text-gray-600 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                    <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-900 group-hover:translate-x-1 transition-all" />
                   </div>
                 </div>
 
                 {/* Overlay for locked Pro features */}
                 {app.isPro && !isActive && (
-                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl">
                     <div className="text-center">
                       <Lock className="w-8 h-8 text-white mx-auto mb-2" />
-                      <p className="text-white font-bold text-xs">Subscribe to unlock</p>
+                      <p className="text-white font-bold">Subscribe to unlock</p>
                     </div>
                   </div>
                 )}

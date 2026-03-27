@@ -29,7 +29,7 @@ const plans = [
     paypalPlanId: '',
   },
   {
-    name: 'Basic',
+    name: 'Premium',
     price: 3,
     period: '30 days',
     icon: Zap,
@@ -59,9 +59,11 @@ export default function PricingPage() {
     if (!user) return;
 
     try {
+      setLoading(null);
       await createSubscription(planName.toLowerCase(), subscriptionId);
-      alert(`Successfully subscribed to ${planName} plan for 30 days! Your subscription will expire automatically.`);
-      router.push('/');
+      alert(`✅ Successfully subscribed to ${planName} plan for 30 days!\n\nYour subscription will auto-expire.\n\nRefresh to see changes!`);
+      // Don't redirect - let user see the updated status
+      window.location.reload();
     } catch (error) {
       console.error('Error saving subscription:', error);
       alert('Subscription created but failed to save. Please contact support.');
@@ -174,7 +176,7 @@ export default function PricingPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 mb-16 max-w-3xl mx-auto">
           {plans.map((plan, index) => {
             const Icon = plan.icon;
-            const isBasicPlan = plan.name === 'Basic';
+            const isPremiumPlan = plan.name === 'Premium';
             const isUserSubscribed = isActive && subscription?.plan?.toLowerCase() === plan.name.toLowerCase();
             const showPayButton = plan.price > 0 && showPaymentButton && !isUserSubscribed;
             
@@ -228,7 +230,7 @@ export default function PricingPage() {
                           </span>
                           <span className="text-sm text-gray-500">/{plan.period}</span>
                         </div>
-                        {isBasicPlan && (
+                        {isPremiumPlan && (
                           <div className="text-sm text-emerald-600 mt-2 font-bold">
                             📆 Auto-expires after 30 days
                           </div>
@@ -257,13 +259,31 @@ export default function PricingPage() {
                     >
                       Current Plan
                     </button>
-                  ) : isUserSubscribed ? (
-                    <button
-                      disabled
-                      className="w-full py-2 sm:py-3 rounded-lg font-bold text-xs sm:text-sm bg-green-100 text-green-700 cursor-not-allowed flex items-center justify-center gap-1"
-                    >
-                      ✓ Active
-                    </button>
+                  ) : isActive && isPremiumPlan ? (
+                    <div className="flex flex-col gap-2">
+                      <button
+                        disabled
+                        className="w-full py-2 sm:py-3 rounded-lg font-bold text-xs sm:text-sm bg-green-100 text-green-700 cursor-not-allowed flex items-center justify-center gap-1"
+                      >
+                        ✅ Active - {daysRemaining} days left
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (window.confirm('Are you sure you want to cancel this subscription?')) {
+                            try {
+                              await clearSubscription?.();
+                              alert('Subscription cancelled successfully!');
+                              window.location.reload();
+                            } catch (error) {
+                              alert('Failed to cancel subscription. Please try again.');
+                            }
+                          }
+                        }}
+                        className="w-full py-2 sm:py-3 rounded-lg font-bold text-xs sm:text-sm bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                      >
+                        ✕ Cancel Subscription
+                      </button>
+                    </div>
                   ) : !user ? (
                     <button
                       onClick={() => alert('Please sign in to subscribe')}
@@ -274,20 +294,6 @@ export default function PricingPage() {
                       }`}
                     >
                       Get Started
-                    </button>
-                  ) : !showPayButton && subscription && subscription.status !== 'no_subscription' ? (
-                    <button
-                      onClick={async () => {
-                        try {
-                          await clearSubscription?.();
-                          alert('Test data cleared!');
-                        } catch (error) {
-                          alert('Failed to clear subscription. Please try again.');
-                        }
-                      }}
-                      className="w-full py-2 sm:py-3 rounded-lg font-bold text-xs sm:text-sm bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors"
-                    >
-                      Clear Test Data
                     </button>
                   ) : (
                     <div id={`paypal-button-container-${plan.name.toLowerCase()}`} className="w-full"></div>
