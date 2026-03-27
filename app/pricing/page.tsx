@@ -44,6 +44,22 @@ const plans = [
     ],
     paypalPlanId: 'P-51711759R0127122YNHA4ITY', // $3 30-day plan
   },
+  {
+    name: 'Test Boomnut',
+    price: 0.1,
+    period: '30 days',
+    icon: Zap,
+    color: 'from-blue-500 to-indigo-600',
+    popular: false,
+    features: [
+      'Test subscription',
+      'All Premium features',
+      'Unlimited AI chat',
+      'Unlimited study sets',
+      'Perfect for testing',
+    ],
+    paypalPlanId: 'P-7V61468029079353FNHDOXSQ', // $0.10 test plan
+  },
 ];
 
 export default function PricingPage() {
@@ -60,13 +76,22 @@ export default function PricingPage() {
 
     try {
       setLoading(null);
-      await createSubscription(planName.toLowerCase(), subscriptionId);
+      console.log('[PAYPAL] Payment approved for:', { userId: user.uid, planName, subscriptionId });
+      
+      // Create subscription in database
+      const result = await createSubscription(planName.toLowerCase(), subscriptionId);
+      console.log('[PAYPAL] Subscription created:', result);
+      
       alert(`✅ Successfully subscribed to ${planName} plan for 30 days!\n\nYour subscription will auto-expire.\n\nRefresh to see changes!`);
-      // Don't redirect - let user see the updated status
-      window.location.reload();
+      
+      // Wait 2 seconds for Firebase to process the write, then reload
+      setTimeout(() => {
+        console.log('[PAYPAL] Reloading page to show updated subscription status...');
+        window.location.reload();
+      }, 2000);
     } catch (error) {
-      console.error('Error saving subscription:', error);
-      alert('Subscription created but failed to save. Please contact support.');
+      console.error('[PAYPAL] Error saving subscription:', error);
+      alert('❌ Subscription created but failed to save to database. Please try refreshing the page or contact support.');
     }
   };
 
@@ -78,7 +103,7 @@ export default function PricingPage() {
       plans.forEach((plan) => {
         if (plan.price === 0 || !plan.paypalPlanId) return;
 
-        const containerId = `paypal-button-container-${plan.name.toLowerCase()}`;
+        const containerId = `paypal-button-container-${plan.name.toLowerCase().replace(/\s+/g, '-')}`;
         const container = document.getElementById(containerId);
         
         if (!container || paypalButtonsRef.current[plan.name]) return;
@@ -173,10 +198,10 @@ export default function PricingPage() {
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 mb-16 max-w-3xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 mb-16 max-w-5xl mx-auto">
           {plans.map((plan, index) => {
             const Icon = plan.icon;
-            const isPremiumPlan = plan.name === 'Premium';
+            const isPaidPlan = plan.name === 'Premium' || plan.name === 'Test Boomnut';
             const isUserSubscribed = isActive && subscription?.plan?.toLowerCase() === plan.name.toLowerCase();
             const showPayButton = plan.price > 0 && showPaymentButton && !isUserSubscribed;
             
@@ -230,7 +255,7 @@ export default function PricingPage() {
                           </span>
                           <span className="text-sm text-gray-500">/{plan.period}</span>
                         </div>
-                        {isPremiumPlan && (
+                        {isPaidPlan && (
                           <div className="text-sm text-emerald-600 mt-2 font-bold">
                             📆 Auto-expires after 30 days
                           </div>
@@ -259,7 +284,7 @@ export default function PricingPage() {
                     >
                       Current Plan
                     </button>
-                  ) : isActive && isPremiumPlan ? (
+                  ) : isActive && isPaidPlan ? (
                     <div className="flex flex-col gap-2">
                       <button
                         disabled
@@ -295,9 +320,9 @@ export default function PricingPage() {
                     >
                       Get Started
                     </button>
-                  ) : (
-                    <div id={`paypal-button-container-${plan.name.toLowerCase()}`} className="w-full"></div>
-                  )}
+                  ) : showPayButton && plan.price > 0 ? (
+                    <div id={`paypal-button-container-${plan.name.toLowerCase().replace(/\s+/g, '-')}`} className="w-full"></div>
+                  ) : null}
                 </div>
               </div>
             );

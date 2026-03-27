@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: NextRequest) {
   try {
     const userId = req.nextUrl.searchParams.get('userId');
+    console.log('[SUBSCRIPTION CHECK] Checking subscription for userId:', userId);
     
     if (!userId) {
       return NextResponse.json(
@@ -27,11 +28,15 @@ export async function GET(req: NextRequest) {
     const subscriptionRef = ref(rtdb, `users/${userId}/subscription`);
     const snapshot = await get(subscriptionRef);
 
+    console.log('[SUBSCRIPTION CHECK] Database snapshot exists:', snapshot.exists());
+    
     if (!snapshot.exists()) {
+      console.log('[SUBSCRIPTION CHECK] No subscription found for user:', userId);
       return NextResponse.json(
         { 
           isActive: false, 
           status: 'no_subscription',
+          plan: 'none',
           message: 'No subscription found'
         },
         { status: 200 }
@@ -39,6 +44,7 @@ export async function GET(req: NextRequest) {
     }
 
     const subscription = snapshot.val();
+    console.log('[SUBSCRIPTION CHECK] Found subscription:', subscription);
 
     if (!subscription || !subscription.endDate) {
       return NextResponse.json(
