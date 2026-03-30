@@ -55,18 +55,6 @@ const plans = [
       'Test subscription',
       'All Premium features',
       'Unlimited AI chat',
-Home
-Study Dashboard
-Study Plan
-Services
-💸 Pricing
-👋 User
-Sign Out
-BoomNut
-
-n
-nbigreeneconomy@g
-
       'Unlimited study sets',
       'Perfect for testing',
     ],
