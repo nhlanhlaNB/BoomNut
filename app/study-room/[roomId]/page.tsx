@@ -312,7 +312,7 @@ export default function StudyRoomPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col relative">
       {/* Header */}
       <header className="bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg p-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
@@ -338,7 +338,24 @@ export default function StudyRoomPage() {
         </div>
       </header>
 
-      <div className="flex-1 max-w-7xl w-full mx-auto p-4 flex gap-4">
+      {/* Coming Soon Overlay */}
+      <div className="absolute inset-0 top-20 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="bg-white rounded-2xl shadow-2xl p-12 text-center max-w-md">
+          <Sparkles className="w-16 h-16 text-blue-600 mx-auto mb-4" />
+          <h1 className="text-4xl font-bold text-gray-900 mb-3">Coming Soon</h1>
+          <p className="text-lg text-gray-600 mb-6">
+            Study Rooms are under development. We're working hard to bring you collaborative learning experiences!
+          </p>
+          <Link
+            href="/study-rooms"
+            className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+          >
+            Back to Study Rooms
+          </Link>
+        </div>
+      </div>
+
+      <div className="flex-1 max-w-7xl w-full mx-auto p-4 flex gap-4 relative opacity-50 pointer-events-none">
         {/* Participants Sidebar */}
         <div className="w-64 bg-white rounded-lg shadow p-4">
           <div className="flex items-center gap-2 mb-4">
