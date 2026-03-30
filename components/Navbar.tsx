@@ -46,7 +46,7 @@ export default function Navbar() {
     { name: 'Home', href: '/', icon: Home },
     { name: 'Study Dashboard', href: '/study', icon: BookOpen },
     { name: 'Study Plan', href: '/study-plan', icon: Target },
-    { name: 'Study Rooms', href: '/study-rooms', icon: Users },
+    // { name: 'Study Rooms', href: '/study-rooms', icon: Users },
     { name: 'Pricing', href: '/pricing', icon: DollarSign },
   ];
 
