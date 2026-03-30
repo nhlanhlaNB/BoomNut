@@ -70,16 +70,6 @@ export default function StudyRoomsPage() {
   if (!user) {
     return (
       <div className="min-h-screen bg-white">
-        <header className="p-6 bg-white shadow-md border-b border-gray-200">
-          <div className="max-w-7xl mx-auto flex justify-between items-center">
-            <Link href="/" className="flex items-center gap-2 text-gray-900 hover:text-gray-700">
-              <Home className="w-5 h-5" />
-              <span className="font-semibold">Home</span>
-            </Link>
-            <AuthButton />
-          </div>
-        </header>
-        
         <div className="flex items-center justify-center p-6 min-h-[80vh]">
           <div className="bg-gray-50 rounded-lg shadow p-8 max-w-md w-full text-center border border-gray-200">
             <Sparkles className="w-16 h-16 text-gray-700 mx-auto mb-4" />
@@ -96,16 +86,6 @@ export default function StudyRoomsPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <header className="p-6 bg-white shadow-md border-b border-gray-200">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-2 text-blue-600 hover:text-blue-700">
-            <Home className="w-5 h-5" />
-            <span className="font-semibold">Home</span>
-          </Link>
-          <AuthButton />
-        </div>
-      </header>
-
       <div className="max-w-4xl mx-auto p-6 py-12">
         <div className="text-center mb-12">
           <div className="inline-block p-3 bg-blue-100 rounded-full mb-4">
