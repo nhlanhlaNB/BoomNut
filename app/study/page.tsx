@@ -154,30 +154,6 @@ export default function StudyPage() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <Link href="/" className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-3 transition">
-                <Home className="w-4 h-4" />
-                <span className="text-sm font-medium">Back to Home</span>
-              </Link>
-              <h1 className="text-4xl md:text-5xl font-black text-gray-900">Study Dashboard</h1>
-              <p className="text-lg text-gray-600 mt-2">Welcome back, {user?.displayName?.split(' ')[0] || 'learner'}! 🎓</p>
-            </div>
-            {!isActive && (
-              <div className="text-right">
-                <p className="text-sm text-gray-600 mb-2">📚 Free tier user</p>
-                <Link href="/pricing" className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium">
-                  Upgrade to Pro
-                </Link>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Filter Section */}

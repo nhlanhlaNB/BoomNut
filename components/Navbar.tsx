@@ -135,6 +135,11 @@ export default function Navbar() {
             {/* Right Side - Desktop */}
             <div className="hidden lg:flex items-center gap-3">
               <SubscriptionBadge />
+              {!loading && user && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                  <span className="text-sm font-semibold text-gray-900">👋 {user.displayName?.split(' ')[0] || 'User'}</span>
+                </div>
+              )}
               {!loading && (
                 user ? (
                   <button
