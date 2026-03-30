@@ -200,6 +200,8 @@ export default function PricingPage() {
         {/* Pricing Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 mb-16 max-w-5xl mx-auto">
           {plans.map((plan, index) => {
+            if (plan.name === 'Test Boomnut') return null;
+            
             const Icon = plan.icon;
             const isPaidPlan = plan.name === 'Premium' || plan.name === 'Test Boomnut';
             const isUserSubscribed = isActive && subscription?.plan?.toLowerCase() === plan.name.toLowerCase();
