@@ -1,5 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Function to remove emojis, special characters, and dashes from text
+function cleanTextForSpeech(text: string): string {
+  return text
+    // Remove emojis and non-ASCII special characters
+    .replace(/[^\x00-\x7F]/g, (char) => {
+      // Allow common accented letters, keep them if present
+      const commonAccented = 'àáâäãåèéêëìíîïòóôöõùúûüýÿÀÁÂÄÃÅÈÉÊËÌÍÎÏÒÓÔÖÕÙÚÛÜÝŸ';
+      return commonAccented.includes(char) ? char : '';
+    })
+    // Remove markdown symbols and special punctuation
+    .replace(/[*_`~#@$%^&()\[\]{};:<>?/\\|]/g, '')
+    // Remove common bullet points and dash variations
+    .replace(/[•–—―]/g, '')
+    // Clean up multiple spaces and trim
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { text, voice = 'en-US-AriaNeural' } = await request.json();
@@ -18,8 +36,11 @@ export async function POST(request: NextRequest) {
     // Use Azure Speech Services REST API for TTS (more compatible with Next.js)
     const endpoint = `https://${speechRegion}.tts.speech.microsoft.com/cognitiveservices/v1`;
     
+    // Clean the text to remove emojis, special characters, and dashes
+    const cleanedText = cleanTextForSpeech(text);
+    
     // Escape XML special characters in text
-    const escapedText = text
+    const escapedText = cleanedText
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')

@@ -110,14 +110,48 @@ async function handleOffer(message: SignalingMessage) {
   } catch (error: any) {
     console.error('Error handling offer:', error);
     
-    // Fallback: Return a mock answer for development
+    // Fallback: Return a properly formatted mock answer for development
+    const mockAnswerSdp = `v=0
+o=webrtc-server 0 0 IN IP4 127.0.0.1
+s=WebRTC Server
+t=0 0
+a=group:BUNDLE 0
+a=msid-semantic: WMS *
+m=audio 9 UDP/TLS/RTP/SAVPF 111 63 103 104 9 0 8 106 105 13 110 112 113 114
+c=IN IP4 0.0.0.0
+a=rtcp:9 IN IP4 0.0.0.0
+a=ice-ufrag:0000
+a=ice-pwd:0000000000000000000000
+a=fingerprint:sha-256 00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00
+a=setup:passive
+a=mid:0
+a=recv-only
+a=rtcp-mux
+a=rtpmap:111 opus/48000/2
+a=rtpmap:63 H264/90000
+a=rtpmap:103 ISAC/16000
+a=rtpmap:104 ISAC/32000
+a=rtpmap:9 G722/8000
+a=rtpmap:0 PCMU/8000
+a=rtpmap:8 PCMA/8000
+a=rtpmap:106 CN/32000
+a=rtpmap:105 CN/16000
+a=rtpmap:13 CN/8000
+a=rtpmap:110 telephone-event/48000
+a=rtpmap:112 telephone-event/32000
+a=rtpmap:113 telephone-event/16000
+a=rtpmap:114 telephone-event/8000
+a=ssrc:1001 cname:webrtc-server
+a=ssrc:1001 msid:* *`;
+
     return NextResponse.json({
       answer: {
         type: 'answer',
-        sdp: 'v=0\r\no=- 0 0 IN IP4 0.0.0.0\r\ns=-\r\nt=0 0\r\na=group:BUNDLE 0\r\na=msid-semantic: WMS\r\n',
+        sdp: mockAnswerSdp,
       },
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
       ],
       warning: 'Using mock response - configure Azure Speech Service for production',
     });
