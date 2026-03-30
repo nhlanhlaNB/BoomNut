@@ -181,7 +181,7 @@ export default function PricingPage() {
             <div>
               <p className="font-bold text-green-900">Active Subscription</p>
               <p className="text-sm text-green-800">{daysRemaining} days remaining • Plan: {subscription?.plan?.toUpperCase()}</p>
-              <p className="text-xs text-green-700 mt-1">Your subscription will automatically expire on {subscription?.endDate ? new Date(subscription.endDate).toLocaleDateString() : 'TBD'}</p>
+              <p className="text-xs text-green-700 mt-1">Renews After 30 Days</p>
             </div>
           </div>
         )}
