@@ -55,6 +55,18 @@ const plans = [
       'Test subscription',
       'All Premium features',
       'Unlimited AI chat',
+Home
+Study Dashboard
+Study Plan
+Services
+💸 Pricing
+👋 User
+Sign Out
+BoomNut
+
+n
+nbigreeneconomy@g
+
       'Unlimited study sets',
       'Perfect for testing',
     ],
@@ -160,18 +172,6 @@ export default function PricingPage() {
         onLoad={() => setPaypalLoaded(true)}
         strategy="lazyOnload"
       />
-
-      <header className="z-10 p-4 md:p-6 bg-white shadow-md sticky top-0 border-b border-gray-200">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-2 text-gray-900 hover:text-gray-700 transition-colors group">
-            <div className="p-2 bg-gray-900 rounded-lg group-hover:scale-110 transition-transform">
-              <Zap className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-bold text-lg hidden sm:inline text-gray-900">BoomNut</span>
-          </Link>
-          <AuthButton />
-        </div>
-      </header>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-8 md:py-16">
         {/* Subscription Status Banner */}
