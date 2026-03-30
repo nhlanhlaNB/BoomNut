@@ -249,7 +249,7 @@ export default function PricingPage() {
                       </div>
                     ) : (
                       <>
-                        <div className="flex items-baseline gap-1">
+                        <div className={`flex items-baseline gap-1 ${plan.name === 'Test Boomnut' ? 'hidden' : ''}`}>
                           <span className="text-4xl font-bold text-gray-900">
                             ${plan.price}
                           </span>
@@ -257,7 +257,7 @@ export default function PricingPage() {
                         </div>
                         {isPaidPlan && (
                           <div className="text-sm text-emerald-600 mt-2 font-bold">
-                            📆 Auto-expires after 30 days
+                            📆 Renews Every 30 Days
                           </div>
                         )}
                       </>
