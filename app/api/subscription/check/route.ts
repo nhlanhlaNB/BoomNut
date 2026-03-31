@@ -45,11 +45,12 @@ export async function GET(req: NextRequest) {
     }
 
     // Get the first (most recent) subscription
-    let subscription = null;
-    let subscriptionRef = null;
-    snapshot.forEach((child) => {
-      if (!subscription || new Date(child.val().createdAt) > new Date(subscription.createdAt)) {
-        subscription = child.val();
+    let subscription: any = null;
+    let subscriptionRef: any = null;
+    snapshot.forEach((child: any) => {
+      const childVal = child.val();
+      if (!subscription || new Date(childVal.createdAt) > new Date(subscription.createdAt)) {
+        subscription = childVal;
         subscriptionRef = child.ref;
       }
     });
@@ -83,9 +84,9 @@ export async function GET(req: NextRequest) {
       isActive,
       status: isActive ? 'active' : 'expired',
       plan: subscription.plan || 'basic',
-      email: subscription.email,
-      startDate: subscription.startDate,
-      endDate: subscription.endDate,
+      email: subscription.email || '',
+      startDate: subscription.startDate || '',
+      endDate: subscription.endDate || '',
       daysRemaining: isActive ? daysRemaining : 0,
       subscriptionId: subscription.subscriptionId,
       message: isActive 

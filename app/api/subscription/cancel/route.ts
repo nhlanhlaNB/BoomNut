@@ -37,8 +37,15 @@ export async function POST(req: NextRequest) {
     }
 
     // Get the first subscription to cancel
-    let subscription = null;
-    let subscriptionRef = null;
+    interface SubscriptionData {
+      plan: string;
+      status: string;
+      email: string;
+      subscriptionId?: string;
+    }
+    
+    let subscription: SubscriptionData | null = null;
+    let subscriptionRef: any = null;
     snapshot.forEach((child) => {
       if (!subscription) {
         subscription = child.val();
@@ -46,19 +53,27 @@ export async function POST(req: NextRequest) {
       }
     });
 
+    if (!subscription) {
+      return NextResponse.json(
+        { success: true, message: 'No subscription found' },
+        { status: 200 }
+      );
+    }
+
+    const subData = subscription as any;
     console.log('[SUBSCRIPTION CANCEL] Found subscription to cancel:', {
       userId,
-      plan: subscription.plan,
-      paypalSubscriptionId: subscription.subscriptionId,
+      plan: subData.plan,
+      paypalSubscriptionId: subData.subscriptionId,
     });
 
     // Cancel PayPal subscription if it exists
-    if (subscription.subscriptionId && subscription.subscriptionId !== 'TEST-' && !subscription.subscriptionId.startsWith('TEST-')) {
+    if (subData.subscriptionId && subData.subscriptionId !== 'TEST-' && !subData.subscriptionId.startsWith('TEST-')) {
       try {
-        console.log('[SUBSCRIPTION CANCEL] Calling PayPal to cancel subscription:', subscription.subscriptionId);
+        console.log('[SUBSCRIPTION CANCEL] Calling PayPal to cancel subscription:', subData.subscriptionId);
         
         const paypalResponse = await fetch(
-          `https://api.paypal.com/v1/billing/subscriptions/${subscription.subscriptionId}/cancel`,
+          `https://api.paypal.com/v1/billing/subscriptions/${subData.subscriptionId}/cancel`,
           {
             method: 'POST',
             headers: {
@@ -92,8 +107,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Delete from database
-    await remove(subscriptionRef);
-    console.log('[SUBSCRIPTION CANCEL] ✅ Subscription removed from database for user:', userId);
+    if (subscriptionRef) {
+      await remove(subscriptionRef);
+      console.log('[SUBSCRIPTION CANCEL] ✅ Subscription removed from database for user:', userId);
+    }
 
     return NextResponse.json({
       success: true,
