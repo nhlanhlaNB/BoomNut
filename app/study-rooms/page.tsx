@@ -49,8 +49,9 @@ export default function StudyRoomsPage() {
   };
 
   const createRoom = () => {
-    const newRoomId = Math.random().toString(36).substring(2, 10);
-    router.push(`/study-room/${newRoomId}`);
+    // Generate a unique room code (6 characters)
+    const newRoomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    router.push(`/study-room/${newRoomCode}`);
   };
 
   const joinRoom = () => {

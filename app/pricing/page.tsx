@@ -189,8 +189,6 @@ export default function PricingPage() {
         <div className="flex justify-center mb-16">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 max-w-3xl w-full">
           {plans.map((plan, index) => {
-            if (plan.name === 'Test Boomnut') return null;
-            
             const Icon = plan.icon;
             const isPaidPlan = plan.name === 'Premium' || plan.name === 'Test Boomnut';
             const isUserSubscribed = isActive && subscription?.plan?.toLowerCase() === plan.name.toLowerCase();
@@ -240,7 +238,7 @@ export default function PricingPage() {
                       </div>
                     ) : (
                       <>
-                        <div className={`flex items-baseline gap-1 ${plan.name === 'Test Boomnut' ? 'hidden' : ''}`}>
+                        <div className="flex items-baseline gap-1">
                           <span className="text-4xl font-bold text-gray-900">
                             ${plan.price}
                           </span>

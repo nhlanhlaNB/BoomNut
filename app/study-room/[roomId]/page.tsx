@@ -91,7 +91,9 @@ export default function StudyRoomPage() {
         await setDoc(roomRef, {
           createdAt: new Date(),
           createdBy: user.uid,
+          roomCode: roomId,
           subject: 'General',
+          maxParticipants: 5,
           participants: [{
             uid: user.uid,
             name: user.displayName || 'Anonymous',
@@ -101,8 +103,17 @@ export default function StudyRoomPage() {
         });
       } else {
         // Join existing room
-        const currentParticipants = roomSnap.data().participants || [];
+        const roomData = roomSnap.data();
+        const currentParticipants = roomData.participants || [];
+        const maxParticipants = roomData.maxParticipants || 5;
         const alreadyJoined = currentParticipants.some((p: Participant) => p.uid === user.uid);
+        
+        // Check if room is full
+        if (!alreadyJoined && currentParticipants.length >= maxParticipants) {
+          alert('❌ This room is full! Maximum 5 participants allowed.');
+          setRoomExists(false);
+          return;
+        }
         
         if (!alreadyJoined) {
           await updateDoc(roomRef, {
@@ -115,7 +126,7 @@ export default function StudyRoomPage() {
           });
         }
 
-        setSubject(roomSnap.data().subject || 'General');
+        setSubject(roomData.subject || 'General');
       }
 
       setRoomExists(true);
@@ -341,10 +352,24 @@ export default function StudyRoomPage() {
       <div className="flex-1 max-w-7xl w-full mx-auto p-4 flex gap-4">
         {/* Participants Sidebar */}
         <div className="w-64 bg-white rounded-lg shadow p-4">
+          <div className="mb-6 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <p className="text-xs text-gray-600 mb-1">Room Code</p>
+            <p className="text-lg font-bold text-blue-600">{roomId}</p>
+            <p className="text-xs text-gray-500 mt-2">Share this code with friends to join</p>
+          </div>
+
           <div className="flex items-center gap-2 mb-4">
             <Users className="w-5 h-5 text-blue-600" />
-            <h3 className="font-semibold text-gray-800">Participants ({participants.length})</h3>
+            <h3 className="font-semibold text-gray-800">Participants</h3>
+            <span className="text-sm text-gray-600 bg-gray-100 px-2 py-0.5 rounded">{participants.length}/5</span>
           </div>
+          
+          {participants.length >= 5 && (
+            <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
+              ⚠️ Room is full!
+            </div>
+          )}
+          
           <div className="space-y-3">
             {participants.map((participant) => (
               <div key={participant.uid} className="flex items-center gap-3">
