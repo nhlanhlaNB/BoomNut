@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { rtdb } from '@/lib/firebase';
-import { ref, set } from 'firebase/database';
+import { ref, set, get } from 'firebase/database';
 
 export async function POST(req: NextRequest) {
   try {
     const { userId, email, plan, subscriptionId } = await req.json();
 
-    console.log('[SUBSCRIPTION CREATE] Attempting to create subscription:', { userId, email, plan });
+    console.log('[SUBSCRIPTION CREATE] 📝 Received request:', { userId, email, plan, subscriptionId });
 
     if (!userId || !email || !plan) {
-      console.error('[SUBSCRIPTION CREATE] Missing required fields:', { userId: !!userId, email: !!email, plan: !!plan });
+      console.error('[SUBSCRIPTION CREATE] ❌ Missing required fields:', { userId: !!userId, email: !!email, plan: !!plan });
       return NextResponse.json(
         { error: 'userId, email, and plan are required' },
         { status: 400 }
@@ -17,12 +17,12 @@ export async function POST(req: NextRequest) {
     }
 
     if (!rtdb) {
-      console.error('[SUBSCRIPTION CREATE] Firebase Realtime Database not initialized!');
-      console.error('[SUBSCRIPTION CREATE] rtdb value:', rtdb);
+      console.error('[SUBSCRIPTION CREATE] ❌ Firebase RTDB not initialized!');
+      console.error('[SUBSCRIPTION CREATE] rtdb:', rtdb);
       return NextResponse.json(
         { 
-          error: 'Firebase Realtime Database not configured. Check your Firebase project settings.',
-          details: 'Make sure you have enabled Realtime Database in your Firebase Console'
+          error: 'Firebase Realtime Database not configured',
+          details: 'RTDB is null - check .env.local for NEXT_PUBLIC_FIREBASE_DATABASE_URL'
         },
         { status: 500 }
       );
@@ -34,11 +34,7 @@ export async function POST(req: NextRequest) {
     endDate.setDate(endDate.getDate() + 30);
     const endDateStr = endDate.toISOString();
 
-    console.log('[SUBSCRIPTION CREATE] Saving to database:', { userId, plan, status: 'active', email });
-
-    // Store subscription in Realtime Database at /users/{userId}/subscription
-    const subscriptionRef = ref(rtdb, `users/${userId}/subscription`);
-    await set(subscriptionRef, {
+    const subscriptionData = {
       plan,
       status: 'active',
       email,
@@ -46,7 +42,30 @@ export async function POST(req: NextRequest) {
       startDate,
       endDate: endDateStr,
       createdAt: startDate,
-    });
+    };
+
+    console.log('[SUBSCRIPTION CREATE] 🔄 Writing to RTDB at users/', userId, '/subscription');
+    console.log('[SUBSCRIPTION CREATE] 📊 Data being written:', JSON.stringify(subscriptionData, null, 2));
+
+    // Store subscription in Realtime Database at /users/{userId}/subscription
+    const subscriptionRef = ref(rtdb, `users/${userId}/subscription`);
+    
+    try {
+      await set(subscriptionRef, subscriptionData);
+      console.log('[SUBSCRIPTION CREATE] ✅ Write to RTDB succeeded');
+    } catch (writeError) {
+      console.error('[SUBSCRIPTION CREATE] ❌ RTDB write failed:', writeError);
+      const errorMsg = writeError instanceof Error ? writeError.message : String(writeError);
+      throw new Error(`Firebase write error: ${errorMsg}`);
+    }
+
+    // Verify the write by reading back
+    try {
+      const snapshot = await get(subscriptionRef);
+      console.log('[SUBSCRIPTION CREATE] 🔍 Verification read:', snapshot.val());
+    } catch (readError) {
+      console.warn('[SUBSCRIPTION CREATE] ⚠️ Could not verify write:', readError);
+    }
 
     console.log('[SUBSCRIPTION CREATE] ✅ Subscription created successfully for user:', userId);
 
