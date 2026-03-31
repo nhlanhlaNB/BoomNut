@@ -3,8 +3,26 @@
 
 import React, { useEffect, useRef } from 'react';
 
-const PayPalSubscriptionButton = ({ planId, planName, userId, userEmail }) => {
-  const containerRef = useRef(null);
+interface PayPalSubscriptionButtonProps {
+  planId: string;
+  planName: string;
+  userId: string;
+  userEmail: string;
+}
+
+declare global {
+  interface Window {
+    paypal?: any;
+  }
+}
+
+const PayPalSubscriptionButton: React.FC<PayPalSubscriptionButtonProps> = ({ 
+  planId, 
+  planName, 
+  userId, 
+  userEmail 
+}) => {
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!window.paypal || !userId || !userEmail) return;
@@ -17,12 +35,12 @@ const PayPalSubscriptionButton = ({ planId, planName, userId, userEmail }) => {
         layout: 'vertical',
         label: 'subscribe'
       },
-      createSubscription: (data, actions) => {
+      createSubscription: (data: any, actions: any) => {
         return actions.subscription.create({
           plan_id: planId
         });
       },
-      onApprove: async (data, actions) => {
+      onApprove: async (data: any, actions: any) => {
         try {
           console.log('PayPal approved:', data.subscriptionID);
 
@@ -49,10 +67,11 @@ const PayPalSubscriptionButton = ({ planId, planName, userId, userEmail }) => {
 
         } catch (error) {
           console.error('Error:', error);
-          alert('❌ Subscription created but failed to save.\n\nError: ' + error.message);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          alert('❌ Subscription created but failed to save.\n\nError: ' + errorMessage);
         }
       },
-      onError: (err) => {
+      onError: (err: any) => {
         console.error('PayPal error:', err);
         alert('Payment failed.');
       }
