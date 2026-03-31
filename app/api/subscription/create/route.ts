@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
     const endDateStr = endDate.toISOString();
 
     const subscriptionData = {
+      userId,
       plan,
       status: 'active',
       email,
@@ -44,11 +45,12 @@ export async function POST(req: NextRequest) {
       createdAt: startDate,
     };
 
-    console.log('[SUBSCRIPTION CREATE] 🔄 Writing to RTDB at users/', userId, '/subscription');
+    console.log('[SUBSCRIPTION CREATE] 🔄 Writing to RTDB at subscriptions/');
     console.log('[SUBSCRIPTION CREATE] 📊 Data being written:', JSON.stringify(subscriptionData, null, 2));
 
-    // Store subscription in Realtime Database at /users/{userId}/subscription
-    const subscriptionRef = ref(rtdb, `users/${userId}/subscription`);
+    // Store subscription in Realtime Database at /subscriptions/{subscriptionId}
+    const subId = subscriptionId || `sub_${userId}_${Date.now()}`;
+    const subscriptionRef = ref(rtdb, `subscriptions/${subId}`);
     
     try {
       await set(subscriptionRef, subscriptionData);

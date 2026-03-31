@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { rtdb } from '@/lib/firebase';
-import { ref, get, update } from 'firebase/database';
+import { ref, get, query, orderByChild, equalTo, update } from 'firebase/database';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,11 +24,12 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Check subscription in Realtime Database at /users/{userId}/subscription
-    const subscriptionRef = ref(rtdb, `users/${userId}/subscription`);
-    const snapshot = await get(subscriptionRef);
+    // Check subscription in Realtime Database at /subscriptions - query by userId
+    const subscriptionsRef = ref(rtdb, 'subscriptions');
+    const subscriptionQuery = query(subscriptionsRef, orderByChild('userId'), equalTo(userId));
+    const snapshot = await get(subscriptionQuery);
 
-    console.log('[SUBSCRIPTION CHECK] Database snapshot exists:', snapshot.exists());
+    console.log('[SUBSCRIPTION CHECK] Database query found data:', snapshot.exists());
     
     if (!snapshot.exists()) {
       console.log('[SUBSCRIPTION CHECK] No subscription found for user:', userId);
@@ -43,7 +44,16 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const subscription = snapshot.val();
+    // Get the first (most recent) subscription
+    let subscription = null;
+    let subscriptionRef = null;
+    snapshot.forEach((child) => {
+      if (!subscription || new Date(child.val().createdAt) > new Date(subscription.createdAt)) {
+        subscription = child.val();
+        subscriptionRef = child.ref;
+      }
+    });
+
     console.log('[SUBSCRIPTION CHECK] Found subscription:', subscription);
 
     if (!subscription || !subscription.endDate) {
@@ -63,7 +73,7 @@ export async function GET(req: NextRequest) {
     const daysRemaining = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
     // Auto-update status if expired
-    if (!isActive && subscription.status === 'active') {
+    if (!isActive && subscription.status === 'active' && subscriptionRef) {
       await update(subscriptionRef, {
         status: 'expired'
       });

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { rtdb } from '@/lib/firebase';
-import { ref, get, remove } from 'firebase/database';
+import { ref, get, remove, query, orderByChild, equalTo } from 'firebase/database';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,9 +23,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get subscription from database
-    const subscriptionRef = ref(rtdb, `users/${userId}/subscription`);
-    const snapshot = await get(subscriptionRef);
+    // Get subscription from database - query by userId
+    const subscriptionsRef = ref(rtdb, 'subscriptions');
+    const subscriptionQuery = query(subscriptionsRef, orderByChild('userId'), equalTo(userId));
+    const snapshot = await get(subscriptionQuery);
 
     if (!snapshot.exists()) {
       console.log('[SUBSCRIPTION CANCEL] No subscription found for user:', userId);
@@ -35,7 +36,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const subscription = snapshot.val();
+    // Get the first subscription to cancel
+    let subscription = null;
+    let subscriptionRef = null;
+    snapshot.forEach((child) => {
+      if (!subscription) {
+        subscription = child.val();
+        subscriptionRef = child.ref;
+      }
+    });
+
     console.log('[SUBSCRIPTION CANCEL] Found subscription to cancel:', {
       userId,
       plan: subscription.plan,

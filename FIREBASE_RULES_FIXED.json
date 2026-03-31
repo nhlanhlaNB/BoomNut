@@ -4,11 +4,6 @@
       "$uid": {
         ".read": "auth != null && $uid === auth.uid",
         ".write": "auth != null && $uid === auth.uid",
-        "subscription": {
-          ".read": "auth != null && $uid === auth.uid",
-          ".write": "newData.hasChildren(['plan', 'status', 'email'])",
-          ".validate": "newData.hasChildren(['plan', 'status', 'email']) && newData.child('plan').isString() && newData.child('status').isString() && newData.child('email').isString()"
-        },
         "settings": {
           ".read": "auth != null && $uid === auth.uid",
           ".write": "auth != null && $uid === auth.uid"
@@ -23,6 +18,7 @@
       "$subId": {
         ".read": "auth != null",
         ".write": "newData.hasChildren(['userId', 'status', 'email', 'plan'])",
+        ".indexOn": ["userId"],
         ".validate": "newData.hasChildren(['userId', 'status', 'email', 'plan']) && newData.child('userId').isString() && newData.child('status').isString() && newData.child('email').isString() && newData.child('plan').isString()"
       }
     },
