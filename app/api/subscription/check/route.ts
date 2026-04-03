@@ -5,10 +5,11 @@ import { ref, get, query, orderByChild, equalTo, update } from 'firebase/databas
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
+  const userId = req.nextUrl.searchParams.get('userId');
+  
+  console.log('[SUBSCRIPTION CHECK] Checking subscription for userId:', userId);
+  
   try {
-    const userId = req.nextUrl.searchParams.get('userId');
-    console.log('[SUBSCRIPTION CHECK] Checking subscription for userId:', userId);
-    
     if (!userId) {
       return NextResponse.json(
         { error: 'userId is required' },
@@ -17,30 +18,25 @@ export async function GET(req: NextRequest) {
     }
 
     if (!rtdb) {
-      console.error('❌ [SUBSCRIPTION CHECK] Firebase Realtime Database not configured. Missing NEXT_PUBLIC_FIREBASE_DATABASE_URL in .env.local');
+      console.error('❌ [SUBSCRIPTION CHECK] Firebase Realtime Database not initialized');
       return NextResponse.json(
-        { error: 'Database not configured - Please add NEXT_PUBLIC_FIREBASE_DATABASE_URL to .env.local' },
-        { status: 500 }
+        { 
+          isActive: false, 
+          status: 'no_subscription',
+          plan: 'none',
+          message: 'Database not available'
+        },
+        { status: 200 }
       );
     }
 
-    // Read all subscriptions from Realtime Database
+    // Read all subscriptions - simple and reliable approach
+    console.log('[SUBSCRIPTION CHECK] Reading all subscriptions...');
     const subscriptionsRef = ref(rtdb, 'subscriptions');
-    let snapshot;
-    
-    try {
-      // Try to use query first (requires .indexOn: ["userId"] in rules)
-      console.log('[SUBSCRIPTION CHECK] Attempting indexed query...');
-      const subscriptionQuery = query(subscriptionsRef, orderByChild('userId'), equalTo(userId));
-      snapshot = await get(subscriptionQuery);
-    } catch (queryError) {
-      // Fallback: read all subscriptions and search manually
-      console.warn('[SUBSCRIPTION CHECK] ⚠️ Query failed, using manual search:', queryError);
-      snapshot = await get(subscriptionsRef);
-    }
+    const snapshot = await get(subscriptionsRef);
 
     if (!snapshot.exists()) {
-      console.log('[SUBSCRIPTION CHECK] No subscriptions found at all');
+      console.log('[SUBSCRIPTION CHECK] No subscriptions found');
       return NextResponse.json(
         { 
           isActive: false, 
@@ -58,7 +54,6 @@ export async function GET(req: NextRequest) {
     
     snapshot.forEach((child: any) => {
       const childVal = child.val();
-      console.log('[SUBSCRIPTION CHECK] Checking subscription:', { key: child.key, userId: childVal.userId });
       
       if (childVal && childVal.userId === userId) {
         // Get the most recent one
@@ -82,7 +77,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    console.log('[SUBSCRIPTION CHECK] Found subscription:', foundSubscription);
+    console.log('[SUBSCRIPTION CHECK] Found subscription for user');
 
     if (!foundSubscription.endDate) {
       console.warn('[SUBSCRIPTION CHECK] Subscription missing endDate');
@@ -103,9 +98,14 @@ export async function GET(req: NextRequest) {
 
     // Auto-update status if expired
     if (!isActive && foundSubscription.status === 'active' && subscriptionKey) {
-      console.log('[SUBSCRIPTION CHECK] Marking subscription as expired');
-      const subRef = ref(rtdb, `subscriptions/${subscriptionKey}`);
-      await update(subRef, { status: 'expired' });
+      try {
+        console.log('[SUBSCRIPTION CHECK] Marking subscription as expired');
+        const subRef = ref(rtdb, `subscriptions/${subscriptionKey}`);
+        await update(subRef, { status: 'expired' });
+      } catch (updateError) {
+        console.warn('[SUBSCRIPTION CHECK] Failed to update status:', updateError);
+        // Don't fail the response if update fails
+      }
     }
 
     const responseData = {
@@ -122,14 +122,20 @@ export async function GET(req: NextRequest) {
         : 'Subscription expired'
     };
 
-    console.log('[SUBSCRIPTION CHECK] ✅ Returning subscription status:', responseData);
+    console.log('[SUBSCRIPTION CHECK] ✅ Success for user:', userId);
     return NextResponse.json(responseData);
   } catch (error) {
-    console.error('[SUBSCRIPTION CHECK] ❌ Error checking subscription:', error);
+    console.error('[SUBSCRIPTION CHECK] ❌ Error:', error);
     const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error('[SUBSCRIPTION CHECK] Error details:', errorMsg, error);
     return NextResponse.json(
-      { error: 'Failed to check subscription', details: errorMsg },
-      { status: 500 }
+      { 
+        isActive: false, 
+        status: 'no_subscription',
+        error: 'Failed to check subscription',
+        details: errorMsg
+      },
+      { status: 200 } // Return 200 even on error to prevent infinite retries
     );
   }
 }
