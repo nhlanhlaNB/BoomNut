@@ -52,6 +52,17 @@ export default function PricingPage() {
   const [paypalLoaded, setPaypalLoaded] = useState(false);
   const paypalButtonsRef = useRef<{ [key: string]: any }>({});
 
+  // Debug logging
+  useEffect(() => {
+    console.log('[PRICING PAGE DEBUG]', {
+      user: user?.uid,
+      subscription,
+      isActive,
+      daysRemaining,
+      premiumCheck: subscription?.plan?.toLowerCase() === 'premium'
+    });
+  }, [user, subscription, isActive, daysRemaining]);
+
   const handleSubscriptionSuccess = async (subscriptionId: string, planName: string) => {
     if (!user) return;
 
@@ -165,6 +176,29 @@ export default function PricingPage() {
                 {subscription?.endDate ? new Date(subscription.endDate).toLocaleDateString() : 'TBD'}
               </p>
             </div>
+          </div>
+        )}
+
+        {/* DEBUG SECTION */}
+        {user && (
+          <div className="mb-8 p-4 bg-blue-50 border border-blue-200 rounded-lg text-xs font-mono">
+            <p className="font-bold text-blue-900 mb-2">🔍 Debug Info:</p>
+            <p className="text-blue-800">User UID: {user.uid}</p>
+            <p className="text-blue-800">isActive: {String(isActive)}</p>
+            <p className="text-blue-800">subscription.plan: {subscription?.plan || 'undefined'}</p>
+            <p className="text-blue-800">subscription.status: {subscription?.status || 'undefined'}</p>
+            <p className="text-blue-800">daysRemaining: {daysRemaining}</p>
+            <p className="text-blue-800">showPaymentButton: {String(showPaymentButton)}</p>
+            <button 
+              onClick={async () => {
+                console.log('[PRICING DEBUG] Refreshing subscription...');
+                await refreshSubscription();
+                alert('✅ Subscription refreshed - check console for details');
+              }}
+              className="mt-2 px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+            >
+              Refresh Subscription
+            </button>
           </div>
         )}
 
