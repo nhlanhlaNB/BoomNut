@@ -186,6 +186,20 @@ export default function PricingPage() {
             const isUserSubscribed = isActive && subscription?.plan?.toLowerCase() === plan.name.toLowerCase();
             const showPayButton = plan.price > 0 && showPaymentButton && !isUserSubscribed;
 
+            // Debug logging for each plan
+            if (user) {
+              console.log(`[PRICING] ${plan.name} card:`, {
+                isActive,
+                subscriptionPlan: subscription?.plan,
+                planName: plan.name,
+                planNameLower: plan.name.toLowerCase(),
+                subscriptionPlanLower: subscription?.plan?.toLowerCase(),
+                isUserSubscribed,
+                daysRemaining,
+                showPayButton
+              });
+            }
+
             return (
               <div
                 key={plan.name}

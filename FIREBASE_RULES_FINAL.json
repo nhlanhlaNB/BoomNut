@@ -1,0 +1,172 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "auth != null && $uid === auth.uid",
+        ".write": "auth != null && $uid === auth.uid",
+        ".indexOn": ["createdAt"],
+        "settings": {
+          ".read": "auth != null && $uid === auth.uid",
+          ".write": "auth != null && $uid === auth.uid"
+        },
+        "preferences": {
+          ".read": "auth != null && $uid === auth.uid",
+          ".write": "auth != null && $uid === auth.uid"
+        }
+      }
+    },
+    "subscriptions": {
+      ".read": "true",
+      ".write": "newData.exists() || !data.exists()",
+      "$subId": {
+        ".read": "true",
+        ".write": "newData.exists() ? (newData.hasChildren(['userId', 'status', 'email', 'plan']) && newData.child('userId').isString() && newData.child('status').isString() && newData.child('email').isString() && newData.child('plan').isString()) : true",
+        ".indexOn": ["userId"],
+        ".validate": "newData.exists() ? (newData.hasChildren(['userId', 'status', 'email', 'plan']) && (newData.child('status').val() === 'active' || newData.child('status').val() === 'expired')) : true"
+      }
+    },
+    "chatSessions": {
+      "$sessionId": {
+        ".read": "auth != null && auth.uid === data.child('userId').val()",
+        ".write": "auth != null && (auth.uid === data.child('userId').val() || (auth.uid === newData.child('userId').val() && !data.exists()))",
+        ".indexOn": ["userId", "createdAt"],
+        "messages": {
+          "$messageId": {
+            ".read": "auth != null && auth.uid === root.child('chatSessions').child($sessionId).child('userId').val()",
+            ".write": "auth != null && auth.uid === newData.child('userId').val() && auth.uid === newData.child('senderId').val()",
+            ".validate": "newData.hasChildren(['text', 'userId', 'senderId', 'timestamp']) && newData.child('timestamp').val() <= now"
+          }
+        }
+      }
+    },
+    "studySets": {
+      "$setId": {
+        ".read": "auth != null && (auth.uid === data.child('userId').val() || data.child('isPublic').val() === true)",
+        ".write": "auth != null && (auth.uid === data.child('userId').val() || (auth.uid === newData.child('userId').val() && !data.exists()))",
+        ".indexOn": ["userId", "isPublic"],
+        "cards": {
+          "$cardId": {
+            ".read": "auth != null && auth.uid === root.child('studySets').child($setId).child('userId').val()",
+            ".write": "auth != null && auth.uid === root.child('studySets').child($setId).child('userId').val()"
+          }
+        },
+        "reviews": {
+          "$reviewId": {
+            ".read": "auth != null && auth.uid === root.child('studySets').child($setId).child('userId').val()",
+            ".write": "auth != null && auth.uid === root.child('studySets').child($setId).child('userId').val()"
+          }
+        }
+      }
+    },
+    "quizzes": {
+      "$quizId": {
+        ".read": "auth != null && (auth.uid === data.child('userId').val() || data.child('isPublic').val() === true)",
+        ".write": "auth != null && (auth.uid === data.child('userId').val() || (auth.uid === newData.child('userId').val() && !data.exists()))",
+        ".indexOn": ["userId", "isPublic"],
+        "attempts": {
+          "$attemptId": {
+            ".read": "auth != null && auth.uid === root.child('quizzes').child($quizId).child('userId').val()",
+            ".write": "auth != null && auth.uid === root.child('quizzes').child($quizId).child('userId').val()",
+            ".validate": "newData.hasChildren(['userId', 'score', 'timestamp'])"
+          }
+        }
+      }
+    },
+    "studyGuides": {
+      "$guideId": {
+        ".read": "auth != null && (auth.uid === data.child('userId').val() || data.child('isPublic').val() === true)",
+        ".write": "auth != null && (auth.uid === data.child('userId').val() || (auth.uid === newData.child('userId').val() && !data.exists()))",
+        ".indexOn": ["userId", "isPublic"],
+        "sections": {
+          "$sectionId": {
+            ".read": "auth != null && auth.uid === root.child('studyGuides').child($guideId).child('userId').val()",
+            ".write": "auth != null && auth.uid === root.child('studyGuides').child($guideId).child('userId').val()"
+          }
+        }
+      }
+    },
+    "documents": {
+      "$docId": {
+        ".read": "auth != null && (auth.uid === data.child('userId').val() || data.child('isPublic').val() === true)",
+        ".write": "auth != null && (auth.uid === data.child('userId').val() || (auth.uid === newData.child('userId').val() && !data.exists()))",
+        ".indexOn": ["userId"],
+        ".validate": "newData.hasChildren(['userId', 'name'])"
+      }
+    },
+    "progress": {
+      "$progressId": {
+        ".read": "auth != null && auth.uid === data.child('userId').val()",
+        ".write": "auth != null && (auth.uid === data.child('userId').val() || (auth.uid === newData.child('userId').val() && !data.exists()))",
+        ".indexOn": ["userId"],
+        ".validate": "newData.hasChildren(['userId', 'completedCards', 'lastReviewDate'])"
+      }
+    },
+    "studyRooms": {
+      "$roomId": {
+        ".read": "auth != null && (auth.uid === data.child('creatorId').val() || data.child('isPublic').val() === true)",
+        ".write": "auth != null && (auth.uid === data.child('creatorId').val() || (auth.uid === newData.child('creatorId').val() && !data.exists()))",
+        ".indexOn": ["creatorId", "isPublic"],
+        "messages": {
+          "$messageId": {
+            ".read": "auth != null && auth.uid === root.child('studyRooms').child($roomId).child('creatorId').val()",
+            ".write": "auth != null && auth.uid === newData.child('userId').val() && auth.uid === newData.child('senderId').val()",
+            ".validate": "newData.hasChildren(['text', 'userId', 'senderId', 'timestamp']) && newData.child('timestamp').val() <= now"
+          }
+        },
+        "participants": {
+          "$participantId": {
+            ".read": "auth != null",
+            ".write": "auth != null && auth.uid === root.child('studyRooms').child($roomId).child('creatorId').val()",
+            ".validate": "newData.hasChildren(['uid', 'joinedAt'])"
+          }
+        }
+      }
+    },
+    "communityPosts": {
+      "$postId": {
+        ".read": "auth != null && (auth.uid === data.child('userId').val() || data.child('isPublic').val() === true)",
+        ".write": "auth != null && (auth.uid === data.child('userId').val() || (auth.uid === newData.child('userId').val() && !data.exists()))",
+        ".indexOn": ["userId", "isPublic", "createdAt"],
+        ".validate": "newData.hasChildren(['userId', 'title', 'content'])",
+        "comments": {
+          "$commentId": {
+            ".read": "auth != null && (auth.uid === data.child('userId').val() || data.child('isPublic').val() === true)",
+            ".write": "auth != null && auth.uid === newData.child('userId').val() && auth.uid === newData.child('authorId').val()",
+            ".validate": "newData.hasChildren(['text', 'userId', 'authorId', 'timestamp']) && newData.child('timestamp').val() <= now"
+          }
+        },
+        "likes": {
+          "$likeerId": {
+            ".read": "auth != null",
+            ".write": "auth != null && auth.uid === $likeerId",
+            ".validate": "newData.val() === true || !newData.exists()"
+          }
+        }
+      }
+    },
+    "notifications": {
+      "$notifId": {
+        ".read": "auth != null && auth.uid === data.child('userId').val()",
+        ".write": "auth != null && auth.uid === data.child('userId').val()",
+        ".indexOn": ["userId", "createdAt"],
+        ".validate": "newData.hasChildren(['userId', 'message', 'type'])"
+      }
+    },
+    "activityLogs": {
+      "$logId": {
+        ".read": "auth != null && auth.uid === data.child('userId').val()",
+        ".write": "auth != null && auth.uid === newData.child('userId').val()",
+        ".indexOn": ["userId", "timestamp"],
+        ".validate": "newData.hasChildren(['userId', 'action', 'timestamp']) && newData.child('timestamp').val() <= now"
+      }
+    },
+    "paymentHistory": {
+      "$paymentId": {
+        ".read": "auth != null && auth.uid === data.child('userId').val()",
+        ".write": "auth != null && auth.uid === newData.child('userId').val()",
+        ".indexOn": ["userId", "timestamp"],
+        ".validate": "newData.hasChildren(['userId', 'amount', 'status', 'timestamp']) && (newData.child('status').val() === 'completed' || newData.child('status').val() === 'pending' || newData.child('status').val() === 'failed')"
+      }
+    }
+  }
+}
