@@ -4,9 +4,13 @@ import { ref, set, get } from 'firebase/database';
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, email, plan, subscriptionId } = await req.json();
+    const body = await req.json();
+    const { userId, email, plan, subscriptionId } = body;
 
-    console.log('[SUBSCRIPTION CREATE] 📝 Received request:', { userId, email, plan, subscriptionId });
+    console.log('[SUBSCRIPTION CREATE] 📝 Raw request body:', JSON.stringify(body));
+    console.log('[SUBSCRIPTION CREATE] 📝 Parsed values:', { userId, email, plan, subscriptionId });
+    console.log('[SUBSCRIPTION CREATE] ⚠️ userId type:', typeof userId, 'value:', userId);
+    console.log('[SUBSCRIPTION CREATE] ⚠️ email type:', typeof email, 'value:', email);
 
     if (!userId || !email || !plan) {
       console.error('[SUBSCRIPTION CREATE] ❌ Missing required fields:', { userId: !!userId, email: !!email, plan: !!plan });
@@ -18,7 +22,6 @@ export async function POST(req: NextRequest) {
 
     if (!rtdb) {
       console.error('[SUBSCRIPTION CREATE] ❌ Firebase RTDB not initialized!');
-      console.error('[SUBSCRIPTION CREATE] rtdb:', rtdb);
       return NextResponse.json(
         { 
           error: 'Firebase Realtime Database not configured',
@@ -50,11 +53,12 @@ export async function POST(req: NextRequest) {
 
     // Store subscription in Realtime Database at /subscriptions/{subscriptionId}
     const subId = subscriptionId || `sub_${userId}_${Date.now()}`;
+    console.log('[SUBSCRIPTION CREATE] Generated subId:', subId);
     const subscriptionRef = ref(rtdb, `subscriptions/${subId}`);
     
     try {
       await set(subscriptionRef, subscriptionData);
-      console.log('[SUBSCRIPTION CREATE] ✅ Write to RTDB succeeded');
+      console.log('[SUBSCRIPTION CREATE] ✅ Write to RTDB succeeded at path: subscriptions/', subId);
     } catch (writeError) {
       console.error('[SUBSCRIPTION CREATE] ❌ RTDB write failed:', writeError);
       const errorMsg = writeError instanceof Error ? writeError.message : String(writeError);
@@ -64,7 +68,11 @@ export async function POST(req: NextRequest) {
     // Verify the write by reading back
     try {
       const snapshot = await get(subscriptionRef);
-      console.log('[SUBSCRIPTION CREATE] 🔍 Verification read:', snapshot.val());
+      const storedData = snapshot.val();
+      console.log('[SUBSCRIPTION CREATE] 🔍 Verification read from database:', JSON.stringify(storedData, null, 2));
+      console.log('[SUBSCRIPTION CREATE] 🔍 Stored userId:', storedData?.userId);
+      console.log('[SUBSCRIPTION CREATE] 🔍 Stored plan:', storedData?.plan);
+      console.log('[SUBSCRIPTION CREATE] 🔍 Stored status:', storedData?.status);
     } catch (readError) {
       console.warn('[SUBSCRIPTION CREATE] ⚠️ Could not verify write:', readError);
     }

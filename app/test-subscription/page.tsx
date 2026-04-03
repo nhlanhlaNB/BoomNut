@@ -19,9 +19,21 @@ export default function TestSubscriptionPage() {
       return;
     }
 
+    if (!user.uid) {
+      alert('❌ ERROR: User UID is missing! This is a login issue.');
+      console.error('[TEST PAGE] ❌ user.uid is:', user.uid, 'user object:', user);
+      return;
+    }
+
     try {
       setLoading(true);
-      console.log('[TEST PAGE] Creating subscription...');
+      console.log('[TEST PAGE] ⚠️ PRE-CREATE CHECK:');
+      console.log('[TEST PAGE] user.uid:', user.uid);
+      console.log('[TEST PAGE] user.email:', user.email);
+      console.log('[TEST PAGE] typeof user.uid:', typeof user.uid);
+      console.log('[TEST PAGE] typeof user.email:', typeof user.email);
+      
+      console.log('[TEST PAGE] Creating subscription with:', { userId: user.uid, email: user.email, plan: 'basic', subscriptionId: `TEST-${Date.now()}` });
       
       // Create the subscription
       await createSubscription('basic', `TEST-${Date.now()}`);
@@ -31,11 +43,11 @@ export default function TestSubscriptionPage() {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Refresh the subscription status
-      console.log('[TEST PAGE] Refreshing subscription status...');
+      console.log('[TEST PAGE] Refreshing subscription status with userId:', user.uid);
       await refreshSubscription();
       
       console.log('[TEST PAGE] ✅ Subscription complete! Current status:', subscription);
-      alert(`✅ Test subscription created!\n\nEmail: ${user.email}\nStatus: Active\nPlan: Basic\nDays: 30\n\nRefresh the page if status doesn't update.`);
+      alert(`✅ Test subscription created!\n\nEmail: ${user.email}\nStatus: Active\nPlan: Basic\nDays: 30\n\nCheck the debug section to verify it was saved.`);
     } catch (error: any) {
       console.error('[TEST PAGE] ❌ Error:', error);
       alert(`❌ Error: ${error?.message || 'Failed to create subscription'}`);
@@ -74,11 +86,18 @@ export default function TestSubscriptionPage() {
 
     try {
       setLoading(true);
-      console.log('[DEBUG] Checking with userId:', user.uid);
-      const response = await fetch(`/api/subscription/debug?userId=${user.uid}`);
+      const searchUid = user.uid;
+      console.log('[DEBUG] Checking with userId:', searchUid);
+      console.log('[DEBUG] Full URL:', `/api/subscription/debug?userId=${searchUid}`);
+      
+      const response = await fetch(`/api/subscription/debug?userId=${searchUid}`);
       const data = await response.json();
-      setDebugData(data);
-      console.log('[DEBUG] Response:', data);
+      
+      console.log('[DEBUG] Full response:', data);
+      setDebugData({
+        ...data,
+        searchUidUsed: searchUid
+      });
     } catch (error: any) {
       console.error('[DEBUG] Error:', error);
       alert(`Debug error: ${error?.message || 'Failed to fetch debug data'}`);
@@ -251,22 +270,28 @@ export default function TestSubscriptionPage() {
                 <div className="bg-white rounded p-4 border border-yellow-200">
                   <p className="font-bold text-gray-900 mb-3">Database Results:</p>
                   <div className="text-sm space-y-2">
-                    <p><strong>Looking for UID:</strong> {debugData.searchingForUserId}</p>
-                    <p><strong>Total subscriptions in DB:</strong> {debugData.totalSubscriptions}</p>
-                    <p><strong>Matching YOUR subscriptions:</strong> {debugData.matchingSubscriptions}</p>
+                    <p><strong>Searched for UID:</strong> <code className="bg-gray-100 px-2 py-1 rounded">{debugData.searchUidUsed || debugData.searchingForUserId}</code></p>
+                    <p><strong>Total subscriptions in database:</strong> <span className="font-bold text-lg">{debugData.totalSubscriptions}</span></p>
+                    <p><strong>Subscriptions matching YOUR UID:</strong> <span className="font-bold text-lg text-blue-600">{debugData.matchingSubscriptions}</span></p>
                     
-                    {debugData.matchingSubscriptions && debugData.matchingSubscriptions > 0 ? (
+                    {debugData.totalSubscriptions === 0 ? (
+                      <div className="mt-3 p-2 bg-orange-100 rounded border border-orange-300">
+                        <p className="font-bold text-orange-900">⚠️ Database is completely empty</p>
+                        <p className="text-xs text-orange-800 mt-1">No subscriptions have been created yet. Try clicking "Create Test Subscription" first.</p>
+                      </div>
+                    ) : debugData.matchingSubscriptions && debugData.matchingSubscriptions > 0 ? (
                       <div className="mt-3 p-2 bg-green-100 rounded border border-green-300">
                         <p className="font-bold text-green-900 mb-2">✅ Your subscriptions found:</p>
-                        <div className="text-xs font-mono space-y-2">
+                        <div className="text-xs font-mono space-y-3">
                           {debugData.userSubscriptions?.map((sub: any, idx: number) => (
-                            <div key={idx} className="p-2 bg-white rounded border border-green-200">
-                              <p>ID: {sub.key}</p>
-                              <p>Plan: {sub.plan}</p>
-                              <p>Status: {sub.status}</p>
-                              <p>Email: {sub.email}</p>
-                              <p>Created: {new Date(sub.createdAt).toLocaleString()}</p>
-                              <p>Expires: {new Date(sub.endDate).toLocaleString()}</p>
+                            <div key={idx} className="p-2 bg-white rounded border border-green-200 space-y-1">
+                              <div><strong>ID:</strong> {sub.key}</div>
+                              <div><strong>UID Stored:</strong> {sub.userId}</div>
+                              <div><strong>Email:</strong> {sub.email}</div>
+                              <div><strong>Plan:</strong> {sub.plan}</div>
+                              <div><strong>Status:</strong> {sub.status}</div>
+                              <div><strong>Created:</strong> {sub.createdAt ? new Date(sub.createdAt).toLocaleString() : 'N/A'}</div>
+                              <div><strong>Expires:</strong> {sub.endDate ? new Date(sub.endDate).toLocaleString() : 'N/A'}</div>
                             </div>
                           ))}
                         </div>
@@ -274,17 +299,22 @@ export default function TestSubscriptionPage() {
                     ) : (
                       <div className="mt-3 p-2 bg-red-100 rounded border border-red-300">
                         <p className="font-bold text-red-900">❌ No subscriptions found for your UID</p>
-                        <p className="text-xs text-red-800 mt-1">This means the subscription wasn't saved with your UID. Check the create endpoint logs.</p>
+                        <p className="text-xs text-red-800 mt-2">
+                          <strong>This means subscriptions were created but with a DIFFERENT UID.</strong><br/>
+                          This usually indicates a login/auth issue. Check browser console logs for the actual UID being sent.
+                        </p>
                       </div>
                     )}
 
-                    {debugData.totalSubscriptions > 0 && (
+                    {debugData.totalSubscriptions > 0 && debugData.allSubscriptions && (
                       <div className="mt-3 p-2 bg-blue-100 rounded border border-blue-300">
-                        <p className="font-bold text-blue-900 mb-2">All subscriptions in database:</p>
-                        <div className="text-xs font-mono space-y-1 max-h-60 overflow-y-auto">
+                        <p className="font-bold text-blue-900 mb-2">All subscriptions in database ({debugData.totalSubscriptions}):</p>
+                        <div className="text-xs space-y-1 max-h-40 overflow-y-auto font-mono">
                           {debugData.allSubscriptions?.map((sub: any, idx: number) => (
-                            <div key={idx} className="text-blue-800">
-                              {sub.key} → UID: {sub.userId} | Plan: {sub.plan} | Status: {sub.status}
+                            <div key={idx} className="text-blue-800 bg-white p-1 rounded border border-blue-200">
+                              <div><strong>ID:</strong> {sub.key}</div>
+                              <div><strong>UID:</strong> <span className={sub.userId === (debugData.searchUidUsed || debugData.searchingForUserId) ? 'text-green-600 font-bold' : 'text-red-600'}>{sub.userId}</span></div>
+                              <div><strong>Plan:</strong> {sub.plan} | <strong>Status:</strong> {sub.status}</div>
                             </div>
                           ))}
                         </div>
