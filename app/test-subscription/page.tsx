@@ -33,10 +33,10 @@ export default function TestSubscriptionPage() {
       console.log('[TEST PAGE] typeof user.uid:', typeof user.uid);
       console.log('[TEST PAGE] typeof user.email:', typeof user.email);
       
-      console.log('[TEST PAGE] Creating subscription with:', { userId: user.uid, email: user.email, plan: 'basic', subscriptionId: `TEST-${Date.now()}` });
+      console.log('[TEST PAGE] Creating subscription with:', { userId: user.uid, email: user.email, plan: 'premium', subscriptionId: `TEST-${Date.now()}` });
       
       // Create the subscription
-      await createSubscription('basic', `TEST-${Date.now()}`);
+      await createSubscription('premium', `TEST-${Date.now()}`);
       console.log('[TEST PAGE] Subscription created, waiting 1 second before refresh...');
       
       // Wait a moment for database to fully save
@@ -47,7 +47,7 @@ export default function TestSubscriptionPage() {
       await refreshSubscription();
       
       console.log('[TEST PAGE] ✅ Subscription complete! Current status:', subscription);
-      alert(`✅ Test subscription created!\n\nEmail: ${user.email}\nStatus: Active\nPlan: Basic\nDays: 30\n\nCheck the debug section to verify it was saved.`);
+      alert(`✅ Test subscription created!\n\nEmail: ${user.email}\nStatus: Active\nPlan: Premium\nDays: 30\n\nCheck the debug section to verify it was saved.`);
     } catch (error: any) {
       console.error('[TEST PAGE] ❌ Error:', error);
       alert(`❌ Error: ${error?.message || 'Failed to create subscription'}`);
