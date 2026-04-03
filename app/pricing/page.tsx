@@ -42,23 +42,7 @@ const plans = [
       'Video & audio uploads',
       'Priority support',
     ],
-    paypalPlanId: 'P-51711759R0127122YNHA4ITY', // $3 30-day plan
-  },
-  {
-    name: 'Test Boomnut',
-    price: 0.1,
-    period: '30 days',
-    icon: Zap,
-    color: 'from-blue-500 to-indigo-600',
-    popular: false,
-    features: [
-      'Test subscription',
-      'All Premium features',
-      'Unlimited AI chat',
-      'Unlimited study sets',
-      'Perfect for testing',
-    ],
-    paypalPlanId: 'P-7V61468029079353FNHDOXSQ', // $0.10 test plan
+    paypalPlanId: 'P-51711759R0127122YNHA4ITY',
   },
 ];
 
@@ -71,7 +55,6 @@ export default function PricingPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const paypalButtonsRef = useRef<{ [key: string]: any }>({});
 
-  // Handle subscription success
   const handleSubscriptionSuccess = async (subscriptionId: string, planName: string) => {
     if (!user) return;
 
@@ -79,7 +62,6 @@ export default function PricingPage() {
       setLoading(null);
       console.log('[PAYPAL] Payment approved for:', { userId: user.uid, planName, subscriptionId });
       
-      // Create subscription in database
       const result = await createSubscription(planName.toLowerCase(), subscriptionId);
       console.log('[PAYPAL] Subscription created:', result);
       console.log('[PAYPAL] Subscription details:', { 
@@ -88,14 +70,21 @@ export default function PricingPage() {
         status: result?.subscription?.status
       });
       
+<<<<<<< Updated upstream
       alert(`✅ Successfully subscribed to ${planName} plan for 30 days!\n\nYour subscription is now active!`);
+=======
+      alert(`✅ Successfully subscribed to ${planName} plan for 30 days!\n\nYour subscription will auto-renew.\n\nRefresh to see changes!`);
+      
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+>>>>>>> Stashed changes
     } catch (error) {
       console.error('[PAYPAL] Error saving subscription:', error);
       alert('❌ Subscription created but failed to save to database. Please try refreshing the page or contact support.');
     }
   };
 
-  // Initialize PayPal buttons when SDK loads
   useEffect(() => {
     if (!paypalLoaded || !user) return;
 
@@ -139,15 +128,11 @@ export default function PricingPage() {
       });
     };
 
-    // Clear existing buttons
     Object.values(paypalButtonsRef.current).forEach((button: any) => {
-      if (button && button.close) {
-        button.close();
-      }
+      if (button && button.close) button.close();
     });
     paypalButtonsRef.current = {};
 
-    // Re-initialize buttons
     initializePayPalButtons();
   }, [paypalLoaded, user]);
 
@@ -161,6 +146,22 @@ export default function PricingPage() {
         strategy="lazyOnload"
       />
 
+<<<<<<< Updated upstream
+=======
+      {/* Single navbar */}
+      <header className="z-10 p-4 md:p-6 bg-white shadow-md sticky top-0 border-b border-gray-200">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <Link href="/" className="flex items-center gap-2 text-gray-900 hover:text-gray-700 transition-colors group">
+            <div className="p-2 bg-gray-900 rounded-lg group-hover:scale-110 transition-transform">
+              <Zap className="w-5 h-5 text-white" />
+            </div>
+            <span className="font-bold text-lg hidden sm:inline text-gray-900">BoomNut</span>
+          </Link>
+          <AuthButton />
+        </div>
+      </header>
+
+>>>>>>> Stashed changes
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-8 md:py-16">
         {/* Subscription Status Banner */}
         {user && isActive && (
@@ -169,7 +170,11 @@ export default function PricingPage() {
             <div>
               <p className="font-bold text-green-900">Active Subscription</p>
               <p className="text-sm text-green-800">{daysRemaining} days remaining • Plan: {subscription?.plan?.toUpperCase()}</p>
+<<<<<<< Updated upstream
               <p className="text-xs text-green-700 mt-1">Renews After 30 Days</p>
+=======
+              <p className="text-xs text-green-700 mt-1">Your subscription will automatically renew on {subscription?.endDate ? new Date(subscription.endDate).toLocaleDateString() : 'TBD'}</p>
+>>>>>>> Stashed changes
             </div>
           </div>
         )}
@@ -179,18 +184,21 @@ export default function PricingPage() {
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 leading-tight">
             Choose Your Plan
           </h1>
-          
           <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
             Pick the perfect plan for your learning journey
           </p>
         </div>
 
         {/* Pricing Cards */}
+<<<<<<< Updated upstream
         <div className="flex justify-center mb-16">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 max-w-3xl w-full">
+=======
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 mb-16 max-w-3xl mx-auto">
+>>>>>>> Stashed changes
           {plans.map((plan, index) => {
             const Icon = plan.icon;
-            const isPaidPlan = plan.name === 'Premium' || plan.name === 'Test Boomnut';
+            const isPaidPlan = plan.name === 'Premium';
             const isUserSubscribed = isActive && subscription?.plan?.toLowerCase() === plan.name.toLowerCase();
             const showPayButton = plan.price > 0 && showPaymentButton && !isUserSubscribed;
             
@@ -215,7 +223,6 @@ export default function PricingPage() {
                       : 'border-gray-200 hover:border-gray-400'
                   }`}
                 >
-                  {/* Icon & Badge */}
                   <div className="flex items-start justify-between mb-3">
                     <div className={`w-12 h-12 bg-gradient-to-br ${plan.color} rounded-lg flex items-center justify-center shadow-md group-hover:scale-110 transition-transform`}>
                       <Icon className="w-6 h-6 text-white" />
@@ -227,10 +234,8 @@ export default function PricingPage() {
                     )}
                   </div>
 
-                  {/* Plan Name */}
                   <h3 className="text-xl font-bold text-gray-900 mb-1">{plan.name}</h3>
                   
-                  {/* Price */}
                   <div className="mb-4">
                     {plan.price === 0 ? (
                       <div>
@@ -239,21 +244,22 @@ export default function PricingPage() {
                     ) : (
                       <>
                         <div className="flex items-baseline gap-1">
-                          <span className="text-4xl font-bold text-gray-900">
-                            ${plan.price}
-                          </span>
+                          <span className="text-4xl font-bold text-gray-900">${plan.price}</span>
                           <span className="text-sm text-gray-500">/{plan.period}</span>
                         </div>
                         {isPaidPlan && (
                           <div className="text-sm text-emerald-600 mt-2 font-bold">
+<<<<<<< Updated upstream
                             📆 Renews Every 30 Days
+=======
+                            📆 Auto-renews after 30 days
+>>>>>>> Stashed changes
                           </div>
                         )}
                       </>
                     )}
                   </div>
 
-                  {/* Features */}
                   <ul className="space-y-2 mb-5 flex-grow">
                     {plan.features.map((feature, idx) => (
                       <li key={idx} className="flex items-start gap-2 group/item">
@@ -265,7 +271,6 @@ export default function PricingPage() {
                     ))}
                   </ul>
 
-                  {/* CTA Button */}
                   {plan.price === 0 ? (
                     <button
                       disabled
@@ -405,20 +410,6 @@ export default function PricingPage() {
       </div>
 
       <style jsx>{`
-        @keyframes blob {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          33% { transform: translate(30px, -50px) scale(1.1); }
-          66% { transform: translate(-20px, 20px) scale(0.9); }
-        }
-        .animate-blob {
-          animation: blob 7s infinite;
-        }
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-        .animation-delay-4000 {
-          animation-delay: 4s;
-        }
         @keyframes fade-in {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
