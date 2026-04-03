@@ -51,9 +51,16 @@ export async function GET(req: NextRequest) {
     // Find subscription for this user
     let foundSubscription: any = null;
     let subscriptionKey: string = '';
+    const allSubs: any[] = [];
     
     snapshot.forEach((child: any) => {
       const childVal = child.val();
+      allSubs.push({
+        key: child.key,
+        userId: childVal?.userId,
+        plan: childVal?.plan,
+        status: childVal?.status
+      });
       
       if (childVal && childVal.userId === userId) {
         // Get the most recent one
@@ -63,6 +70,11 @@ export async function GET(req: NextRequest) {
         }
       }
     });
+    
+    console.log('[SUBSCRIPTION CHECK] Found', allSubs.length, 'total subscriptions in database');
+    console.log('[SUBSCRIPTION CHECK] Looking for userId:', userId);
+    console.log('[SUBSCRIPTION CHECK] Subscriptions found:', allSubs);
+    console.log('[SUBSCRIPTION CHECK] Matched subscription:', foundSubscription ? 'YES' : 'NO');
 
     if (!foundSubscription) {
       console.log('[SUBSCRIPTION CHECK] No subscription found for user:', userId);

@@ -46,11 +46,10 @@ const plans = [
 
 export default function PricingPage() {
   const { user } = useAuth();
-  const { subscription, isActive, showPaymentButton, daysRemaining, createSubscription, clearSubscription } = useSubscription();
+  const { subscription, isActive, showPaymentButton, daysRemaining, createSubscription, clearSubscription, refreshSubscription } = useSubscription();
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [paypalLoaded, setPaypalLoaded] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
   const paypalButtonsRef = useRef<{ [key: string]: any }>({});
 
   const handleSubscriptionSuccess = async (subscriptionId: string, planName: string) => {
@@ -63,11 +62,15 @@ export default function PricingPage() {
       const result = await createSubscription(planName.toLowerCase(), subscriptionId);
       console.log('[PAYPAL] Subscription created:', result);
 
-      alert(`✅ Successfully subscribed to ${planName} plan for 30 days!\n\nYour subscription is now active!`);
+      // Wait for database to fully save
+      console.log('[PAYPAL] Waiting for database to sync...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Refresh subscription status
+      console.log('[PAYPAL] Refreshing subscription status...');
+      await refreshSubscription();
 
-      setTimeout(() => {
-        window.location.reload();
-      }, 2000);
+      alert(`✅ Successfully subscribed to ${planName} plan for 30 days!\n\nYour subscription is now active!`);
     } catch (error) {
       console.error('[PAYPAL] Error saving subscription:', error);
       alert('❌ Subscription created but failed to save to database. Please try refreshing the page or contact support.');
@@ -266,10 +269,18 @@ export default function PricingPage() {
                         onClick={async () => {
                           if (window.confirm('Are you sure you want to cancel this subscription?')) {
                             try {
+                              console.log('[PRICING PAGE] Cancelling subscription...');
                               await clearSubscription?.();
+                              
+                              // Wait for database to sync
+                              await new Promise(resolve => setTimeout(resolve, 1000));
+                              
+                              // Refresh the subscription status
+                              await refreshSubscription();
+                              
                               alert('✅ Subscription cancelled successfully!');
-                              setRefreshKey((prev) => prev + 1);
                             } catch (error) {
+                              console.error('[PRICING PAGE] Cancel error:', error);
                               alert('Failed to cancel subscription. Please try again.');
                             }
                           }

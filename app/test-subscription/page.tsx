@@ -8,9 +8,8 @@ import { Zap, Check, AlertCircle, Home } from 'lucide-react';
 
 export default function TestSubscriptionPage() {
   const { user } = useAuth();
-  const { subscription, isActive, showPaymentButton, daysRemaining, createSubscription, clearSubscription } = useSubscription();
+  const { subscription, isActive, showPaymentButton, daysRemaining, createSubscription, clearSubscription, refreshSubscription } = useSubscription();
   const [loading, setLoading] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
 
   const handleTestSubscription = async () => {
     if (!user) {
@@ -20,11 +19,23 @@ export default function TestSubscriptionPage() {
 
     try {
       setLoading(true);
+      console.log('[TEST PAGE] Creating subscription...');
+      
+      // Create the subscription
       await createSubscription('basic', `TEST-${Date.now()}`);
-      // Force component to re-render by updating key
-      setRefreshKey(prev => prev + 1);
-      alert(`✅ Test subscription created!\n\nEmail: ${user.email}\nStatus: Active\nPlan: Basic\nDays: 30`);
+      console.log('[TEST PAGE] Subscription created, waiting 1 second before refresh...');
+      
+      // Wait a moment for database to fully save
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Refresh the subscription status
+      console.log('[TEST PAGE] Refreshing subscription status...');
+      await refreshSubscription();
+      
+      console.log('[TEST PAGE] ✅ Subscription complete! Current status:', subscription);
+      alert(`✅ Test subscription created!\n\nEmail: ${user.email}\nStatus: Active\nPlan: Basic\nDays: 30\n\nRefresh the page if status doesn't update.`);
     } catch (error: any) {
+      console.error('[TEST PAGE] ❌ Error:', error);
       alert(`❌ Error: ${error?.message || 'Failed to create subscription'}`);
     } finally {
       setLoading(false);
@@ -34,9 +45,19 @@ export default function TestSubscriptionPage() {
   const handleClearSubscription = async () => {
     try {
       setLoading(true);
+      console.log('[TEST PAGE] Clearing subscription...');
       await clearSubscription?.();
+      
+      // Wait for database to sync
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Refresh status
+      console.log('[TEST PAGE] Refreshing status...');
+      await refreshSubscription();
+      
       alert('✅ Test data cleared!');
     } catch (error: any) {
+      console.error('[TEST PAGE] Clear error:', error);
       alert(`❌ Error: ${error?.message || 'Failed to clear subscription'}`);
     } finally {
       setLoading(false);
@@ -120,6 +141,28 @@ export default function TestSubscriptionPage() {
                 {loading ? '⏳ Clearing...' : '🗑️ Clear Test Data'}
               </button>
             )}
+
+            {/* Refresh Status Button */}
+            <button
+              onClick={async () => {
+                try {
+                  setLoading(true);
+                  console.log('[TEST PAGE] Refreshing subscription status...');
+                  await refreshSubscription();
+                  console.log('[TEST PAGE] ✅ Status refreshed');
+                  alert('✅ Status refreshed! Check your subscription above.');
+                } catch (error: any) {
+                  console.error('[TEST PAGE] Refresh error:', error);
+                  alert(`❌ Error: ${error?.message || 'Failed to refresh status'}`);
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              disabled={loading}
+              className="w-full py-3 rounded-lg font-bold text-white transition-all disabled:opacity-50 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
+            >
+              {loading ? '⏳ Refreshing...' : '🔄 Refresh Status'}
+            </button>
 
             {/* Go to Dashboard */}
             <Link

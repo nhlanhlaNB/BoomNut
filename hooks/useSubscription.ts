@@ -114,6 +114,30 @@ export function useSubscription() {
     }
   };
 
+  const refreshSubscription = async () => {
+    if (!user?.uid) {
+      console.warn('[REFRESH SUBSCRIPTION] No user UID');
+      return;
+    }
+
+    try {
+      console.log('[REFRESH SUBSCRIPTION] Fetching latest subscription status for user:', user.uid);
+      const response = await fetch(`/api/subscription/check?userId=${user.uid}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to check subscription');
+      }
+
+      const data = await response.json();
+      console.log('[REFRESH SUBSCRIPTION] ✅ Got updated data:', data);
+      setSubscription(data);
+      setError(null);
+    } catch (err) {
+      console.error('[REFRESH SUBSCRIPTION] ❌ Error:', err);
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    }
+  };
+
   const clearSubscription = async () => {
     if (!user?.uid) {
       throw new Error('User not authenticated');
@@ -168,5 +192,6 @@ export function useSubscription() {
     daysRemaining: subscription?.daysRemaining ?? 0,
     createSubscription,
     clearSubscription,
+    refreshSubscription,
   };
 }
