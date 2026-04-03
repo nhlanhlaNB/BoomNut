@@ -98,7 +98,14 @@ export function useSubscription() {
       
       const updatedSub = await checkResponse.json();
       console.log('[CREATE SUBSCRIPTION] Updated subscription data:', updatedSub);
+      console.log('[CREATE SUBSCRIPTION] isActive:', updatedSub.isActive);
+      console.log('[CREATE SUBSCRIPTION] status:', updatedSub.status);
+      console.log('[CREATE SUBSCRIPTION] plan:', updatedSub.plan);
+      console.log('[CREATE SUBSCRIPTION] email:', updatedSub.email);
+      
+      // Update state with new subscription data
       setSubscription(updatedSub);
+      console.log('[CREATE SUBSCRIPTION] ✅ State updated with subscription data');
 
       return data;
     } catch (err) {

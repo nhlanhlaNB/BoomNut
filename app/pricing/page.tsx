@@ -68,6 +68,7 @@ export default function PricingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [paypalLoaded, setPaypalLoaded] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const paypalButtonsRef = useRef<{ [key: string]: any }>({});
 
   // Handle subscription success
@@ -81,14 +82,13 @@ export default function PricingPage() {
       // Create subscription in database
       const result = await createSubscription(planName.toLowerCase(), subscriptionId);
       console.log('[PAYPAL] Subscription created:', result);
+      console.log('[PAYPAL] Subscription details:', { 
+        isActive: result?.subscription?.isActive, 
+        plan: result?.subscription?.plan,
+        status: result?.subscription?.status
+      });
       
-      alert(`✅ Successfully subscribed to ${planName} plan for 30 days!\n\nYour subscription will auto-expire.\n\nRefresh to see changes!`);
-      
-      // Wait 2 seconds for Firebase to process the write, then reload
-      setTimeout(() => {
-        console.log('[PAYPAL] Reloading page to show updated subscription status...');
-        window.location.reload();
-      }, 2000);
+      alert(`✅ Successfully subscribed to ${planName} plan for 30 days!\n\nYour subscription is now active!`);
     } catch (error) {
       console.error('[PAYPAL] Error saving subscription:', error);
       alert('❌ Subscription created but failed to save to database. Please try refreshing the page or contact support.');
@@ -273,7 +273,8 @@ export default function PricingPage() {
                     >
                       Current Plan
                     </button>
-                  ) : isActive && isPaidPlan ? (
+                  ) : isUserSubscribed ? (
+                    // Show for the specific plan user is subscribed to
                     <div className="flex flex-col gap-2">
                       <button
                         disabled
@@ -286,8 +287,9 @@ export default function PricingPage() {
                           if (window.confirm('Are you sure you want to cancel this subscription?')) {
                             try {
                               await clearSubscription?.();
-                              alert('Subscription cancelled successfully!');
-                              window.location.reload();
+                              alert('✅ Subscription cancelled successfully!');
+                              // Refresh the key to trigger re-render
+                              setRefreshKey(prev => prev + 1);
                             } catch (error) {
                               alert('Failed to cancel subscription. Please try again.');
                             }

@@ -10,6 +10,7 @@ export default function TestSubscriptionPage() {
   const { user } = useAuth();
   const { subscription, isActive, showPaymentButton, daysRemaining, createSubscription, clearSubscription } = useSubscription();
   const [loading, setLoading] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const handleTestSubscription = async () => {
     if (!user) {
@@ -20,7 +21,9 @@ export default function TestSubscriptionPage() {
     try {
       setLoading(true);
       await createSubscription('basic', `TEST-${Date.now()}`);
-      alert(`✅ Test subscription created!\n\nEmail: ${user.email}\nStatus: Active\nPlan: Basic\nDays: 30\n\nRefresh to see changes!`);
+      // Force component to re-render by updating key
+      setRefreshKey(prev => prev + 1);
+      alert(`✅ Test subscription created!\n\nEmail: ${user.email}\nStatus: Active\nPlan: Basic\nDays: 30`);
     } catch (error: any) {
       alert(`❌ Error: ${error?.message || 'Failed to create subscription'}`);
     } finally {
