@@ -24,111 +24,23 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Check subscription in Realtime Database at /subscriptions - query by userId
+    // Read all subscriptions from Realtime Database
+    const subscriptionsRef = ref(rtdb, 'subscriptions');
+    let snapshot;
+    
     try {
-      const subscriptionsRef = ref(rtdb, 'subscriptions');
+      // Try to use query first (requires .indexOn: ["userId"] in rules)
+      console.log('[SUBSCRIPTION CHECK] Attempting indexed query...');
       const subscriptionQuery = query(subscriptionsRef, orderByChild('userId'), equalTo(userId));
-      const snapshot = await get(subscriptionQuery);
-
-      console.log('[SUBSCRIPTION CHECK] Database query found data:', snapshot.exists());
-      
-      if (!snapshot.exists()) {
-        console.log('[SUBSCRIPTION CHECK] No subscription found for user:', userId);
-        return NextResponse.json(
-          { 
-            isActive: false, 
-            status: 'no_subscription',
-            plan: 'none',
-            message: 'No subscription found'
-          },
-          { status: 200 }
-        );
-      }
+      snapshot = await get(subscriptionQuery);
     } catch (queryError) {
-      console.error('[SUBSCRIPTION CHECK] ❌ Query failed:', queryError);
-      // Fallback: try to read from the new subscriptions path without query
-      const subscriptionsRef = ref(rtdb, 'subscriptions');
-      try {
-        const snapshot = await get(subscriptionsRef);
-        if (!snapshot.exists()) {
-          return NextResponse.json(
-            { 
-              isActive: false, 
-              status: 'no_subscription',
-              plan: 'none',
-              message: 'No subscription found'
-            },
-            { status: 200 }
-          );
-        }
-        // Search manually for matching userId
-        let foundSubscription: any = null;
-        snapshot.forEach((child: any) => {
-          if (child.val().userId === userId) {
-            foundSubscription = { val: child.val(), ref: child.ref };
-          }
-        });
-        
-        if (!foundSubscription) {
-          return NextResponse.json(
-            { 
-              isActive: false, 
-              status: 'no_subscription',
-              plan: 'none',
-              message: 'No subscription found'
-            },
-            { status: 200 }
-          );
-        }
-        
-        const subscription = foundSubscription.val;
-        const subscriptionRef = foundSubscription.ref;
-        
-        if (!subscription || !subscription.endDate) {
-          return NextResponse.json(
-            { 
-              isActive: false, 
-              status: 'no_subscription',
-              message: 'No active subscription'
-            },
-            { status: 200 }
-          );
-        }
-
-        const endDate = new Date(subscription.endDate);
-        const now = new Date();
-        const isActive = now < endDate && subscription.status === 'active';
-        const daysRemaining = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
-        if (!isActive && subscription.status === 'active' && subscriptionRef) {
-          await update(subscriptionRef, { status: 'expired' });
-        }
-
-        return NextResponse.json({
-          isActive,
-          status: isActive ? 'active' : 'expired',
-          plan: subscription.plan || 'basic',
-          email: subscription.email || '',
-          startDate: subscription.startDate || '',
-          endDate: subscription.endDate || '',
-          daysRemaining: isActive ? daysRemaining : 0,
-          subscriptionId: subscription.subscriptionId,
-          message: isActive 
-            ? `Subscription active for ${daysRemaining} more days`
-            : 'Subscription expired'
-        });
-      } catch (fallbackError) {
-        console.error('[SUBSCRIPTION CHECK] ❌ Fallback also failed:', fallbackError);
-        throw fallbackError;
-      }
+      // Fallback: read all subscriptions and search manually
+      console.warn('[SUBSCRIPTION CHECK] ⚠️ Query failed, using manual search:', queryError);
+      snapshot = await get(subscriptionsRef);
     }
 
-    // Get the first (most recent) subscription from query
-    let subscription: any = null;
-    let subscriptionRef: any = null;
-    const snapshot = await get(query(ref(rtdb, 'subscriptions'), orderByChild('userId'), equalTo(userId)));
-    
     if (!snapshot.exists()) {
+      console.log('[SUBSCRIPTION CHECK] No subscriptions found at all');
       return NextResponse.json(
         { 
           isActive: false, 
@@ -139,57 +51,84 @@ export async function GET(req: NextRequest) {
         { status: 200 }
       );
     }
+
+    // Find subscription for this user
+    let foundSubscription: any = null;
+    let subscriptionKey: string = '';
     
     snapshot.forEach((child: any) => {
       const childVal = child.val();
-      if (!subscription || new Date(childVal.createdAt) > new Date(subscription.createdAt)) {
-        subscription = childVal;
-        subscriptionRef = child.ref;
+      console.log('[SUBSCRIPTION CHECK] Checking subscription:', { key: child.key, userId: childVal.userId });
+      
+      if (childVal && childVal.userId === userId) {
+        // Get the most recent one
+        if (!foundSubscription || new Date(childVal.createdAt) > new Date(foundSubscription.createdAt)) {
+          foundSubscription = childVal;
+          subscriptionKey = child.key;
+        }
       }
     });
 
-    console.log('[SUBSCRIPTION CHECK] Found subscription:', subscription);
-
-    if (!subscription || !subscription.endDate) {
+    if (!foundSubscription) {
+      console.log('[SUBSCRIPTION CHECK] No subscription found for user:', userId);
       return NextResponse.json(
         { 
           isActive: false, 
           status: 'no_subscription',
-          message: 'No active subscription'
+          plan: 'none',
+          message: 'No subscription found'
         },
         { status: 200 }
       );
     }
 
-    const endDate = new Date(subscription.endDate);
+    console.log('[SUBSCRIPTION CHECK] Found subscription:', foundSubscription);
+
+    if (!foundSubscription.endDate) {
+      console.warn('[SUBSCRIPTION CHECK] Subscription missing endDate');
+      return NextResponse.json(
+        { 
+          isActive: false, 
+          status: 'no_subscription',
+          message: 'Invalid subscription data'
+        },
+        { status: 200 }
+      );
+    }
+
+    const endDate = new Date(foundSubscription.endDate);
     const now = new Date();
-    const isActive = now < endDate && subscription.status === 'active';
+    const isActive = now < endDate && foundSubscription.status === 'active';
     const daysRemaining = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
     // Auto-update status if expired
-    if (!isActive && subscription.status === 'active' && subscriptionRef) {
-      await update(subscriptionRef, {
-        status: 'expired'
-      });
+    if (!isActive && foundSubscription.status === 'active' && subscriptionKey) {
+      console.log('[SUBSCRIPTION CHECK] Marking subscription as expired');
+      const subRef = ref(rtdb, `subscriptions/${subscriptionKey}`);
+      await update(subRef, { status: 'expired' });
     }
 
-    return NextResponse.json({
+    const responseData = {
       isActive,
       status: isActive ? 'active' : 'expired',
-      plan: subscription.plan || 'basic',
-      email: subscription.email || '',
-      startDate: subscription.startDate || '',
-      endDate: subscription.endDate || '',
+      plan: foundSubscription.plan || 'basic',
+      email: foundSubscription.email || '',
+      startDate: foundSubscription.startDate || '',
+      endDate: foundSubscription.endDate || '',
       daysRemaining: isActive ? daysRemaining : 0,
-      subscriptionId: subscription.subscriptionId,
+      subscriptionId: foundSubscription.subscriptionId,
       message: isActive 
         ? `Subscription active for ${daysRemaining} more days`
         : 'Subscription expired'
-    });
+    };
+
+    console.log('[SUBSCRIPTION CHECK] ✅ Returning subscription status:', responseData);
+    return NextResponse.json(responseData);
   } catch (error) {
-    console.error('Error checking subscription:', error);
+    console.error('[SUBSCRIPTION CHECK] ❌ Error checking subscription:', error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { error: 'Failed to check subscription' },
+      { error: 'Failed to check subscription', details: errorMsg },
       { status: 500 }
     );
   }
