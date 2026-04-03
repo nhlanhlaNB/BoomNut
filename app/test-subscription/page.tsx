@@ -10,6 +10,8 @@ export default function TestSubscriptionPage() {
   const { user } = useAuth();
   const { subscription, isActive, showPaymentButton, daysRemaining, createSubscription, clearSubscription, refreshSubscription } = useSubscription();
   const [loading, setLoading] = useState(false);
+  const [debugData, setDebugData] = useState<any>(null);
+  const [showDebug, setShowDebug] = useState(false);
 
   const handleTestSubscription = async () => {
     if (!user) {
@@ -59,6 +61,27 @@ export default function TestSubscriptionPage() {
     } catch (error: any) {
       console.error('[TEST PAGE] Clear error:', error);
       alert(`❌ Error: ${error?.message || 'Failed to clear subscription'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDebugCheck = async () => {
+    if (!user?.uid) {
+      alert('User UID not available');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log('[DEBUG] Checking with userId:', user.uid);
+      const response = await fetch(`/api/subscription/debug?userId=${user.uid}`);
+      const data = await response.json();
+      setDebugData(data);
+      console.log('[DEBUG] Response:', data);
+    } catch (error: any) {
+      console.error('[DEBUG] Error:', error);
+      alert(`Debug error: ${error?.message || 'Failed to fetch debug data'}`);
     } finally {
       setLoading(false);
     }
@@ -195,6 +218,83 @@ export default function TestSubscriptionPage() {
             <li>✅ Click "Clear Test Data" to remove and start over</li>
             <li>✅ The subscription auto-expires after 30 days</li>
           </ul>
+        </div>
+
+        {/* Debug Section */}
+        <div className="bg-yellow-50 border-l-4 border-yellow-500 p-6 mt-8 rounded">
+          <button
+            onClick={() => setShowDebug(!showDebug)}
+            className="font-bold text-yellow-900 flex items-center gap-2 hover:underline"
+          >
+            🔧 Troubleshooting & Debug
+            <span>{showDebug ? '▼' : '▶'}</span>
+          </button>
+
+          {showDebug && (
+            <div className="mt-4 space-y-4">
+              <div className="bg-white rounded p-4 border border-yellow-200">
+                <p className="font-bold text-gray-900 mb-2">Your Full UID (for copying):</p>
+                <div className="bg-gray-100 p-2 rounded font-mono text-sm break-all select-all">
+                  {user?.uid || 'Not logged in'}
+                </div>
+              </div>
+
+              <button
+                onClick={handleDebugCheck}
+                disabled={loading}
+                className="w-full py-2 rounded-lg font-bold text-sm bg-yellow-600 text-white hover:bg-yellow-700 disabled:opacity-50 transition-all"
+              >
+                {loading ? '⏳ Checking database...' : '🔍 Check Database for Your Subscriptions'}
+              </button>
+
+              {debugData && (
+                <div className="bg-white rounded p-4 border border-yellow-200">
+                  <p className="font-bold text-gray-900 mb-3">Database Results:</p>
+                  <div className="text-sm space-y-2">
+                    <p><strong>Looking for UID:</strong> {debugData.searchingForUserId}</p>
+                    <p><strong>Total subscriptions in DB:</strong> {debugData.totalSubscriptions}</p>
+                    <p><strong>Matching YOUR subscriptions:</strong> {debugData.matchingSubscriptions}</p>
+                    
+                    {debugData.matchingSubscriptions && debugData.matchingSubscriptions > 0 ? (
+                      <div className="mt-3 p-2 bg-green-100 rounded border border-green-300">
+                        <p className="font-bold text-green-900 mb-2">✅ Your subscriptions found:</p>
+                        <div className="text-xs font-mono space-y-2">
+                          {debugData.userSubscriptions?.map((sub: any, idx: number) => (
+                            <div key={idx} className="p-2 bg-white rounded border border-green-200">
+                              <p>ID: {sub.key}</p>
+                              <p>Plan: {sub.plan}</p>
+                              <p>Status: {sub.status}</p>
+                              <p>Email: {sub.email}</p>
+                              <p>Created: {new Date(sub.createdAt).toLocaleString()}</p>
+                              <p>Expires: {new Date(sub.endDate).toLocaleString()}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-3 p-2 bg-red-100 rounded border border-red-300">
+                        <p className="font-bold text-red-900">❌ No subscriptions found for your UID</p>
+                        <p className="text-xs text-red-800 mt-1">This means the subscription wasn't saved with your UID. Check the create endpoint logs.</p>
+                      </div>
+                    )}
+
+                    {debugData.totalSubscriptions > 0 && (
+                      <div className="mt-3 p-2 bg-blue-100 rounded border border-blue-300">
+                        <p className="font-bold text-blue-900 mb-2">All subscriptions in database:</p>
+                        <div className="text-xs font-mono space-y-1 max-h-60 overflow-y-auto">
+                          {debugData.allSubscriptions?.map((sub: any, idx: number) => (
+                            <div key={idx} className="text-blue-800">
+                              {sub.key} → UID: {sub.userId} | Plan: {sub.plan} | Status: {sub.status}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </main>
     </div>
