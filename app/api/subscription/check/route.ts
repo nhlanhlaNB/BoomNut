@@ -55,16 +55,26 @@ export async function GET(req: NextRequest) {
     
     snapshot.forEach((child: any) => {
       const childVal = child.val();
+      
+      if (!childVal) {
+        console.log('[SUBSCRIPTION CHECK] Child has no value:', child.key);
+        return;
+      }
+      
       allSubs.push({
         key: child.key,
         userId: childVal?.userId,
         plan: childVal?.plan,
-        status: childVal?.status
+        status: childVal?.status,
+        hasUserId: !!childVal?.userId
       });
       
-      if (childVal && childVal.userId === userId) {
+      console.log('[SUBSCRIPTION CHECK] Child key:', child.key, 'stored userId:', childVal.userId, 'searching for:', userId, 'match:', childVal.userId === userId);
+      
+      if (childVal.userId === userId) {
         // Get the most recent one
         if (!foundSubscription || new Date(childVal.createdAt) > new Date(foundSubscription.createdAt)) {
+          console.log('[SUBSCRIPTION CHECK] Found matching subscription with key:', child.key);
           foundSubscription = childVal;
           subscriptionKey = child.key;
         }
@@ -72,9 +82,9 @@ export async function GET(req: NextRequest) {
     });
     
     console.log('[SUBSCRIPTION CHECK] Found', allSubs.length, 'total subscriptions in database');
+    console.log('[SUBSCRIPTION CHECK] Subscriptions summary:', JSON.stringify(allSubs));
     console.log('[SUBSCRIPTION CHECK] Looking for userId:', userId);
-    console.log('[SUBSCRIPTION CHECK] Subscriptions found:', allSubs);
-    console.log('[SUBSCRIPTION CHECK] Matched subscription:', foundSubscription ? 'YES' : 'NO');
+    console.log('[SUBSCRIPTION CHECK] Matched subscription:', foundSubscription ? 'YES - ' + subscriptionKey : 'NO');
 
     if (!foundSubscription) {
       console.log('[SUBSCRIPTION CHECK] No subscription found for user:', userId);

@@ -70,9 +70,27 @@ export async function POST(req: NextRequest) {
       const snapshot = await get(subscriptionRef);
       const storedData = snapshot.val();
       console.log('[SUBSCRIPTION CREATE] 🔍 Verification read from database:', JSON.stringify(storedData, null, 2));
-      console.log('[SUBSCRIPTION CREATE] 🔍 Stored userId:', storedData?.userId);
+      console.log('[SUBSCRIPTION CREATE] 🔍 Stored userId:', storedData?.userId, 'Expected:', userId, 'Match:', storedData?.userId === userId);
       console.log('[SUBSCRIPTION CREATE] 🔍 Stored plan:', storedData?.plan);
       console.log('[SUBSCRIPTION CREATE] 🔍 Stored status:', storedData?.status);
+      
+      // Now try to read all subscriptions to verify it's queryable
+      console.log('[SUBSCRIPTION CREATE] 🔍 Reading all subscriptions to verify lookup...');
+      const allSubsRef = ref(rtdb, 'subscriptions');
+      const allSnapshot = await get(allSubsRef);
+      
+      if (allSnapshot.exists()) {
+        let foundInQuery = false;
+        allSnapshot.forEach((child: any) => {
+          if (child.key === subId) {
+            console.log('[SUBSCRIPTION CREATE] ✅ Found created subscription in full list with key:', child.key);
+            foundInQuery = true;
+          }
+        });
+        if (!foundInQuery) {
+          console.warn('[SUBSCRIPTION CREATE] ⚠️ Created subscription NOT found in full subscription list');
+        }
+      }
     } catch (readError) {
       console.warn('[SUBSCRIPTION CREATE] ⚠️ Could not verify write:', readError);
     }
