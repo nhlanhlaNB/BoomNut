@@ -87,13 +87,13 @@ async function verifyWebhookSignature(
 // Map PayPal plan ID to subscription tier
 function getPlanNameFromPlanId(planId: string): string {
   const planMap: { [key: string]: string } = {
-    'P-0EW71788K8993972RNFP4YOY': 'pro',     // Pro Monthly
-    'P-33A20854VN557325GNFP6CYQ': 'pro',     // Pro Yearly
-    'P-8W509033WG9931346NFP5YAQ': 'premium', // Premium Monthly
-    'P-3NC19032VG801351ENFP56MY': 'premium', // Premium Yearly
-    'P-51711759R0127122YNHA4ITY': 'basic',   // Basic $3 Plan
+    'P-0EW71788K8993972RNFP4YOY': 'pro',       // Pro Monthly
+    'P-33A20854VN557325GNFP6CYQ': 'pro',       // Pro Yearly
+    'P-8W509033WG9931346NFP5YAQ': 'premium',   // Premium Monthly
+    'P-3NC19032VG801351ENFP56MY': 'premium',   // Premium Yearly
+    'P-51711759R0127122YNHA4ITY': 'premium',   // Premium $3 Plan (pricing page)
   };
-  return planMap[planId] || 'basic';
+  return planMap[planId] || 'premium';
 }
 
 export async function POST(req: NextRequest) {
@@ -123,6 +123,12 @@ export async function POST(req: NextRequest) {
         const planName = getPlanNameFromPlanId(planId);
         const email = subscription.subscriber?.email_address || '';
 
+        console.log('[PAYPAL WEBHOOK] BILLING_SUBSCRIPTION_ACTIVATED/CREATED event received');
+        console.log('[PAYPAL WEBHOOK] customId (userId):', customId);
+        console.log('[PAYPAL WEBHOOK] subscriptionId:', subscriptionId);
+        console.log('[PAYPAL WEBHOOK] planId:', planId, '→ planName:', planName);
+        console.log('[PAYPAL WEBHOOK] email:', email);
+
         if (customId && subscriptionId) {
           if (!rtdb) {
             console.warn('[PAYPAL WEBHOOK] Realtime Database not configured; webhook cannot save subscription.');
@@ -146,10 +152,16 @@ export async function POST(req: NextRequest) {
             createdAt: startDate,
           };
 
+          console.log('[PAYPAL WEBHOOK] Saving subscription data:', JSON.stringify(subscriptionData, null, 2));
+
           try {
             const subRef = ref(rtdb, `subscriptions/${subscriptionId}`);
             await set(subRef, subscriptionData);
-            console.log(`[PAYPAL WEBHOOK] ✅ Subscription saved for user ${customId}: ${planName}`);
+            console.log(`[PAYPAL WEBHOOK] ✅ Subscription SAVED successfully for user ${customId}: ${planName}`);
+            
+            // Verify the write
+            const verifySnapshot = await get(subRef);
+            console.log('[PAYPAL WEBHOOK] ✅ Verification read:', JSON.stringify(verifySnapshot.val(), null, 2));
           } catch (writeError) {
             console.error(`[PAYPAL WEBHOOK] ❌ Failed to save subscription:`, writeError);
           }
