@@ -3,11 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Script from 'next/script';
-import { Check, Sparkles, Zap, Crown, Home, Star, TrendingUp, Users, Award, Clock, AlertCircle } from 'lucide-react';
+import { Check, Sparkles, Zap, Star, TrendingUp, Users, Award, Clock } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
-import { db } from '@/lib/firebase';
-import { doc, setDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import AuthButton from '@/components/AuthButton';
 
@@ -61,24 +59,15 @@ export default function PricingPage() {
     try {
       setLoading(null);
       console.log('[PAYPAL] Payment approved for:', { userId: user.uid, planName, subscriptionId });
-      
+
       const result = await createSubscription(planName.toLowerCase(), subscriptionId);
       console.log('[PAYPAL] Subscription created:', result);
-      console.log('[PAYPAL] Subscription details:', { 
-        isActive: result?.subscription?.isActive, 
-        plan: result?.subscription?.plan,
-        status: result?.subscription?.status
-      });
-      
-<<<<<<< Updated upstream
+
       alert(`✅ Successfully subscribed to ${planName} plan for 30 days!\n\nYour subscription is now active!`);
-=======
-      alert(`✅ Successfully subscribed to ${planName} plan for 30 days!\n\nYour subscription will auto-renew.\n\nRefresh to see changes!`);
-      
+
       setTimeout(() => {
         window.location.reload();
       }, 2000);
->>>>>>> Stashed changes
     } catch (error) {
       console.error('[PAYPAL] Error saving subscription:', error);
       alert('❌ Subscription created but failed to save to database. Please try refreshing the page or contact support.');
@@ -94,7 +83,7 @@ export default function PricingPage() {
 
         const containerId = `paypal-button-container-${plan.name.toLowerCase().replace(/\s+/g, '-')}`;
         const container = document.getElementById(containerId);
-        
+
         if (!container || paypalButtonsRef.current[plan.name]) return;
 
         try {
@@ -103,21 +92,21 @@ export default function PricingPage() {
               shape: 'rect',
               color: plan.popular ? 'blue' : 'gold',
               layout: 'vertical',
-              label: 'pay'
+              label: 'pay',
             },
-            createSubscription: function(data: any, actions: any) {
+            createSubscription: function (data: any, actions: any) {
               return actions.subscription.create({
                 plan_id: plan.paypalPlanId,
-                custom_id: user?.uid
+                custom_id: user?.uid,
               });
             },
-            onApprove: function(data: any, actions: any) {
+            onApprove: function (data: any, actions: any) {
               handleSubscriptionSuccess(data.subscriptionID, plan.name);
             },
-            onError: function(err: any) {
+            onError: function (err: any) {
               console.error('PayPal error:', err);
               alert('Payment failed. Please try again.');
-            }
+            },
           });
 
           buttons.render(`#${containerId}`);
@@ -146,9 +135,7 @@ export default function PricingPage() {
         strategy="lazyOnload"
       />
 
-<<<<<<< Updated upstream
-=======
-      {/* Single navbar */}
+      {/* Navbar */}
       <header className="z-10 p-4 md:p-6 bg-white shadow-md sticky top-0 border-b border-gray-200">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <Link href="/" className="flex items-center gap-2 text-gray-900 hover:text-gray-700 transition-colors group">
@@ -161,8 +148,8 @@ export default function PricingPage() {
         </div>
       </header>
 
->>>>>>> Stashed changes
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-8 md:py-16">
+
         {/* Subscription Status Banner */}
         {user && isActive && (
           <div className="mb-8 p-4 bg-green-50 border-2 border-green-200 rounded-xl flex items-start gap-3">
@@ -170,16 +157,15 @@ export default function PricingPage() {
             <div>
               <p className="font-bold text-green-900">Active Subscription</p>
               <p className="text-sm text-green-800">{daysRemaining} days remaining • Plan: {subscription?.plan?.toUpperCase()}</p>
-<<<<<<< Updated upstream
-              <p className="text-xs text-green-700 mt-1">Renews After 30 Days</p>
-=======
-              <p className="text-xs text-green-700 mt-1">Your subscription will automatically renew on {subscription?.endDate ? new Date(subscription.endDate).toLocaleDateString() : 'TBD'}</p>
->>>>>>> Stashed changes
+              <p className="text-xs text-green-700 mt-1">
+                Your subscription will automatically renew on{' '}
+                {subscription?.endDate ? new Date(subscription.endDate).toLocaleDateString() : 'TBD'}
+              </p>
             </div>
           </div>
         )}
 
-        {/* Header Section */}
+        {/* Header */}
         <div className="text-center mb-8 md:mb-10 space-y-3">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 leading-tight">
             Choose Your Plan
@@ -190,22 +176,17 @@ export default function PricingPage() {
         </div>
 
         {/* Pricing Cards */}
-<<<<<<< Updated upstream
-        <div className="flex justify-center mb-16">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 max-w-3xl w-full">
-=======
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 mb-16 max-w-3xl mx-auto">
->>>>>>> Stashed changes
-          {plans.map((plan, index) => {
+          {plans.map((plan) => {
             const Icon = plan.icon;
             const isPaidPlan = plan.name === 'Premium';
             const isUserSubscribed = isActive && subscription?.plan?.toLowerCase() === plan.name.toLowerCase();
             const showPayButton = plan.price > 0 && showPaymentButton && !isUserSubscribed;
-            
+
             return (
               <div
                 key={plan.name}
-                className={`relative group transform transition-all duration-500 hover:scale-105`}
+                className="relative group transform transition-all duration-500 hover:scale-105"
               >
                 {plan.popular && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
@@ -218,8 +199,8 @@ export default function PricingPage() {
 
                 <div
                   className={`relative bg-white rounded-lg shadow-md p-5 sm:p-6 border h-full flex flex-col ${
-                    plan.popular 
-                      ? 'border-gray-400 shadow-lg' 
+                    plan.popular
+                      ? 'border-gray-400 shadow-lg'
                       : 'border-gray-200 hover:border-gray-400'
                   }`}
                 >
@@ -235,12 +216,10 @@ export default function PricingPage() {
                   </div>
 
                   <h3 className="text-xl font-bold text-gray-900 mb-1">{plan.name}</h3>
-                  
+
                   <div className="mb-4">
                     {plan.price === 0 ? (
-                      <div>
-                        <span className="text-3xl font-bold text-gray-900">Free</span>
-                      </div>
+                      <span className="text-3xl font-bold text-gray-900">Free</span>
                     ) : (
                       <>
                         <div className="flex items-baseline gap-1">
@@ -249,11 +228,7 @@ export default function PricingPage() {
                         </div>
                         {isPaidPlan && (
                           <div className="text-sm text-emerald-600 mt-2 font-bold">
-<<<<<<< Updated upstream
-                            📆 Renews Every 30 Days
-=======
-                            📆 Auto-renews after 30 days
->>>>>>> Stashed changes
+                            📆 Renews every 30 days
                           </div>
                         )}
                       </>
@@ -271,6 +246,7 @@ export default function PricingPage() {
                     ))}
                   </ul>
 
+                  {/* CTA */}
                   {plan.price === 0 ? (
                     <button
                       disabled
@@ -279,13 +255,12 @@ export default function PricingPage() {
                       Current Plan
                     </button>
                   ) : isUserSubscribed ? (
-                    // Show for the specific plan user is subscribed to
                     <div className="flex flex-col gap-2">
                       <button
                         disabled
                         className="w-full py-2 sm:py-3 rounded-lg font-bold text-xs sm:text-sm bg-green-100 text-green-700 cursor-not-allowed flex items-center justify-center gap-1"
                       >
-                        ✅ Active - {daysRemaining} days left
+                        ✅ Active — {daysRemaining} days left
                       </button>
                       <button
                         onClick={async () => {
@@ -293,8 +268,7 @@ export default function PricingPage() {
                             try {
                               await clearSubscription?.();
                               alert('✅ Subscription cancelled successfully!');
-                              // Refresh the key to trigger re-render
-                              setRefreshKey(prev => prev + 1);
+                              setRefreshKey((prev) => prev + 1);
                             } catch (error) {
                               alert('Failed to cancel subscription. Please try again.');
                             }
@@ -316,71 +290,42 @@ export default function PricingPage() {
                     >
                       Get Started
                     </button>
-                  ) : showPayButton && plan.price > 0 ? (
-                    <div id={`paypal-button-container-${plan.name.toLowerCase().replace(/\s+/g, '-')}`} className="w-full"></div>
+                  ) : showPayButton ? (
+                    <div id={`paypal-button-container-${plan.name.toLowerCase().replace(/\s+/g, '-')}`} className="w-full" />
                   ) : null}
                 </div>
               </div>
             );
           })}
-          </div>
         </div>
 
         {/* Social Proof */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-8 mb-16 text-center">
-          <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 shadow-lg border border-gray-200">
-            <div className="flex justify-center mb-2">
-              <Users className="w-6 h-6 sm:w-8 sm:h-8 text-indigo-600" />
+          {[
+            { icon: <Users className="w-6 h-6 sm:w-8 sm:h-8 text-indigo-600" />, value: '10K+', label: 'Active Students' },
+            { icon: <Star className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-500 fill-yellow-500" />, value: '4.9/5', label: 'Average Rating' },
+            { icon: <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />, value: '95%', label: 'Success Rate' },
+            { icon: <Award className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />, value: '50K+', label: 'Study Sessions' },
+          ].map((stat, i) => (
+            <div key={i} className="bg-white/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 shadow-lg border border-gray-200">
+              <div className="flex justify-center mb-2">{stat.icon}</div>
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900">{stat.value}</div>
+              <div className="text-xs sm:text-sm text-gray-600">{stat.label}</div>
             </div>
-            <div className="text-2xl sm:text-3xl font-bold text-gray-900">10K+</div>
-            <div className="text-xs sm:text-sm text-gray-600">Active Students</div>
-          </div>
-          <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 shadow-lg border border-gray-200">
-            <div className="flex justify-center mb-2">
-              <Star className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-500 fill-yellow-500" />
-            </div>
-            <div className="text-2xl sm:text-3xl font-bold text-gray-900">4.9/5</div>
-            <div className="text-xs sm:text-sm text-gray-600">Average Rating</div>
-          </div>
-          <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 shadow-lg border border-gray-200">
-            <div className="flex justify-center mb-2">
-              <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
-            </div>
-            <div className="text-2xl sm:text-3xl font-bold text-gray-900">95%</div>
-            <div className="text-xs sm:text-sm text-gray-600">Success Rate</div>
-          </div>
-          <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 shadow-lg border border-gray-200">
-            <div className="flex justify-center mb-2">
-              <Award className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
-            </div>
-            <div className="text-2xl sm:text-3xl font-bold text-gray-900">50K+</div>
-            <div className="text-xs sm:text-sm text-gray-600">Study Sessions</div>
-          </div>
+          ))}
         </div>
 
-        {/* FAQ Section */}
+        {/* FAQ */}
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-6 sm:p-10 max-w-4xl mx-auto border border-gray-200">
           <h2 className="text-3xl sm:text-4xl font-bold text-center mb-8 sm:mb-12 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
             Frequently Asked Questions
           </h2>
           <div className="space-y-6">
             {[
-              {
-                q: "Can I cancel anytime?",
-                a: "Yes! You can cancel your subscription at any time. You'll continue to have access until the end of your billing period."
-              },
-              {
-                q: "What payment methods do you accept?",
-                a: "We accept all major credit cards, debit cards, and PayPal for your convenience."
-              },
-              {
-                q: "Is there a student discount?",
-                a: "Yes! Students get 20% off any plan. Contact support with your student ID for the discount code."
-              },
-              {
-                q: "Can I upgrade or downgrade my plan?",
-                a: "Absolutely! You can change your plan at any time from your account settings with no hassle."
-              }
+              { q: 'Can I cancel anytime?', a: "Yes! You can cancel your subscription at any time. You'll continue to have access until the end of your billing period." },
+              { q: 'What payment methods do you accept?', a: 'We accept all major credit cards, debit cards, and PayPal for your convenience.' },
+              { q: 'Is there a student discount?', a: 'Yes! Students get 20% off any plan. Contact support with your student ID for the discount code.' },
+              { q: 'Can I upgrade or downgrade my plan?', a: 'Absolutely! You can change your plan at any time from your account settings with no hassle.' },
             ].map((faq, idx) => (
               <div key={idx} className="border-b border-gray-200 last:border-0 pb-6 last:pb-0">
                 <h3 className="font-bold text-gray-900 mb-3 text-base sm:text-lg flex items-center gap-2">
@@ -389,9 +334,7 @@ export default function PricingPage() {
                   </div>
                   {faq.q}
                 </h3>
-                <p className="text-sm sm:text-base text-gray-600 leading-relaxed ml-8">
-                  {faq.a}
-                </p>
+                <p className="text-sm sm:text-base text-gray-600 leading-relaxed ml-8">{faq.a}</p>
               </div>
             ))}
           </div>
@@ -400,7 +343,7 @@ export default function PricingPage() {
         {/* Final CTA */}
         <div className="mt-16 text-center">
           <p className="text-gray-600 mb-4">Still have questions?</p>
-          <Link 
+          <Link
             href="/"
             className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-full font-bold shadow-xl hover:shadow-2xl transition-all hover:scale-105"
           >
@@ -408,16 +351,6 @@ export default function PricingPage() {
           </Link>
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes fade-in {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in {
-          animation: fade-in 0.6s ease-out;
-        }
-      `}</style>
     </div>
   );
 }
