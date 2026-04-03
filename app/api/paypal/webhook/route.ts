@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { doc, setDoc, updateDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { rtdb } from '@/lib/firebase';
+import { ref, set, get, update } from 'firebase/database';
 import crypto from 'crypto';
 
 // PayPal webhook events we care about
@@ -91,8 +91,9 @@ function getPlanNameFromPlanId(planId: string): string {
     'P-33A20854VN557325GNFP6CYQ': 'pro',     // Pro Yearly
     'P-8W509033WG9931346NFP5YAQ': 'premium', // Premium Monthly
     'P-3NC19032VG801351ENFP56MY': 'premium', // Premium Yearly
+    'P-51711759R0127122YNHA4ITY': 'basic',   // Basic $3 Plan
   };
-  return planMap[planId] || 'free';
+  return planMap[planId] || 'basic';
 }
 
 export async function POST(req: NextRequest) {
@@ -120,29 +121,43 @@ export async function POST(req: NextRequest) {
         const subscriptionId = subscription.id;
         const planId = subscription.plan_id;
         const planName = getPlanNameFromPlanId(planId);
-        const billingPeriod = planId.includes('YEARLY') ? 'yearly' : 'monthly';
+        const email = subscription.subscriber?.email_address || '';
 
-        if (customId) {
-          if (!db) {
-            console.warn('Firestore not configured; webhook cannot update user.');
+        if (customId && subscriptionId) {
+          if (!rtdb) {
+            console.warn('[PAYPAL WEBHOOK] Realtime Database not configured; webhook cannot save subscription.');
             break;
           }
-          const userRef = doc(db!, 'users', customId);
-          await setDoc(userRef, {
-            subscription: {
-              plan: planName,
-              subscriptionId: subscriptionId,
-              planId: planId,
-              status: 'active',
-              startDate: new Date(subscription.start_time || subscription.create_time),
-              billingPeriod: billingPeriod,
-              nextBillingDate: subscription.billing_info?.next_billing_time 
-                ? new Date(subscription.billing_info.next_billing_time) 
-                : null,
-            },
-          }, { merge: true });
 
-          console.log(`Subscription activated for user ${customId}: ${planName}`);
+          // Calculate 30-day expiry
+          const startDate = new Date(subscription.start_time || subscription.create_time).toISOString();
+          const endDate = new Date();
+          endDate.setDate(endDate.getDate() + 30);
+          const endDateStr = endDate.toISOString();
+
+          const subscriptionData = {
+            userId: customId,
+            plan: planName,
+            status: 'active',
+            email: email,
+            subscriptionId: subscriptionId,
+            startDate: startDate,
+            endDate: endDateStr,
+            createdAt: startDate,
+          };
+
+          try {
+            const subRef = ref(rtdb, `subscriptions/${subscriptionId}`);
+            await set(subRef, subscriptionData);
+            console.log(`[PAYPAL WEBHOOK] ✅ Subscription saved for user ${customId}: ${planName}`);
+          } catch (writeError) {
+            console.error(`[PAYPAL WEBHOOK] ❌ Failed to save subscription:`, writeError);
+          }
+        } else {
+          console.warn('[PAYPAL WEBHOOK] Missing customId or subscriptionId:', { 
+            customId, 
+            subscriptionId: subscription?.id 
+          });
         }
         break;
       }
@@ -152,25 +167,29 @@ export async function POST(req: NextRequest) {
         const subscription = event.resource;
         const subscriptionId = subscription.id;
 
-        // Find user by subscription ID
-        if (!db) {
-          console.warn('Firestore not configured; webhook cannot find user.');
+        if (!rtdb) {
+          console.warn('[PAYPAL WEBHOOK] Realtime Database not configured.');
           break;
         }
-        const usersRef = collection(db!, 'users');
-        const q = query(usersRef, where('subscription.subscriptionId', '==', subscriptionId));
-        const snapshot = await getDocs(q);
-        
-        if (!snapshot.empty) {
-          const userDoc = snapshot.docs[0];
-          await updateDoc(userDoc.ref, {
-            'subscription.status': eventType === WEBHOOK_EVENTS.BILLING_SUBSCRIPTION_CANCELLED 
-              ? 'cancelled' 
-              : 'suspended',
-            'subscription.cancelledAt': new Date(),
-          });
 
-          console.log(`Subscription ${eventType} for user ${userDoc.id}`);
+        try {
+          const subRef = ref(rtdb, `subscriptions/${subscriptionId}`);
+          const snapshot = await get(subRef);
+          
+          if (snapshot.exists()) {
+            await update(subRef, {
+              status: eventType === WEBHOOK_EVENTS.BILLING_SUBSCRIPTION_CANCELLED 
+                ? 'cancelled' 
+                : 'suspended',
+              updatedAt: new Date().toISOString(),
+            });
+            const userId = snapshot.val().userId;
+            console.log(`[PAYPAL WEBHOOK] ✅ Subscription ${eventType === WEBHOOK_EVENTS.BILLING_SUBSCRIPTION_CANCELLED ? 'cancelled' : 'suspended'} for user ${userId}`);
+          } else {
+            console.warn('[PAYPAL WEBHOOK] Subscription not found:', subscriptionId);
+          }
+        } catch (error) {
+          console.error('[PAYPAL WEBHOOK] ❌ Error updating subscription:', error);
         }
         break;
       }
@@ -179,23 +198,28 @@ export async function POST(req: NextRequest) {
         const subscription = event.resource;
         const subscriptionId = subscription.id;
 
-        // Find user by subscription ID
-        if (!db) {
-          console.warn('Firestore not configured; webhook cannot find user.');
+        if (!rtdb) {
+          console.warn('[PAYPAL WEBHOOK] Realtime Database not configured.');
           break;
         }
-        const usersRef = collection(db!, 'users');
-        const q = query(usersRef, where('subscription.subscriptionId', '==', subscriptionId));
-        const snapshot = await getDocs(q);
-        
-        if (!snapshot.empty) {
-          const userDoc = snapshot.docs[0];
-          await updateDoc(userDoc.ref, {
-            'subscription.status': 'payment_failed',
-            'subscription.lastPaymentFailed': new Date(),
-          });
 
-          console.log(`Payment failed for user ${userDoc.id}`);
+        try {
+          const subRef = ref(rtdb, `subscriptions/${subscriptionId}`);
+          const snapshot = await get(subRef);
+          
+          if (snapshot.exists()) {
+            await update(subRef, {
+              status: 'payment_failed',
+              lastPaymentFailedAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            });
+            const userId = snapshot.val().userId;
+            console.log(`[PAYPAL WEBHOOK] ❌ Payment failed for user ${userId}`);
+          } else {
+            console.warn('[PAYPAL WEBHOOK] Subscription not found:', subscriptionId);
+          }
+        } catch (error) {
+          console.error('[PAYPAL WEBHOOK] ❌ Error updating subscription:', error);
         }
         break;
       }
@@ -204,24 +228,23 @@ export async function POST(req: NextRequest) {
         const sale = event.resource;
         const subscriptionId = sale.billing_agreement_id;
 
-        if (subscriptionId) {
-          // Update last successful payment
-            if (!db) {
-              console.warn('Firestore not configured; webhook cannot query users.');
-              break;
-            } else {
-              const usersRef = collection(db, 'users');
-              const q = query(usersRef, where('subscription.subscriptionId', '==', subscriptionId));
-              const snapshot = await getDocs(q);
-              if (!snapshot.empty) {
-                const userDoc = snapshot.docs[0];
-                await updateDoc(userDoc.ref, {
-                  'subscription.lastPaymentDate': new Date(),
-                  'subscription.status': 'active',
-                });
-                console.log(`Payment completed for user ${userDoc.id}`);
-              }
+        if (subscriptionId && rtdb) {
+          try {
+            const subRef = ref(rtdb, `subscriptions/${subscriptionId}`);
+            const snapshot = await get(subRef);
+            
+            if (snapshot.exists()) {
+              await update(subRef, {
+                status: 'active',
+                lastPaymentDate: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              });
+              const userId = snapshot.val().userId;
+              console.log(`[PAYPAL WEBHOOK] ✅ Payment completed for user ${userId}`);
             }
+          } catch (error) {
+            console.error('[PAYPAL WEBHOOK] ❌ Error updating payment:', error);
+          }
         }
         break;
       }
