@@ -9,26 +9,7 @@ type Post = {
 }
 
 function getInitials(name: string) {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2)
-}
-
-function getAvatarColor(name: string) {
-  const colors = [
-    { bg: "#1a2744", text: "#6ea8fe" },
-    { bg: "#1a2e22", text: "#4ade80" },
-    { bg: "#2d1b36", text: "#c084fc" },
-    { bg: "#2d1f0e", text: "#fb923c" },
-    { bg: "#1f2d2d", text: "#2dd4bf" },
-    { bg: "#2d1a1a", text: "#f87171" },
-  ]
-  let hash = 0
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
-  return colors[Math.abs(hash) % colors.length]
+  return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
 }
 
 function timeAgo(dateStr: string) {
@@ -52,9 +33,7 @@ export default function CommunityFeed() {
   const [focused, setFocused] = useState(false)
   const [expandedPost, setExpandedPost] = useState<string | null>(null)
 
-  useEffect(() => {
-    fetchPosts()
-  }, [])
+  useEffect(() => { fetchPosts() }, [])
 
   async function fetchPosts() {
     setFetching(true)
@@ -94,19 +73,18 @@ export default function CommunityFeed() {
   }
 
   return (
-    <div style={{ fontFamily: "'Berkeley Mono', 'Fira Code', 'JetBrains Mono', monospace" }}>
+    <div style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
       <style>{`
         .post-compose {
-          background: #111318;
-          border: 1px solid #1e2330;
+          background: #fff;
+          border: 1.5px solid #e5e7eb;
           border-radius: 12px;
           overflow: hidden;
-          transition: border-color 0.2s;
+          transition: border-color 0.15s;
           margin-bottom: 24px;
         }
-        .post-compose:focus-within {
-          border-color: #2a3a6e;
-        }
+        .post-compose:focus-within { border-color: #111; }
+
         .compose-header {
           padding: 16px 20px 0;
           display: flex;
@@ -117,172 +95,154 @@ export default function CommunityFeed() {
           width: 36px;
           height: 36px;
           border-radius: 50%;
-          background: #1a2744;
-          color: #6ea8fe;
+          background: #111;
+          color: #fff;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 13px;
-          font-weight: 600;
+          font-size: 12px;
+          font-weight: 700;
           flex-shrink: 0;
-          font-family: inherit;
         }
         .compose-name-input {
           background: transparent;
           border: none;
           outline: none;
-          color: #e2e8f0;
+          color: #111;
           font-size: 13px;
-          font-family: inherit;
           font-weight: 600;
           width: 180px;
           padding: 0;
+          font-family: inherit;
         }
-        .compose-name-input::placeholder { color: #3d4b6b; }
-        .compose-body {
-          padding: 12px 20px 16px 68px;
-        }
+        .compose-name-input::placeholder { color: #ccc; }
+
+        .compose-body { padding: 10px 20px 14px 68px; }
         .compose-textarea {
           width: 100%;
           background: transparent;
           border: none;
           outline: none;
-          color: #cbd5e1;
+          color: #333;
           font-size: 14px;
-          font-family: inherit;
           resize: none;
           line-height: 1.6;
-          min-height: 42px;
+          min-height: 40px;
           box-sizing: border-box;
+          font-family: inherit;
         }
-        .compose-textarea::placeholder { color: #2d3a57; }
+        .compose-textarea::placeholder { color: #ccc; }
+
         .compose-footer {
-          padding: 12px 20px;
-          border-top: 1px solid #1a2030;
+          padding: 10px 20px;
+          border-top: 1px solid #f0f0f0;
           display: flex;
           align-items: center;
           justify-content: space-between;
         }
-        .compose-meta {
-          font-size: 12px;
-          color: #3d4b6b;
-        }
-        .compose-actions {
-          display: flex;
-          gap: 8px;
-          align-items: center;
-        }
-        .btn-clear {
+        .compose-meta { font-size: 12px; color: #bbb; }
+        .compose-actions { display: flex; gap: 8px; align-items: center; }
+
+        .btn-cancel {
           background: transparent;
-          border: 1px solid #1e2a45;
-          color: #4a5a80;
-          padding: 7px 14px;
+          border: 1.5px solid #e5e7eb;
+          color: #666;
+          padding: 6px 14px;
           border-radius: 8px;
           font-size: 13px;
-          font-family: inherit;
           cursor: pointer;
-          transition: all 0.15s;
+          transition: all 0.1s;
+          font-family: inherit;
         }
-        .btn-clear:hover { border-color: #2a3a6e; color: #6ea8fe; }
+        .btn-cancel:hover { border-color: #111; color: #111; }
+
         .btn-post {
-          background: #1a3a7a;
-          border: 1px solid #2a4d9e;
-          color: #6ea8fe;
-          padding: 7px 18px;
+          background: #111;
+          border: 1.5px solid #111;
+          color: #fff;
+          padding: 6px 18px;
           border-radius: 8px;
           font-size: 13px;
-          font-family: inherit;
           font-weight: 600;
           cursor: pointer;
-          transition: all 0.15s;
+          transition: background 0.1s;
           display: flex;
           align-items: center;
           gap: 6px;
+          font-family: inherit;
         }
-        .btn-post:hover:not(:disabled) { background: #1e4490; color: #93c4ff; }
-        .btn-post:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-post:hover:not(:disabled) { background: #333; border-color: #333; }
+        .btn-post:disabled { opacity: 0.3; cursor: not-allowed; }
 
         .feed-header {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          margin-bottom: 16px;
+          margin-bottom: 14px;
         }
         .feed-label {
           font-size: 11px;
           font-weight: 700;
-          letter-spacing: 0.12em;
-          color: #3d4b6b;
+          letter-spacing: 0.1em;
+          color: #aaa;
           text-transform: uppercase;
         }
         .feed-count {
           font-size: 11px;
-          color: #2a3a57;
-          background: #0e1420;
-          border: 1px solid #1a2340;
+          color: #aaa;
+          background: #f9f9f9;
+          border: 1px solid #e5e7eb;
           padding: 3px 10px;
           border-radius: 20px;
         }
 
         .post-card {
-          background: #0d1117;
-          border: 1px solid #1a2030;
+          background: #fff;
+          border: 1.5px solid #e5e7eb;
           border-radius: 12px;
-          padding: 0;
           margin-bottom: 8px;
           overflow: hidden;
-          transition: border-color 0.2s;
-          animation: fadeSlideIn 0.3s ease both;
+          transition: border-color 0.15s;
+          animation: fadeSlideIn 0.25s ease both;
         }
-        .post-card:hover { border-color: #1e2a45; }
+        .post-card:hover { border-color: #111; }
 
         @keyframes fadeSlideIn {
-          from { opacity: 0; transform: translateY(6px); }
+          from { opacity: 0; transform: translateY(5px); }
           to { opacity: 1; transform: translateY(0); }
         }
 
-        .post-inner {
-          padding: 16px 20px;
-        }
+        .post-inner { padding: 16px 20px; }
         .post-top {
           display: flex;
           align-items: center;
           gap: 10px;
-          margin-bottom: 12px;
+          margin-bottom: 10px;
         }
         .post-avatar {
-          width: 34px;
-          height: 34px;
+          width: 32px;
+          height: 32px;
           border-radius: 50%;
+          background: #111;
+          color: #fff;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 700;
           flex-shrink: 0;
-          font-family: inherit;
         }
-        .post-author {
-          font-size: 13px;
-          font-weight: 700;
-          color: #e2e8f0;
-          font-family: inherit;
-        }
-        .post-dot {
-          color: #1e2a45;
-          font-size: 13px;
-        }
-        .post-time {
-          font-size: 12px;
-          color: #2d3d5e;
-          font-family: inherit;
-        }
+        .post-author { font-size: 13px; font-weight: 700; color: #111; }
+        .post-dot { color: #ddd; }
+        .post-time { font-size: 12px; color: #bbb; }
+
         .post-body {
           font-size: 14px;
-          color: #94a3b8;
+          color: #444;
           line-height: 1.7;
           white-space: pre-wrap;
           word-break: break-word;
+          margin: 0;
         }
         .post-body.truncated {
           display: -webkit-box;
@@ -290,60 +250,45 @@ export default function CommunityFeed() {
           -webkit-box-orient: vertical;
           overflow: hidden;
         }
+
         .post-footer {
-          padding: 10px 20px;
-          border-top: 1px solid #111820;
+          padding: 9px 20px;
+          border-top: 1px solid #f3f4f6;
           display: flex;
           align-items: center;
           gap: 16px;
         }
         .post-action {
           font-size: 12px;
-          color: #2d3d5e;
+          color: #ccc;
           cursor: pointer;
           display: flex;
           align-items: center;
           gap: 5px;
-          transition: color 0.15s;
+          transition: color 0.1s;
           background: none;
           border: none;
           font-family: inherit;
           padding: 0;
         }
-        .post-action:hover { color: #6ea8fe; }
+        .post-action:hover { color: #111; }
         .post-action svg { width: 13px; height: 13px; }
 
         .empty-state {
           text-align: center;
           padding: 60px 20px;
-          border: 1px dashed #1a2340;
+          border: 1.5px dashed #e5e7eb;
           border-radius: 12px;
         }
-        .empty-icon {
-          width: 40px;
-          height: 40px;
-          margin: 0 auto 16px;
-          opacity: 0.15;
-        }
-        .empty-title {
-          font-size: 14px;
-          font-weight: 600;
-          color: #2d3d5e;
-          margin-bottom: 6px;
-          font-family: inherit;
-        }
-        .empty-sub {
-          font-size: 13px;
-          color: #1e2a45;
-          font-family: inherit;
-        }
+        .empty-title { font-size: 14px; font-weight: 600; color: #ccc; margin-bottom: 6px; }
+        .empty-sub { font-size: 13px; color: #ddd; }
 
         .skeleton {
-          background: linear-gradient(90deg, #0e1420 25%, #131b2b 50%, #0e1420 75%);
+          background: linear-gradient(90deg, #f3f4f6 25%, #eaebec 50%, #f3f4f6 75%);
           background-size: 200% 100%;
-          animation: shimmer 1.6s infinite;
+          animation: shimmer 1.4s infinite;
           border-radius: 6px;
-          height: 14px;
+          height: 12px;
           margin-bottom: 8px;
         }
         @keyframes shimmer {
@@ -351,12 +296,13 @@ export default function CommunityFeed() {
           100% { background-position: -200% 0; }
         }
         .skeleton-card {
-          background: #0d1117;
-          border: 1px solid #1a2030;
+          background: #fff;
+          border: 1.5px solid #e5e7eb;
           border-radius: 12px;
           padding: 16px 20px;
           margin-bottom: 8px;
         }
+        @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
 
       {/* Compose Box */}
@@ -386,88 +332,66 @@ export default function CommunityFeed() {
         {(focused || message) && (
           <div className="compose-footer">
             <span className="compose-meta">
-              {message.length > 0 ? `${message.length} chars` : "markdown supported"}
+              {message.length > 0 ? `${message.length} chars` : "plain text"}
             </span>
             <div className="compose-actions">
-              <button
-                className="btn-clear"
-                onClick={() => { setName(""); setMessage(""); setFocused(false) }}
-              >
+              <button className="btn-cancel" onClick={() => { setName(""); setMessage(""); setFocused(false) }}>
                 Cancel
               </button>
-              <button
-                className="btn-post"
-                onClick={handleSubmit}
-                disabled={loading || !message.trim()}
-              >
+              <button className="btn-post" onClick={handleSubmit} disabled={loading || !message.trim()}>
                 {loading ? (
                   <>
-                    <svg viewBox="0 0 24 24" fill="none" width="14" height="14" style={{ animation: "spin 1s linear infinite" }}>
-                      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" strokeDasharray="28" strokeDashoffset="8" />
+                    <svg viewBox="0 0 24 24" fill="none" width="13" height="13" style={{ animation: "spin 0.8s linear infinite" }}>
+                      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" strokeDasharray="28" strokeDashoffset="8" />
                     </svg>
                     Posting
                   </>
-                ) : (
-                  <>Post</>
-                )}
+                ) : "Post"}
               </button>
             </div>
           </div>
         )}
       </div>
 
-      {/* Feed */}
+      {/* Feed Header */}
       <div className="feed-header">
         <span className="feed-label">Latest posts</span>
         <span className="feed-count">{posts.length} {posts.length === 1 ? "post" : "posts"}</span>
       </div>
 
+      {/* Posts */}
       {fetching ? (
         <>
           {[1, 2, 3].map((i) => (
             <div className="skeleton-card" key={i}>
               <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
-                <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#111820", flexShrink: 0 }} />
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#e5e7eb", flexShrink: 0 }} />
                 <div style={{ flex: 1 }}>
-                  <div className="skeleton" style={{ width: "30%", height: 12 }} />
-                  <div className="skeleton" style={{ width: "15%", height: 10 }} />
+                  <div className="skeleton" style={{ width: "28%" }} />
+                  <div className="skeleton" style={{ width: "14%", height: 10 }} />
                 </div>
               </div>
-              <div className="skeleton" style={{ width: "90%" }} />
-              <div className="skeleton" style={{ width: "70%" }} />
-              <div className="skeleton" style={{ width: "50%", marginBottom: 0 }} />
+              <div className="skeleton" style={{ width: "92%" }} />
+              <div className="skeleton" style={{ width: "72%" }} />
+              <div className="skeleton" style={{ width: "48%", marginBottom: 0 }} />
             </div>
           ))}
         </>
       ) : posts.length === 0 ? (
         <div className="empty-state">
-          <svg className="empty-icon" viewBox="0 0 40 40" fill="none">
-            <circle cx="20" cy="20" r="18" stroke="#6ea8fe" strokeWidth="1.5" />
-            <path d="M12 20h16M20 12v16" stroke="#6ea8fe" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
           <p className="empty-title">No posts yet</p>
           <p className="empty-sub">Be the first to start the conversation</p>
         </div>
       ) : (
         <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
           {posts.map((p, i) => {
-            const colors = getAvatarColor(p.name)
             const isLong = p.message.length > 280
             const isExpanded = expandedPost === p.id
             return (
-              <li
-                key={p.id}
-                className="post-card"
-                style={{ animationDelay: `${i * 40}ms` }}
-              >
+              <li key={p.id} className="post-card" style={{ animationDelay: `${i * 35}ms` }}>
                 <div className="post-inner">
                   <div className="post-top">
-                    <div
-                      className="post-avatar"
-                      style={{ background: colors.bg, color: colors.text }}
-                    >
-                      {getInitials(p.name)}
-                    </div>
+                    <div className="post-avatar">{getInitials(p.name)}</div>
                     <span className="post-author">{p.name}</span>
                     <span className="post-dot">·</span>
                     <span className="post-time">{timeAgo(p.createdAt)}</span>
@@ -486,12 +410,13 @@ export default function CommunityFeed() {
                   )}
                 </div>
                 <div className="post-footer">
-                  <button className="post-action">
+                  <span className="post-action" style={{ cursor: "default" }}>
                     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <path d="M8 2a6 6 0 110 12A6 6 0 018 2zM8 5v3l2 2" strokeLinecap="round" />
+                      <circle cx="8" cy="8" r="6" />
+                      <path d="M8 5v3l2 1.5" strokeLinecap="round" />
                     </svg>
                     {new Date(p.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                  </button>
+                  </span>
                   <button className="post-action">
                     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
                       <path d="M2 8c0-3.3 2.7-6 6-6s6 2.7 6 6-2.7 6-6 6H2l2-2" strokeLinecap="round" strokeLinejoin="round" />
@@ -510,12 +435,6 @@ export default function CommunityFeed() {
           })}
         </ul>
       )}
-
-      <style>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   )
 }
