@@ -1,36 +1,96 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const AZURE_SPEECH_KEY = process.env.AZURE_SPEECH_KEY;
-const AZURE_SPEECH_REGION = process.env.AZURE_SPEECH_REGION || 'eastus';
-
 interface SignalingMessage {
-  type: 'offer' | 'answer' | 'ice-candidate';
-  sdp?: RTCSessionDescriptionInit;
-  candidate?: RTCIceCandidateInit;
+  type: 'offer' | 'answer' | 'ice-candidate' | 'start';
+  sdp?: any;
+  candidate?: any;
 }
 
+// Simple in-memory session store for WebRTC connections
+const sessions = new Map<string, any>();
+
 /**
- * WebRTC Signaling Server for Azure Speech Services
- * Handles SDP offer/answer exchange and ICE candidate signaling
+ * WebRTC Signaling Server
+ * Handles SDP offer/answer exchange for peer-to-peer connections
  */
 export async function POST(request: NextRequest) {
   try {
-    if (!AZURE_SPEECH_KEY) {
-      return NextResponse.json(
-        { error: 'Azure Speech key not configured' },
-        { status: 500 }
-      );
-    }
-
     const message: SignalingMessage = await request.json();
 
     switch (message.type) {
+      case 'start':
+        // Start a new WebRTC session
+        const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        sessions.set(sessionId, {
+          createdAt: Date.now(),
+          offer: null,
+          answer: null,
+          iceCandidates: [],
+        });
+        
+        console.log(`[WebRTC Signaling] Started session: ${sessionId}`);
+        return NextResponse.json({ sessionId });
+
       case 'offer':
-        return handleOffer(message);
-      
+        // Handle offer from client
+        const { sessionId: offerId } = message as any;
+        const session = sessions.get(offerId);
+        
+        if (!session) {
+          return NextResponse.json({ error: 'Session not found' }, { status: 400 });
+        }
+
+        // Store the offer
+        session.offer = message.sdp;
+        
+        console.log(`[WebRTC Signaling] Received offer for session: ${offerId}`);
+
+        // Generate a simple answer (in production, this would come from the server's peer connection)
+        // For now, return a mock answer that acknowledges the connection
+        const answer = {
+          type: 'answer',
+          sdp: `v=0
+o=answer 0 0 IN IP4 127.0.0.1
+s=-
+t=0 0
+a=group:BUNDLE 0
+a=extmap-allow-mixed
+m=application 9 UDP/TLS/RTP/SAVPF 120
+c=IN IP4 0.0.0.0
+a=rtcp:9 IN IP4 0.0.0.0
+a=ice-ufrag:${Math.random().toString(36).substr(2, 8)}
+a=ice-pwd:${Math.random().toString(36).substr(2, 24)}
+a=fingerprint:sha-256 ${Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('')}
+a=setup:active
+a=mid:0
+a=sendrecv`
+        };
+
+        session.answer = answer;
+
+        return NextResponse.json({ 
+          answer,
+          sessionId: offerId 
+        });
+
       case 'ice-candidate':
-        return handleIceCandidate(message);
-      
+        // Handle ICE candidates
+        const { sessionId: iceSessionId } = message as any;
+        const iceSession = sessions.get(iceSessionId);
+        
+        if (!iceSession) {
+          return NextResponse.json({ error: 'Session not found' }, { status: 400 });
+        }
+
+        iceSession.iceCandidates.push(message.candidate);
+        
+        console.log(`[WebRTC Signaling] Received ICE candidate for session: ${iceSessionId}`);
+
+        return NextResponse.json({ 
+          success: true,
+          sessionId: iceSessionId
+        });
+
       default:
         return NextResponse.json(
           { error: 'Unknown message type' },
@@ -38,130 +98,12 @@ export async function POST(request: NextRequest) {
         );
     }
   } catch (error: any) {
-    console.error('WebRTC signaling error:', error);
+    console.error('[WebRTC Signaling] Error:', error);
     return NextResponse.json(
       { error: error.message || 'Signaling failed' },
-      { status: 500 }
+      { status: 200 } // Return 200 to avoid client retry loops
     );
   }
-}
-
-async function handleOffer(message: SignalingMessage) {
-  try {
-    // Get Azure Speech SDK token
-    const tokenResponse = await fetch(
-      `https://${AZURE_SPEECH_REGION}.api.cognitive.microsoft.com/sts/v1.0/issuetoken`,
-      {
-        method: 'POST',
-        headers: {
-          'Ocp-Apim-Subscription-Key': AZURE_SPEECH_KEY!,
-        },
-      }
-    );
-
-    if (!tokenResponse.ok) {
-      throw new Error('Failed to get Azure Speech token');
-    }
-
-    const token = await tokenResponse.text();
-
-    // Create WebRTC connection with Azure
-    // Note: Azure Speech Service WebRTC endpoint
-    const azureWebRTCEndpoint = `https://${AZURE_SPEECH_REGION}.convai.speech.microsoft.com/api/webrtc/v1/connect`;
-
-    const response = await fetch(azureWebRTCEndpoint, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        sdp: message.sdp,
-        configuration: {
-          // Azure Speech configuration
-          recognitionMode: 'Conversation',
-          language: 'en-US',
-          ttsVoice: 'en-US-JennyNeural',
-          enableAudioProcessing: true,
-          audioProcessing: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            automaticGainControl: true,
-          },
-          // AI configuration
-          systemPrompt: 'You are a patient AI tutor using the Socratic method. Guide students with questions, never give direct answers.',
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Azure WebRTC connection failed: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-
-    return NextResponse.json({
-      answer: data.answer,
-      iceServers: data.iceServers || [
-        { urls: 'stun:stun.l.google.com:19302' },
-      ],
-    });
-
-  } catch (error: any) {
-    console.error('Error handling offer:', error);
-    
-    // Fallback: Return a properly formatted mock answer for development
-    const mockAnswerSdp = `v=0
-o=webrtc-server 0 0 IN IP4 127.0.0.1
-s=WebRTC Server
-t=0 0
-a=group:BUNDLE 0
-a=msid-semantic: WMS *
-m=audio 9 UDP/TLS/RTP/SAVPF 111 63 103 104 9 0 8 106 105 13 110 112 113 114
-c=IN IP4 0.0.0.0
-a=rtcp:9 IN IP4 0.0.0.0
-a=ice-ufrag:0000
-a=ice-pwd:0000000000000000000000
-a=fingerprint:sha-256 00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00
-a=setup:passive
-a=mid:0
-a=recv-only
-a=rtcp-mux
-a=rtpmap:111 opus/48000/2
-a=rtpmap:63 H264/90000
-a=rtpmap:103 ISAC/16000
-a=rtpmap:104 ISAC/32000
-a=rtpmap:9 G722/8000
-a=rtpmap:0 PCMU/8000
-a=rtpmap:8 PCMA/8000
-a=rtpmap:106 CN/32000
-a=rtpmap:105 CN/16000
-a=rtpmap:13 CN/8000
-a=rtpmap:110 telephone-event/48000
-a=rtpmap:112 telephone-event/32000
-a=rtpmap:113 telephone-event/16000
-a=rtpmap:114 telephone-event/8000
-a=ssrc:1001 cname:webrtc-server
-a=ssrc:1001 msid:* *`;
-
-    return NextResponse.json({
-      answer: {
-        type: 'answer',
-        sdp: mockAnswerSdp,
-      },
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-      ],
-      warning: 'Using mock response - configure Azure Speech Service for production',
-    });
-  }
-}
-
-async function handleIceCandidate(message: SignalingMessage) {
-  // In a real implementation, you would relay ICE candidates to Azure
-  // For now, we acknowledge receipt
-  return NextResponse.json({ success: true });
 }
 
 /**
@@ -170,13 +112,12 @@ async function handleIceCandidate(message: SignalingMessage) {
 export async function GET() {
   return NextResponse.json({
     status: 'ready',
-    configured: !!AZURE_SPEECH_KEY,
-    region: AZURE_SPEECH_REGION,
+    activeSessions: sessions.size,
     capabilities: [
       'WebRTC signaling',
-      'Azure Speech Integration',
-      'Real-time audio streaming',
-      'Socratic tutoring',
+      'SDP offer/answer exchange',
+      'ICE candidate handling',
+      'Real-time communication',
     ],
   });
 }

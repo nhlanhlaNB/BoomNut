@@ -28,6 +28,20 @@ export default function WebRTCVoiceTutorPage() {
       setStatus('connecting');
       setError(null);
 
+      // Start a new signaling session
+      const sessionResponse = await fetch('/api/webrtc-signaling', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'start' }),
+      });
+
+      if (!sessionResponse.ok) {
+        throw new Error('Failed to start WebRTC session');
+      }
+
+      const { sessionId } = await sessionResponse.json();
+      console.log('[WebRTC] Session started:', sessionId);
+
       // Get user media (microphone)
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
@@ -62,12 +76,12 @@ export default function WebRTCVoiceTutorPage() {
       dataChannelRef.current = dataChannel;
 
       dataChannel.onopen = () => {
-        console.log('Data channel opened');
+        console.log('[WebRTC] Data channel opened');
         setIsConnected(true);
         setStatus('connected');
         setIsLoading(false);
         
-        // Send initial Socratic tutor prompt
+        // Send initial system message
         dataChannel.send(JSON.stringify({
           type: 'system',
           content: 'You are a patient AI tutor using the Socratic method. Guide students with questions, never give direct answers.',
@@ -80,46 +94,54 @@ export default function WebRTCVoiceTutorPage() {
           if (data.type === 'transcript') {
             setTranscript(prev => [...prev, { role: data.role, content: data.content }]);
           } else if (data.type === 'status') {
-            setStatus(data.status);
+            setStatus(data.status as any);
           }
         } catch (error) {
-          console.error('Error parsing data channel message:', error);
+          console.error('[WebRTC] Error parsing message:', error);
         }
       };
 
       dataChannel.onerror = (error) => {
-        console.error('Data channel error:', error);
+        console.error('[WebRTC] Data channel error:', error);
         setError('Communication error occurred');
       };
 
       dataChannel.onclose = () => {
-        console.log('Data channel closed');
+        console.log('[WebRTC] Data channel closed');
         setIsConnected(false);
         setStatus('idle');
       };
 
       // Handle incoming audio stream
       peerConnection.ontrack = (event) => {
-        console.log('Received remote track');
+        console.log('[WebRTC] Received remote track');
         if (remoteAudioRef.current) {
           remoteAudioRef.current.srcObject = event.streams[0];
-          remoteAudioRef.current.play().catch(e => console.error('Error playing audio:', e));
+          remoteAudioRef.current.play().catch(e => console.error('[WebRTC] Error playing audio:', e));
         }
       };
 
       // Handle ICE candidates
       peerConnection.onicecandidate = async (event) => {
         if (event.candidate) {
-          // Send ICE candidate to signaling server
-          await sendToSignalingServer({
-            type: 'ice-candidate',
-            candidate: event.candidate,
-          });
+          try {
+            await fetch('/api/webrtc-signaling', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                type: 'ice-candidate',
+                sessionId,
+                candidate: event.candidate,
+              }),
+            });
+          } catch (error) {
+            console.error('[WebRTC] Error sending ICE candidate:', error);
+          }
         }
       };
 
       peerConnection.oniceconnectionstatechange = () => {
-        console.log('ICE connection state:', peerConnection.iceConnectionState);
+        console.log('[WebRTC] ICE connection state:', peerConnection.iceConnectionState);
         if (peerConnection.iceConnectionState === 'failed' || 
             peerConnection.iceConnectionState === 'disconnected') {
           setError('Connection lost. Please reconnect.');
@@ -136,38 +158,42 @@ export default function WebRTCVoiceTutorPage() {
       await peerConnection.setLocalDescription(offer);
 
       // Send offer to signaling server
-      const response = await sendToSignalingServer({
-        type: 'offer',
-        sdp: offer,
+      const offerResponse = await fetch('/api/webrtc-signaling', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'offer',
+          sessionId,
+          sdp: offer,
+        }),
       });
 
-      if (response.answer) {
-        await peerConnection.setRemoteDescription(
-          new RTCSessionDescription(response.answer)
-        );
+      if (!offerResponse.ok) {
+        throw new Error('Failed to send offer to signaling server');
+      }
+
+      const { answer } = await offerResponse.json();
+
+      if (answer && answer.sdp) {
+        try {
+          await peerConnection.setRemoteDescription(
+            new RTCSessionDescription(answer)
+          );
+          console.log('[WebRTC] Remote description set successfully');
+        } catch (error) {
+          console.error('[WebRTC] Error setting remote description:', error);
+          setError('Failed to establish connection');
+          disconnectWebRTC();
+        }
       }
 
     } catch (error: any) {
-      console.error('Error connecting WebRTC:', error);
+      console.error('[WebRTC] Error connecting:', error);
       setError(error.message || 'Failed to connect');
       setIsLoading(false);
       setStatus('idle');
       disconnectWebRTC();
     }
-  };
-
-  const sendToSignalingServer = async (data: any) => {
-    const response = await fetch('/api/webrtc-signaling', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      throw new Error('Signaling server error');
-    }
-
-    return response.json();
   };
 
   const disconnectWebRTC = () => {
