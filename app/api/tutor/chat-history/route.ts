@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ref, push, get, remove } from 'firebase/database';
-import { rtdb } from '@/lib/firebase';
 
 type ChatMessage = {
   role: 'user' | 'assistant';
@@ -18,13 +16,11 @@ type ChatSession = {
   title?: string;
 };
 
+const FIREBASE_DB_URL = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || 'https://tutapp-88bf0-default-rtdb.firebaseio.com';
+
 // GET - Retrieve chat history for a user
 export async function GET(request: NextRequest) {
   try {
-    if (!rtdb) {
-      return NextResponse.json({ error: 'Database not initialized' }, { status: 500 });
-    }
-
     const userId = request.nextUrl.searchParams.get('userId');
     const sessionId = request.nextUrl.searchParams.get('sessionId');
 
@@ -32,34 +28,41 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 });
     }
 
-    const tutorChatsRef = ref(rtdb, 'tutorChats');
-
     // If looking for specific session
     if (sessionId) {
-      const snapshot = await get(ref(rtdb, `tutorChats/${sessionId}`));
-      if (!snapshot.exists()) {
+      const response = await fetch(`${FIREBASE_DB_URL}/tutorChats/${sessionId}.json`);
+      
+      if (!response.ok) {
+        console.error(`[TUTOR CHAT HISTORY] Failed to fetch session: ${response.status}`);
         return NextResponse.json({ error: 'Chat session not found' }, { status: 404 });
       }
 
-      const session = snapshot.val();
-      if (session.userId !== userId) {
+      const session = await response.json();
+      
+      if (!session || session.userId !== userId) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
       }
 
       return NextResponse.json({ session: { id: sessionId, ...session } });
     }
 
-    // Get all sessions for user - iterate through all and filter
-    const snapshot = await get(tutorChatsRef);
+    // Get all sessions for user
+    const response = await fetch(`${FIREBASE_DB_URL}/tutorChats.json`);
+    
+    if (!response.ok) {
+      console.error(`[TUTOR CHAT HISTORY] Failed to fetch sessions: ${response.status}`);
+      return NextResponse.json({ sessions: [] });
+    }
+
+    const allSessions = await response.json();
     const sessions: (ChatSession & { id: string })[] = [];
 
-    if (snapshot.exists()) {
-      snapshot.forEach((child) => {
-        const session = child.val();
-        if (session.userId === userId) {
+    if (allSessions && typeof allSessions === 'object') {
+      Object.entries(allSessions).forEach(([key, value]: [string, any]) => {
+        if (value && value.userId === userId) {
           sessions.push({
-            id: child.key!,
-            ...session,
+            id: key,
+            ...value,
           });
         }
       });
@@ -73,8 +76,8 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('[TUTOR CHAT HISTORY] GET error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to retrieve chat history' },
-      { status: 500 }
+      { error: error.message || 'Failed to retrieve chat history', sessions: [] },
+      { status: 200 } // Return 200 even on error to prevent client retry loops
     );
   }
 }
@@ -82,10 +85,6 @@ export async function GET(request: NextRequest) {
 // POST - Save a new chat message or create session
 export async function POST(request: NextRequest) {
   try {
-    if (!rtdb) {
-      return NextResponse.json({ error: 'Database not initialized' }, { status: 500 });
-    }
-
     const { userId, sessionId, subject, messages, title } = await request.json();
 
     if (!userId || !subject || !Array.isArray(messages)) {
@@ -99,32 +98,26 @@ export async function POST(request: NextRequest) {
 
     // Create or update session
     if (sessionId) {
-      // Update existing session
-      const sessionRef = ref(rtdb, `tutorChats/${sessionId}`);
-      const snapshot = await get(sessionRef);
-
-      if (!snapshot.exists()) {
+      // Update existing session - verify ownership first
+      const checkResponse = await fetch(`${FIREBASE_DB_URL}/tutorChats/${sessionId}.json`);
+      
+      if (!checkResponse.ok) {
         return NextResponse.json({ error: 'Chat session not found' }, { status: 404 });
       }
 
-      const session = snapshot.val();
-      if (session.userId !== userId) {
+      const session = await checkResponse.json();
+      if (!session || session.userId !== userId) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
       }
 
-      // Update using REST API (Firebase SDK update doesn't work in server context reliably)
-      const databaseURL = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL;
-      if (!databaseURL) {
-        throw new Error('Firebase database URL not configured');
-      }
-
+      // Update using PATCH
       const updateData = {
         messages,
         updatedAt: now,
         ...(title && { title }),
       };
 
-      const patchResponse = await fetch(`${databaseURL}/tutorChats/${sessionId}.json`, {
+      const patchResponse = await fetch(`${FIREBASE_DB_URL}/tutorChats/${sessionId}.json`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updateData),
@@ -137,7 +130,9 @@ export async function POST(request: NextRequest) {
       console.log(`[TUTOR CHAT HISTORY] Updated session ${sessionId}`);
       return NextResponse.json({ sessionId });
     } else {
-      // Create new session
+      // Create new session with generated ID
+      const newSessionId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
       const newSession: ChatSession = {
         userId,
         subject,
@@ -147,17 +142,24 @@ export async function POST(request: NextRequest) {
         title: title || `${subject} Chat`,
       };
 
-      const tutorChatsRef = ref(rtdb, 'tutorChats');
-      const newSessionRef = push(tutorChatsRef, newSession);
+      const putResponse = await fetch(`${FIREBASE_DB_URL}/tutorChats/${newSessionId}.json`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newSession),
+      });
 
-      console.log(`[TUTOR CHAT HISTORY] Created new session ${newSessionRef.key}`);
-      return NextResponse.json({ sessionId: newSessionRef.key!, session: newSession });
+      if (!putResponse.ok) {
+        throw new Error(`Failed to create session: ${putResponse.statusText}`);
+      }
+
+      console.log(`[TUTOR CHAT HISTORY] Created new session ${newSessionId}`);
+      return NextResponse.json({ sessionId: newSessionId, session: newSession });
     }
   } catch (error: any) {
     console.error('[TUTOR CHAT HISTORY] POST error:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to save chat history' },
-      { status: 500 }
+      { status: 200 } // Return 200 to prevent client retry loops
     );
   }
 }
@@ -165,10 +167,6 @@ export async function POST(request: NextRequest) {
 // DELETE - Remove a chat session
 export async function DELETE(request: NextRequest) {
   try {
-    if (!rtdb) {
-      return NextResponse.json({ error: 'Database not initialized' }, { status: 500 });
-    }
-
     const userId = request.nextUrl.searchParams.get('userId');
     const sessionId = request.nextUrl.searchParams.get('sessionId');
 
@@ -176,19 +174,26 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'userId and sessionId are required' }, { status: 400 });
     }
 
-    const sessionRef = ref(rtdb, `tutorChats/${sessionId}`);
-    const snapshot = await get(sessionRef);
-
-    if (!snapshot.exists()) {
+    // Verify ownership first
+    const checkResponse = await fetch(`${FIREBASE_DB_URL}/tutorChats/${sessionId}.json`);
+    
+    if (!checkResponse.ok) {
       return NextResponse.json({ error: 'Chat session not found' }, { status: 404 });
     }
 
-    const session = snapshot.val();
-    if (session.userId !== userId) {
+    const session = await checkResponse.json();
+    if (!session || session.userId !== userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    await remove(sessionRef);
+    // Delete the session
+    const deleteResponse = await fetch(`${FIREBASE_DB_URL}/tutorChats/${sessionId}.json`, {
+      method: 'DELETE',
+    });
+
+    if (!deleteResponse.ok) {
+      throw new Error(`Failed to delete session: ${deleteResponse.statusText}`);
+    }
 
     console.log(`[TUTOR CHAT HISTORY] Deleted session ${sessionId}`);
     return NextResponse.json({ message: 'Chat session deleted' });
@@ -196,7 +201,7 @@ export async function DELETE(request: NextRequest) {
     console.error('[TUTOR CHAT HISTORY] DELETE error:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to delete chat session' },
-      { status: 500 }
+      { status: 200 } // Return 200 to prevent client retry loops
     );
   }
 }
