@@ -33,7 +33,6 @@ export default function Navbar() {
   const services = [
     { name: 'AI Tutor Chat', href: '/tutor', icon: Brain, description: '24/7 Personal AI Tutor' },
     { name: 'Voice Tutor', href: '/voice-tutor', icon: Mic, description: 'Speak & Learn' },
-    { name: 'Voice Tutor WebRTC', href: '/voice-tutor-webrtc', icon: Video, description: 'Real-time Voice Learning' },
     { name: 'Live Lecture', href: '/live-lecture', icon: Video, description: 'Record & Transcribe' },
     { name: 'Study Arcade', href: '/arcade', icon: Gamepad2, description: 'Gamified Learning' },
     { name: 'Essay Grading', href: '/essay-grading', icon: PenTool, description: 'AI Essay Feedback' },
@@ -46,7 +45,7 @@ export default function Navbar() {
     { name: 'Home', href: '/', icon: Home },
     { name: 'Study Dashboard', href: '/study', icon: BookOpen },
     { name: 'Study Plan', href: '/study-plan', icon: Target },
-    // { name: 'Study Rooms', href: '/study-rooms', icon: Users },
+    { name: 'Community', href: '/community', icon: Users },
     { name: 'Pricing', href: '/pricing', icon: DollarSign },
   ];
 
@@ -69,19 +68,32 @@ export default function Navbar() {
 
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center space-x-1">
-              {mainLinks.slice(0, -1).map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isActive(link.href)
-                      ? 'bg-orange-100 text-orange-700'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  {link.name}
-                </Link>
-              ))}
+              {mainLinks.map((link) => {
+                if (link.href === '/pricing') {
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-lg hover:opacity-90 transition font-bold text-sm shadow-lg"
+                    >
+                      💸 Pricing
+                    </Link>
+                  );
+                }
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isActive(link.href)
+                        ? 'bg-orange-100 text-orange-700'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    {link.name}
+                  </Link>
+                );
+              })}
 
               {/* Services Dropdown */}
               <div className="relative">
@@ -123,13 +135,6 @@ export default function Navbar() {
                   </div>
                 )}
               </div>
-
-              <Link
-                href="/pricing"
-                className="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-lg hover:opacity-90 transition font-bold text-sm shadow-lg"
-              >
-                💸 Pricing
-              </Link>
             </div>
 
             {/* Right Side - Desktop */}
