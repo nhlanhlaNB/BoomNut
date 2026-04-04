@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { rtdb } from '@/lib/firebase';
-import { ref, get, remove, query, orderByChild, equalTo } from 'firebase/database';
+import { ref, get, remove } from 'firebase/database';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,7 +8,10 @@ export async function POST(req: NextRequest) {
   try {
     const { userId } = await req.json();
 
+    console.log('[SUBSCRIPTION CANCEL] Starting cancellation for userId:', userId);
+
     if (!userId) {
+      console.error('[SUBSCRIPTION CANCEL] ❌ No userId provided');
       return NextResponse.json(
         { error: 'userId is required' },
         { status: 400 }
@@ -16,64 +19,63 @@ export async function POST(req: NextRequest) {
     }
 
     if (!rtdb) {
-      console.error('❌ [SUBSCRIPTION CANCEL] Firebase not configured');
+      console.error('[SUBSCRIPTION CANCEL] ❌ Firebase not configured');
       return NextResponse.json(
         { error: 'Database not configured' },
         { status: 500 }
       );
     }
 
-    // Get subscription from database - query by userId
+    // Read all subscriptions - simple and reliable approach
+    console.log('[SUBSCRIPTION CANCEL] Reading all subscriptions from database...');
     const subscriptionsRef = ref(rtdb, 'subscriptions');
-    const subscriptionQuery = query(subscriptionsRef, orderByChild('userId'), equalTo(userId));
-    const snapshot = await get(subscriptionQuery);
+    const snapshot = await get(subscriptionsRef);
 
     if (!snapshot.exists()) {
-      console.log('[SUBSCRIPTION CANCEL] No subscription found for user:', userId);
+      console.log('[SUBSCRIPTION CANCEL] No subscriptions found in database');
       return NextResponse.json(
-        { success: true, message: 'No subscription to cancel' },
+        { success: true, message: 'No subscriptions found' },
         { status: 200 }
       );
     }
 
-    // Get the first subscription to cancel
-    interface SubscriptionData {
-      plan: string;
-      status: string;
-      email: string;
-      subscriptionId?: string;
-    }
+    // Find subscription for this user
+    let foundSubscription: any = null;
+    let subscriptionKey: string = '';
     
-    let subscription: SubscriptionData | null = null;
-    let subscriptionRef: any = null;
-    snapshot.forEach((child) => {
-      if (!subscription) {
-        subscription = child.val();
-        subscriptionRef = child.ref;
+    snapshot.forEach((child: any) => {
+      const sub = child.val();
+      console.log('[SUBSCRIPTION CANCEL] Checking subscription:', child.key, 'userId:', sub?.userId, 'searching for:', userId);
+      
+      if (sub?.userId === userId) {
+        console.log('[SUBSCRIPTION CANCEL] ✅ Found matching subscription:', child.key);
+        foundSubscription = sub;
+        subscriptionKey = child.key;
       }
     });
 
-    if (!subscription) {
+    if (!foundSubscription) {
+      console.log('[SUBSCRIPTION CANCEL] No subscription found for user:', userId);
       return NextResponse.json(
-        { success: true, message: 'No subscription found' },
+        { success: true, message: 'No subscription found to cancel' },
         { status: 200 }
       );
     }
 
-    const subData = subscription as any;
     console.log('[SUBSCRIPTION CANCEL] Found subscription to cancel:', {
+      subscriptionKey,
       userId,
-      plan: subData.plan,
-      paypalSubscriptionId: subData.subscriptionId,
+      plan: foundSubscription.plan,
+      paypalSubscriptionId: foundSubscription.subscriptionId,
     });
 
-    // Cancel PayPal subscription if it exists
-    if (subData.subscriptionId && subData.subscriptionId !== 'TEST-' && !subData.subscriptionId.startsWith('TEST-')) {
+    // Cancel PayPal subscription if it's a real one (not a test)
+    if (foundSubscription.subscriptionId && !foundSubscription.subscriptionId.startsWith('TEST-')) {
       try {
-        console.log('[SUBSCRIPTION CANCEL] Calling PayPal to cancel subscription:', subData.subscriptionId);
+        console.log('[SUBSCRIPTION CANCEL] Calling PayPal to cancel:', foundSubscription.subscriptionId);
         
         const paypalResponse = await fetch(
-          `https://api.paypal.com/v1/billing/subscriptions/${subData.subscriptionId}/cancel`,
+          `https://api.paypal.com/v1/billing/subscriptions/${foundSubscription.subscriptionId}/cancel`,
           {
             method: 'POST',
             headers: {
@@ -106,10 +108,16 @@ export async function POST(req: NextRequest) {
       console.log('[SUBSCRIPTION CANCEL] Skipping PayPal cancel (test subscription)');
     }
 
-    // Delete from database
-    if (subscriptionRef) {
-      await remove(subscriptionRef);
-      console.log('[SUBSCRIPTION CANCEL] ✅ Subscription removed from database for user:', userId);
+    // Delete from database using the subscription key
+    if (subscriptionKey) {
+      try {
+        const subRefToDelete = ref(rtdb, `subscriptions/${subscriptionKey}`);
+        await remove(subRefToDelete);
+        console.log('[SUBSCRIPTION CANCEL] ✅ Subscription removed from database:', subscriptionKey);
+      } catch (deleteError) {
+        console.error('[SUBSCRIPTION CANCEL] ❌ Failed to delete from database:', deleteError);
+        throw new Error(`Failed to delete subscription from database: ${deleteError}`);
+      }
     }
 
     return NextResponse.json({
