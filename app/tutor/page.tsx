@@ -30,28 +30,48 @@ export default function TutorPage() {
   const [isRecording, setIsRecording] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [messageCount, setMessageCount] = useState(0);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [isSavingChat, setIsSavingChat] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const FREE_MESSAGE_LIMIT = 2;
 
-  // Fetch message usage from database on load
+  // Fetch message usage and chat history on load
   useEffect(() => {
-    if (!user || isActive) return; // Don't track for paid users
+    const initialize = async () => {
+      if (!user) return;
 
-    const fetchUsage = async () => {
+      // Fetch usage for free tier
+      if (!isActive) {
+        try {
+          const response = await fetch(`/api/usage/track?userId=${user.uid}&appName=tutor`);
+          if (response.ok) {
+            const data = await response.json();
+            setMessageCount(data.messageCount);
+            console.log('[TUTOR] Loaded usage:', data);
+          }
+        } catch (error) {
+          console.error('[TUTOR] Error fetching usage:', error);
+        }
+      }
+
+      // Load chat history if available - check for recent sessions
       try {
-        const response = await fetch(`/api/usage/track?userId=${user.uid}&appName=tutor`);
-        if (response.ok) {
-          const data = await response.json();
-          setMessageCount(data.messageCount);
-          console.log('[TUTOR] Loaded usage:', data);
+        const historyResponse = await fetch(`/api/tutor/chat-history?userId=${user.uid}`);
+        if (historyResponse.ok) {
+          const data = await historyResponse.json();
+          if (data.sessions && data.sessions.length > 0) {
+            const latestSession = data.sessions[0];
+            // Optionally auto-load the last session, or just make it available
+            console.log('[TUTOR] Chat history loaded:', data.sessions.length, 'sessions');
+          }
         }
       } catch (error) {
-        console.error('[TUTOR] Error fetching usage:', error);
+        console.error('[TUTOR] Error loading chat history:', error);
       }
     };
 
-    fetchUsage();
+    initialize();
   }, [user, isActive]);
 
   const scrollToBottom = () => {
@@ -61,6 +81,60 @@ export default function TutorPage() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Save chat to database
+  const saveChatHistory = async (
+    messagesToSave: Message[],
+    currentSessionId: string | null = sessionId
+  ) => {
+    if (!user || messagesToSave.length === 0) return;
+
+    setIsSavingChat(true);
+    try {
+      // Convert messages to format for storage
+      const formattedMessages = messagesToSave.map(m => ({
+        role: m.role,
+        content: m.content,
+        timestamp: m.timestamp instanceof Date ? m.timestamp.getTime() : m.timestamp,
+      }));
+
+      // Generate title from first user message if new session
+      let title = subject;
+      const firstUserMessage = messagesToSave.find(m => m.role === 'user');
+      if (firstUserMessage) {
+        const firstLine = firstUserMessage.content.split('\n')[0];
+        title = firstLine.substring(0, 50); // First 50 chars of first user message
+      }
+
+      const response = await fetch('/api/tutor/chat-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.uid,
+          sessionId: currentSessionId,
+          subject,
+          messages: formattedMessages,
+          title,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (!currentSessionId) {
+          setSessionId(data.sessionId);
+          console.log('[TUTOR] Created new chat session:', data.sessionId);
+        } else {
+          console.log('[TUTOR] Updated chat session:', currentSessionId);
+        }
+      } else {
+        console.error('[TUTOR] Failed to save chat:', response.statusText);
+      }
+    } catch (error) {
+      console.error('[TUTOR] Error saving chat history:', error);
+    } finally {
+      setIsSavingChat(false);
+    }
+  };
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -132,7 +206,13 @@ export default function TutorPage() {
         timestamp: new Date(),
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
+      const updatedMessages = [...messages, userMessage, assistantMessage];
+      setMessages(updatedMessages);
+
+      // Save both messages to database if user is logged in
+      if (user) {
+        await saveChatHistory(updatedMessages, sessionId);
+      }
     } catch (error) {
       console.error('Error:', error);
       const errorMessage: Message = {

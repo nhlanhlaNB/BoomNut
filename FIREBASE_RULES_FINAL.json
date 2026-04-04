@@ -39,6 +39,17 @@
         }
       }
     },
+    "tutorChats": {
+      "$chatId": {
+        ".read": "auth != null && auth.uid === data.child('userId').val()",
+        ".write": "auth != null && (auth.uid === data.child('userId').val() || (auth.uid === newData.child('userId').val() && !data.exists()))",
+        ".indexOn": ["userId", "updatedAt", "createdAt"],
+        ".validate": "newData.hasChildren(['userId', 'subject', 'messages', 'createdAt', 'updatedAt'])",
+        "messages": {
+          ".validate": "newData.isArray()"
+        }
+      }
+    },
     "studySets": {
       "$setId": {
         ".read": "auth != null && (auth.uid === data.child('userId').val() || data.child('isPublic').val() === true)",
