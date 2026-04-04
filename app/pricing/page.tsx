@@ -183,18 +183,17 @@ export default function PricingPage() {
           {plans.map((plan) => {
             const Icon = plan.icon;
             const isPaidPlan = plan.name === 'Premium';
-            // Normalize plan names to lowercase for comparison (handles BASIC, basic, PREMIUM, premium, etc)
-            const isUserSubscribed = isActive && (subscription?.plan?.toLowerCase() === plan.name.toLowerCase());
+            // Show subscribe/cancel based on: active subscription + on a paid plan = user is subscribed to this plan
+            // Since Premium is the only paid plan, if they're active and this is Premium, show cancel button
+            const isUserSubscribed = isActive && isPaidPlan;
             const showPayButton = plan.price > 0 && showPaymentButton && !isUserSubscribed;
 
             // Debug logging for each plan
             if (user) {
               console.log(`[PRICING] ${plan.name} card:`, {
                 isActive,
+                isPaidPlan,
                 subscriptionPlan: subscription?.plan,
-                subscriptionPlanLower: subscription?.plan?.toLowerCase(),
-                planName: plan.name,
-                planNameLower: plan.name.toLowerCase(),
                 isUserSubscribed,
                 daysRemaining,
                 showPayButton
