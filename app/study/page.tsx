@@ -66,18 +66,6 @@ export default function StudyPage() {
       isPro: true,
     },
     {
-      id: 'voice-tutor-webrtc',
-      name: 'Voice Tutor WebRTC',
-      description: 'Real-time Voice Learning',
-      icon: <Video className="w-12 h-12" />,
-      href: '/voice-tutor-webrtc',
-      category: 'tools',
-      color: 'red',
-      gradient: 'from-red-600 to-red-800',
-      bgImage: 'url(https://tse3.mm.bing.net/th/id/OIP.YpXRHkQUT4nayqYoIESADQHaHa?rs=1&pid=ImgDetMain&o=7&rm=3)',
-      isPro: true,
-    },
-    {
       id: 'live-lecture',
       name: 'Live Lecture',
       description: 'Record & Transcribe',

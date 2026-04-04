@@ -34,6 +34,12 @@ export default function ArcadePage() {
   const [flippedCards, setFlippedCards] = useState<number[]>([]);
   const [matchedCards, setMatchedCards] = useState<number[]>([]);
 
+  // Word Race State
+  const [currentWordQuestion, setCurrentWordQuestion] = useState<any>(null);
+  const [userAnswer, setUserAnswer] = useState('');
+  const [wordQuestionIndex, setWordQuestionIndex] = useState(0);
+  const [wordRaceCorrect, setWordRaceCorrect] = useState(0);
+
   useEffect(() => {
     loadLeaderboard();
     loadUserPoints();
@@ -179,7 +185,61 @@ export default function ArcadePage() {
     setIsPlaying(true);
     setScore(0);
     setTimeLeft(90);
-    // Word race implementation
+    setWordQuestionIndex(0);
+    setWordRaceCorrect(0);
+    setUserAnswer('');
+    await loadWordQuestion();
+  };
+
+  const loadWordQuestion = async () => {
+    const topics = ['Math', 'Science', 'History', 'Geography', 'Literature'];
+    const topic = topics[Math.floor(Math.random() * topics.length)];
+    
+    try {
+      const response = await fetch('/api/arcade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          action: 'generate-question',
+          topic,
+          difficulty: level 
+        })
+      });
+      const data = await response.json();
+      setCurrentWordQuestion(data.question);
+      setUserAnswer('');
+    } catch (error) {
+      console.error('Error loading word race question:', error);
+    }
+  };
+
+  const submitWordRaceAnswer = () => {
+    if (!currentWordQuestion) return;
+    
+    const normalizeAnswer = (str: string) => str.trim().toLowerCase();
+    const isCorrect = normalizeAnswer(userAnswer) === normalizeAnswer(currentWordQuestion.correctAnswer);
+    
+    if (isCorrect) {
+      const points = (15 + wordRaceCorrect * 3) * level;
+      setScore(score + points);
+      setWordRaceCorrect(wordRaceCorrect + 1);
+      
+      if (wordRaceCorrect > 0 && wordRaceCorrect % 5 === 0) {
+        setLevel(level + 1);
+      }
+    } else {
+      setWordRaceCorrect(0);
+    }
+    
+    setWordQuestionIndex(wordQuestionIndex + 1);
+    setUserAnswer('');
+    loadWordQuestion();
+  };
+
+  const handleWordRaceKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      submitWordRaceAnswer();
+    }
   };
 
   const endGame = () => {
@@ -389,10 +449,40 @@ export default function ArcadePage() {
         )}
 
         {/* Word Race */}
-        {gameMode === 'word-race' && (
+        {gameMode === 'word-race' && currentWordQuestion && (
           <div className="bg-white rounded-3xl shadow-2xl p-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Type the Answer!</h2>
-            <p className="text-lg text-center text-gray-600 mb-6">Coming soon...</p>
+            
+            <div className="mb-8">
+              <div className="text-sm text-gray-500 mb-3">Question {wordQuestionIndex + 1}</div>
+              <p className="text-xl font-semibold text-gray-900 mb-6 p-6 bg-blue-50 rounded-xl border-2 border-blue-200">
+                {currentWordQuestion.question}
+              </p>
+            </div>
+
+            <div className="flex gap-4">
+              <input
+                type="text"
+                value={userAnswer}
+                onChange={(e) => setUserAnswer(e.target.value)}
+                onKeyPress={handleWordRaceKeyPress}
+                placeholder="Type your answer..."
+                className="flex-1 px-6 py-4 border-2 border-gray-300 rounded-xl text-lg focus:border-blue-500 focus:outline-none"
+                autoFocus
+              />
+              <button
+                onClick={submitWordRaceAnswer}
+                className="px-8 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl font-bold hover:opacity-90 transition transform hover:scale-105"
+              >
+                Submit
+              </button>
+            </div>
+
+            {wordRaceCorrect > 0 && (
+              <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
+                <p className="text-green-700 font-semibold">Correct in a row: {wordRaceCorrect}</p>
+              </div>
+            )}
           </div>
         )}
       </div>
