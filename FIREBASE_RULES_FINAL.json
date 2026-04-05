@@ -12,6 +12,14 @@
         "preferences": {
           ".read": "auth != null && $uid === auth.uid",
           ".write": "auth != null && $uid === auth.uid"
+        },
+        "dailyUsage": {
+          ".read": "true",
+          ".write": "true",
+          "$date": {
+            ".read": "true",
+            ".write": "true"
+          }
         }
       }
     },

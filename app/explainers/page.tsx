@@ -153,19 +153,39 @@ export default function ExplainersPage() {
       <div className="max-w-7xl mx-auto">
         {/* Usage Indicator */}
         {!isActive && user && (
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+          <div className={`mb-6 p-4 rounded-lg border flex items-center justify-between ${
+            usageCount >= FREE_LIMIT
+              ? 'bg-red-50 border-red-200'
+              : 'bg-blue-50 border-blue-200'
+          }`}>
             <div className="flex items-center gap-2">
-              <Lock className="w-4 h-4 text-blue-600" />
-              <span className="text-sm text-blue-800">
-                Free Plan: {usageCount}/{FREE_LIMIT} topics explained today
+              <Lock className="w-4 h-4" style={{ color: usageCount >= FREE_LIMIT ? '#dc2626' : '#2563eb' }} />
+              <span className={`text-sm font-medium ${
+                usageCount >= FREE_LIMIT ? 'text-red-800' : 'text-blue-800'
+              }`}>
+                {usageCount >= FREE_LIMIT ? (
+                  <>
+                    ⚠️ You've used your {FREE_LIMIT} free topics explained today.
+                    <a
+                      href="/pricing"
+                      className="ml-2 font-bold underline text-red-700 hover:text-red-800"
+                    >
+                      Subscribe to continue →
+                    </a>
+                  </>
+                ) : (
+                  <>
+                    Free Plan: {usageCount}/{FREE_LIMIT} topics explained today
+                    <a
+                      href="/pricing"
+                      className="ml-2 text-blue-600 hover:text-blue-700 font-medium underline"
+                    >
+                      Upgrade
+                    </a>
+                  </>
+                )}
               </span>
             </div>
-            <a
-              href="/pricing"
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium underline"
-            >
-              Upgrade
-            </a>
           </div>
         )}
         {/* Header */}
