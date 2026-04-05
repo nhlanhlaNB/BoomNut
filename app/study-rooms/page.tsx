@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Users, Plus, ArrowRight, Sparkles, Home, Lock, Globe } from 'lucide-react';
 import Link from 'next/link';
@@ -20,6 +20,13 @@ export default function StudyRoomsPage() {
     isPublic: true,
     maxMembers: 10,
   });
+
+  // Check authentication on mount
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/signin');
+    }
+  }, [user, loading, router]);
 
   const loadRooms = async () => {
     try {

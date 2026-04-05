@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Mic, MicOff, Volume2, VolumeX, Settings, AlertCircle, CheckCircle, Loader, Lock } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import PaywallModal from '@/components/PaywallModal';
 
 export default function VoiceTutorPage() {
-  const { user } = useAuth();
+  const router = useRouter();
+  const { user, loading } = useAuth();
   const { isActive } = useSubscription();
 
   const [isRecording, setIsRecording] = useState(false);
@@ -26,6 +28,13 @@ export default function VoiceTutorPage() {
   const [showPaywall, setShowPaywall] = useState(false);
 
   const FREE_MESSAGE_LIMIT = 2;
+
+  // Check authentication on mount
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/signin');
+    }
+  }, [user, loading, router]);
 
   // Fetch message usage from database on load
   useEffect(() => {

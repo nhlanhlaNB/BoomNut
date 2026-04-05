@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { BookOpen, Search, Lightbulb, ArrowLeft, Sparkles, Video, Image as ImageIcon, List } from 'lucide-react';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Explanation {
   title: string;
@@ -18,6 +20,8 @@ interface Explanation {
 }
 
 export default function ExplainersPage() {
+  const router = useRouter();
+  const { user, loading } = useAuth();
   const [topic, setTopic] = useState('');
   const [subject, setSubject] = useState('General');
   const [complexity, setComplexity] = useState('simple');
@@ -25,6 +29,12 @@ export default function ExplainersPage() {
   const [explanation, setExplanation] = useState<Explanation | null>(null);
   const [includeVisuals, setIncludeVisuals] = useState(true);
   const [includeAnalogies, setIncludeAnalogies] = useState(true);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/signin');
+    }
+  }, [user, loading, router]);
 
   const popularTopics = [
     { emoji: '🧬', topic: 'Photosynthesis', subject: 'Biology' },

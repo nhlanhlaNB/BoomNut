@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Brain, FileText, Zap, BookOpen, GraduationCap, Upload, Sparkles, Lock,
   Mic, Video, Gamepad2, PenTool, Lightbulb, Users, TrendingUp, Target,
@@ -26,8 +27,15 @@ interface AppCard {
 }
 
 export default function StudyPage() {
-  const { user } = useAuth();
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const { isActive, subscription, loading } = useSubscription();
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/signin');
+    }
+  }, [user, authLoading, router]);
   const [selectedCategory, setSelectedCategory] = useState<AppCategory>('all');
 
   const apps: AppCard[] = [

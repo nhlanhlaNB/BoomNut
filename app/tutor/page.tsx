@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Send, Mic, MicOff, Upload, Download, BookOpen, Home, Lock } from 'lucide-react';
 import Link from 'next/link';
 import ChatMessage from '@/components/ChatMessage';
@@ -20,7 +21,8 @@ type Message = {
 };
 
 export default function TutorPage() {
-  const { user } = useAuth();
+  const router = useRouter();
+  const { user, loading } = useAuth();
   const { isActive } = useSubscription();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -35,6 +37,13 @@ export default function TutorPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const FREE_MESSAGE_LIMIT = 2;
+
+  // Check authentication on mount
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/signin');
+    }
+  }, [user, loading, router]);
 
   // Fetch message usage and chat history on load
   useEffect(() => {

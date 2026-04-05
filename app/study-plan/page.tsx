@@ -1,10 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Calendar, Target, TrendingUp, Clock, Download } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function StudyPlanPage() {
-  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const { user, loading } = useAuth();
+  const [pageLoading, setPageLoading] = useState(false);
   const [plan, setPlan] = useState<any>(null);
   const [formData, setFormData] = useState({
     subjects: [''],
@@ -14,6 +18,13 @@ export default function StudyPlanPage() {
     learningPace: 'medium',
     preferences: '',
   });
+
+  // Check authentication on mount
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/signin');
+    }
+  }, [user, loading, router]);
 
   const addSubject = () => {
     setFormData({
@@ -34,7 +45,7 @@ export default function StudyPlanPage() {
   };
 
   const generatePlan = async () => {
-    setLoading(true);
+    setPageLoading(true);
     try {
       const response = await fetch('/api/study-plan', {
         method: 'POST',
@@ -54,7 +65,7 @@ export default function StudyPlanPage() {
       console.error('Failed to generate plan:', error);
       alert('Failed to generate study plan');
     } finally {
-      setLoading(false);
+      setPageLoading(false);
     }
   };
 

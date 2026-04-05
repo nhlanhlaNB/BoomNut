@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { FileText, Send, CheckCircle, XCircle, ArrowLeft, Sparkles, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
@@ -21,13 +22,20 @@ interface GradingResult {
 }
 
 export default function EssayGradingPage() {
-  const { user } = useAuth();
+  const router = useRouter();
+  const { user, loading } = useAuth();
   const [essay, setEssay] = useState('');
   const [prompt, setPrompt] = useState('');
   const [subject, setSubject] = useState('English');
   const [gradeLevel, setGradeLevel] = useState('High School');
   const [isGrading, setIsGrading] = useState(false);
   const [result, setResult] = useState<GradingResult | null>(null);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/signin');
+    }
+  }, [user, loading, router]);
   const [wordCount, setWordCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
 

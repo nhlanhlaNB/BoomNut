@@ -2,6 +2,7 @@
 
 // Updated: Word Race game fully implemented - April 5, 2026
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Gamepad2, Trophy, Zap, Target, Clock, Star, Award, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
@@ -16,7 +17,8 @@ interface LeaderboardEntry {
 }
 
 export default function ArcadePage() {
-  const { user } = useAuth();
+  const router = useRouter();
+  const { user, loading } = useAuth();
   const [gameMode, setGameMode] = useState<GameMode>(null);
   const [score, setScore] = useState(0);
   const [level, setLevel] = useState(1);
@@ -40,6 +42,13 @@ export default function ArcadePage() {
   const [userAnswer, setUserAnswer] = useState('');
   const [wordQuestionIndex, setWordQuestionIndex] = useState(0);
   const [wordRaceCorrect, setWordRaceCorrect] = useState(0);
+
+  // Check authentication on mount
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/signin');
+    }
+  }, [user, loading, router]);
 
   useEffect(() => {
     loadLeaderboard();
