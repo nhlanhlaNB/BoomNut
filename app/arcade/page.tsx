@@ -32,6 +32,13 @@ export default function ArcadePage() {
   const [currentQuestion, setCurrentQuestion] = useState<any>(null);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [streak, setStreak] = useState(0);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackData, setFeedbackData] = useState<{isCorrect: boolean; selectedAnswer: string; correctAnswer: string; explanation?: string}>({
+    isCorrect: false,
+    selectedAnswer: '',
+    correctAnswer: '',
+    explanation: ''
+  });
 
   // Memory Match State
   const [cards, setCards] = useState<any[]>([]);
@@ -43,6 +50,12 @@ export default function ArcadePage() {
   const [userAnswer, setUserAnswer] = useState('');
   const [wordQuestionIndex, setWordQuestionIndex] = useState(0);
   const [wordRaceCorrect, setWordRaceCorrect] = useState(0);
+  const [showWordRaceFeedback, setShowWordRaceFeedback] = useState(false);
+  const [wordRaceFeedbackData, setWordRaceFeedbackData] = useState<{isCorrect: boolean; userAnswer: string; correctAnswer: string}>({
+    isCorrect: false,
+    userAnswer: '',
+    correctAnswer: ''
+  });
 
   // Check authentication on mount
   useEffect(() => {
@@ -132,8 +145,20 @@ export default function ArcadePage() {
       setStreak(0);
     }
 
+    // Show feedback before moving to next question
+    setFeedbackData({
+      isCorrect,
+      selectedAnswer: answer,
+      correctAnswer: currentQuestion.correctAnswer,
+      explanation: currentQuestion.explanation || 'Good learning opportunity!'
+    });
+    setShowFeedback(true);
+  };
+
+  const continuToNextQuestion = () => {
+    setShowFeedback(false);
     setQuestionIndex(questionIndex + 1);
-    await loadQuestion();
+    loadQuestion();
   };
 
   const startMemoryMatch = () => {
@@ -222,6 +247,17 @@ export default function ArcadePage() {
       setWordRaceCorrect(0);
     }
     
+    // Show feedback before moving to next question
+    setWordRaceFeedbackData({
+      isCorrect,
+      userAnswer,
+      correctAnswer: currentWordQuestion.correctAnswer
+    });
+    setShowWordRaceFeedback(true);
+  };
+
+  const continueToNextWordRaceQuestion = () => {
+    setShowWordRaceFeedback(false);
     setWordQuestionIndex(wordQuestionIndex + 1);
     setUserAnswer('');
     loadWordQuestion();
@@ -395,7 +431,7 @@ export default function ArcadePage() {
         </div>
 
         {/* Speed Quiz */}
-        {gameMode === 'speed-quiz' && currentQuestion && (
+        {gameMode === 'speed-quiz' && currentQuestion && !showFeedback && (
           <div className="bg-white rounded-3xl shadow-2xl p-8">
             <div className="mb-6">
               <div className="text-sm text-gray-500 mb-2">Question {questionIndex + 1} • Level {level}</div>
@@ -413,6 +449,55 @@ export default function ArcadePage() {
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Feedback Card */}
+        {gameMode === 'speed-quiz' && showFeedback && (
+          <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl mx-auto">
+            <div className="text-center mb-6">
+              {feedbackData.isCorrect ? (
+                <div>
+                  <div className="text-6xl mb-4">🎉</div>
+                  <h2 className="text-3xl font-bold text-green-600 mb-2">Correct!</h2>
+                  <p className="text-lg text-gray-600">Great job! You earned bonus points for your streak!</p>
+                </div>
+              ) : (
+                <div>
+                  <div className="text-6xl mb-4">❌</div>
+                  <h2 className="text-3xl font-bold text-red-600 mb-2">Not Quite!</h2>
+                  <p className="text-lg text-gray-600">Don't worry, keep learning!</p>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-gray-50 rounded-xl p-6 mb-6">
+              {!feedbackData.isCorrect && (
+                <div className="mb-4">
+                  <p className="text-sm text-gray-600 mb-1">Your answer:</p>
+                  <p className="text-lg font-semibold text-red-600 mb-4">{feedbackData.selectedAnswer}</p>
+                </div>
+              )}
+              
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Correct answer:</p>
+                <p className="text-lg font-semibold text-green-600 mb-4">{feedbackData.correctAnswer}</p>
+              </div>
+
+              {feedbackData.explanation && (
+                <div className="border-t pt-4">
+                  <p className="text-sm text-gray-600 mb-2">Explanation:</p>
+                  <p className="text-gray-800">{feedbackData.explanation}</p>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={continuToNextQuestion}
+              className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-xl hover:from-purple-600 hover:to-pink-600 transition"
+            >
+              Continue to Next Question
+            </button>
           </div>
         )}
 
@@ -442,7 +527,7 @@ export default function ArcadePage() {
         )}
 
         {/* Word Race */}
-        {gameMode === 'word-race' && currentWordQuestion && (
+        {gameMode === 'word-race' && currentWordQuestion && !showWordRaceFeedback && (
           <div className="bg-white rounded-3xl shadow-2xl p-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Type the Answer!</h2>
             
@@ -476,6 +561,48 @@ export default function ArcadePage() {
                 <p className="text-green-700 font-semibold">Correct in a row: {wordRaceCorrect}</p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Word Race Feedback */}
+        {gameMode === 'word-race' && showWordRaceFeedback && (
+          <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl mx-auto">
+            <div className="text-center mb-6">
+              {wordRaceFeedbackData.isCorrect ? (
+                <div>
+                  <div className="text-6xl mb-4">🏆</div>
+                  <h2 className="text-3xl font-bold text-green-600 mb-2">Excellent!</h2>
+                  <p className="text-lg text-gray-600">Your speed is improving!</p>
+                </div>
+              ) : (
+                <div>
+                  <div className="text-6xl mb-4">⏱️</div>
+                  <h2 className="text-3xl font-bold text-orange-600 mb-2">Not Quite!</h2>
+                  <p className="text-lg text-gray-600">Keep practicing - you'll get faster!</p>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-gray-50 rounded-xl p-6 mb-6">
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-1">Your answer:</p>
+                <p className={`text-lg font-semibold ${wordRaceFeedbackData.isCorrect ? 'text-green-600' : 'text-orange-600'}`}>
+                  {wordRaceFeedbackData.userAnswer || '(empty)'}
+                </p>
+              </div>
+              
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Correct answer:</p>
+                <p className="text-lg font-semibold text-green-600">{wordRaceFeedbackData.correctAnswer}</p>
+              </div>
+            </div>
+
+            <button
+              onClick={continueToNextWordRaceQuestion}
+              className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold rounded-xl hover:from-blue-600 hover:to-cyan-600 transition"
+            >
+              Next Challenge
+            </button>
           </div>
         )}
       </div>
