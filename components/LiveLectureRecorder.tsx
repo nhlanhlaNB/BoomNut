@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Mic, Square, FileText, Download, Loader } from 'lucide-react';
+import { Mic, Square, FileText, Download, Loader, Copy, Check, Sparkles, AlertCircle, Info } from 'lucide-react';
 
 export default function LiveLectureRecorder() {
   const [isRecording, setIsRecording] = useState(false);
@@ -9,13 +9,38 @@ export default function LiveLectureRecorder() {
   const [notes, setNotes] = useState('');
   const [sessionId, setSessionId] = useState('');
   const [loading, setLoading] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [copied, setCopied] = useState(false);
+  const [hasUserResponse, setHasUserResponse] = useState(false);
+  const [userInput, setUserInput] = useState('');
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+
+  // Timer effect
+  useEffect(() => {
+    if (isRecording) {
+      timerRef.current = setInterval(() => {
+        setRecordingTime(t => t + 1);
+      }, 1000);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isRecording]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const startRecording = async () => {
     try {
-      // Start session
       const startRes = await fetch('/api/live-lecture', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -23,8 +48,11 @@ export default function LiveLectureRecorder() {
       });
       const { sessionId: newSessionId } = await startRes.json();
       setSessionId(newSessionId);
+      setRecordingTime(0);
+      setTranscription('');
+      setNotes('');
+      setUserInput('');
 
-      // Get microphone access
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
@@ -33,7 +61,6 @@ export default function LiveLectureRecorder() {
         if (event.data.size > 0) {
           chunksRef.current.push(event.data);
 
-          // Send chunk for transcription every 5 seconds
           if (chunksRef.current.length >= 5) {
             const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
             chunksRef.current = [];
@@ -65,11 +92,11 @@ export default function LiveLectureRecorder() {
         }
       };
 
-      mediaRecorder.start(1000); // Capture data every second
+      mediaRecorder.start(1000);
       setIsRecording(true);
     } catch (error) {
       console.error('Failed to start recording:', error);
-      alert('Failed to start recording. Please allow microphone access.');
+      alert('Failed to start recording. Please enable microphone access in your browser settings.');
     }
   };
 
@@ -80,7 +107,6 @@ export default function LiveLectureRecorder() {
       setIsRecording(false);
       setLoading(true);
 
-      // Get final notes
       try {
         const response = await fetch('/api/live-lecture', {
           method: 'POST',
@@ -99,6 +125,13 @@ export default function LiveLectureRecorder() {
     }
   };
 
+  const copyToClipboard = () => {
+    const content = `${notes}\n\n---\n\n${transcription}`;
+    navigator.clipboard.writeText(content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const downloadNotes = () => {
     const content = `LECTURE NOTES\n\n${notes}\n\n---\nFULL TRANSCRIPTION\n\n${transcription}`;
     const blob = new Blob([content], { type: 'text/plain' });
@@ -110,80 +143,204 @@ export default function LiveLectureRecorder() {
     URL.revokeObjectURL(url);
   };
 
+  const handleGenerateNotes = async () => {
+    if (!userInput.trim()) return;
+    
+    setLoading(true);
+    try {
+      const response = await fetch('/api/live-lecture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'generateNotes',
+          transcription: userInput,
+        }),
+      });
+
+      const data = await response.json();
+      setNotes(data.notes || 'Unable to generate notes. Please try again.');
+      setTranscription(userInput);
+      setUserInput('');
+    } catch (error) {
+      console.error('Error generating notes:', error);
+      setNotes('Error generating notes. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-          <FileText className="w-6 h-6 text-indigo-600" />
-          Live Lecture Notes
-        </h2>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-50 p-4 md:p-8">
+      <div className="max-w-5xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-block px-4 py-2 bg-indigo-100 text-indigo-800 rounded-full text-sm font-semibold mb-4">
+            <Sparkles className="w-4 h-4 inline mr-2" />
+            AI-Powered Study Tool
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-2">
+            Live Lecture Notes
+          </h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Record your lectures and get instant AI-generated notes with key concepts and summaries
+          </p>
+        </div>
 
-        <div className="flex gap-4 mb-6">
-          <button
-            onClick={isRecording ? stopRecording : startRecording}
-            disabled={loading}
-            className={`flex-1 py-4 px-6 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
-              isRecording
-                ? 'bg-red-600 hover:bg-red-700 text-white'
-                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-            } disabled:opacity-50`}
-          >
-            {loading ? (
-              <>
-                <Loader className="w-5 h-5 animate-spin" />
-                Processing...
-              </>
-            ) : isRecording ? (
-              <>
-                <Square className="w-5 h-5" />
-                Stop Recording
-              </>
-            ) : (
-              <>
-                <Mic className="w-5 h-5" />
-                Start Recording
-              </>
-            )}
-          </button>
+        {/* Info Box */}
+        {!isRecording && !notes && (
+          <div className="mb-8 p-4 bg-blue-50 border border-blue-200 rounded-lg flex gap-3">
+            <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-blue-800">
+              <strong>How it works:</strong> Click "Start Recording" to record your lecture. The transcription will appear in real-time. When done, we'll automatically generate organized notes with key concepts.
+            </div>
+          </div>
+        )}
 
-          {(notes || transcription) && (
-            <button
-              onClick={downloadNotes}
-              className="px-6 py-4 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium flex items-center gap-2"
-            >
-              <Download className="w-5 h-5" />
-              Download
-            </button>
+        {/* Main Recording Area */}
+        <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
+          {!notes && !hasUserResponse ? (
+            <div className="text-center">
+              {/* Recording Status */}
+              {isRecording && (
+                <div className="mb-6">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-full font-semibold">
+                    <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
+                    Recording... {formatTime(recordingTime)}
+                  </div>
+                </div>
+              )}
+
+              {/* Large Recording Button */}
+              <button
+                onClick={isRecording ? stopRecording : startRecording}
+                disabled={loading}
+                className={`mb-6 w-24 h-24 rounded-full flex items-center justify-center transition-all transform hover:scale-105 ${
+                  isRecording
+                    ? 'bg-red-600 hover:bg-red-700 shadow-lg'
+                    : 'bg-indigo-600 hover:bg-indigo-700 shadow-lg'
+                } text-white disabled:opacity-50`}
+              >
+                {isRecording ? (
+                  <Square className="w-10 h-10" />
+                ) : (
+                  <Mic className="w-10 h-10" />
+                )}
+              </button>
+
+              <p className="text-lg font-semibold text-gray-700 mb-6">
+                {isRecording ? 'Stop when finished' : 'Click to start recording'}
+              </p>
+
+              {/* Alternative Input Method */}
+              {!isRecording && !transcription && (
+                <div className="mt-8 pt-8 border-t border-gray-200">
+                  <p className="text-sm text-gray-600 mb-4">Don't have a recording? Paste transcription here:</p>
+                  <textarea
+                    value={userInput}
+                    onChange={(e) => setUserInput(e.target.value)}
+                    placeholder="Paste your lecture transcription or notes here..."
+                    className="w-full h-32 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                  />
+                  <button
+                    onClick={() => {
+                      if (userInput.trim()) {
+                        setHasUserResponse(true);
+                        handleGenerateNotes();
+                      }
+                    }}
+                    disabled={loading || !userInput.trim()}
+                    className="mt-4 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold disabled:opacity-50"
+                  >
+                    <Sparkles className="w-4 h-4 inline mr-2" />
+                    Generate Notes
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Generated Notes */}
+              {notes && (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-indigo-600" />
+                      AI-Generated Notes
+                    </h3>
+                    <button
+                      onClick={copyToClipboard}
+                      className="inline-flex items-center gap-2 px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded transition"
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="w-4 h-4" />
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4" />
+                          Copy
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <div className="bg-gray-50 rounded-xl p-6 max-h-96 overflow-y-auto prose prose-sm max-w-none text-gray-700">
+                    {notes.split('\n').map((line, i) => (
+                      <p key={i} className="mb-2">{line}</p>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Transcription */}
+              {transcription && (
+                <div className="pt-4 border-t border-gray-200">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">Full Transcription</h3>
+                  <div className="bg-gray-50 rounded-xl p-6 max-h-48 overflow-y-auto">
+                    <p className="text-sm text-gray-700 leading-relaxed">{transcription}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t border-gray-200">
+                <button
+                  onClick={downloadNotes}
+                  className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold flex items-center justify-center gap-2 transition"
+                >
+                  <Download className="w-5 h-5" />
+                  Download as Text
+                </button>
+                <button
+                  onClick={() => {
+                    setNotes('');
+                    setTranscription('');
+                    setUserInput('');
+                    setHasUserResponse(false);
+                  }}
+                  className="px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-900 rounded-lg font-semibold transition"
+                >
+                  Start Over
+                </button>
+              </div>
+            </div>
+          )}
+
+          {loading && (
+            <div className="flex items-center justify-center gap-2 text-indigo-600">
+              <Loader className="w-5 h-5 animate-spin" />
+              <span className="font-semibold">Generating notes...</span>
+            </div>
           )}
         </div>
 
-        {isRecording && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <div className="flex items-center gap-2 text-red-700">
-              <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse" />
-              <span className="font-medium">Recording in progress...</span>
-            </div>
-          </div>
-        )}
-
-        {notes && (
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-3">AI-Generated Notes</h3>
-            <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
-              <div className="prose prose-sm max-w-none whitespace-pre-wrap">
-                {notes}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {transcription && (
-          <div>
-            <h3 className="text-lg font-semibold mb-3">Transcription</h3>
-            <div className="bg-gray-50 rounded-lg p-4 max-h-64 overflow-y-auto">
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                {transcription}
-              </p>
+        {/* Real-time Transcription Display */}
+        {isRecording && transcription && (
+          <div className="bg-white rounded-2xl shadow-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Live Transcription</h3>
+            <div className="bg-gray-50 rounded-lg p-4 max-h-48 overflow-y-auto">
+              <p className="text-sm text-gray-700">{transcription}</p>
+              <div className="animate-pulse mt-2 text-gray-500 text-sm">Listening...</div>
             </div>
           </div>
         )}

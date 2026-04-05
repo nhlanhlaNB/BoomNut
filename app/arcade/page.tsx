@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Gamepad2, Trophy, Zap, Target, Clock, Star, Award, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
+import { getRandomQuestion, getRandomWordRaceAnswer, getMemoryMatchPairs } from '@/lib/quizQuestions';
 
 type GameMode = 'speed-quiz' | 'memory-match' | 'word-race' | null;
 
@@ -98,36 +99,20 @@ export default function ArcadePage() {
     setTotalPoints(newTotal);
   };
 
-  const startSpeedQuiz = async () => {
+  const startSpeedQuiz = () => {
     setGameMode('speed-quiz');
     setIsPlaying(true);
     setScore(0);
     setStreak(0);
     setTimeLeft(60);
     setQuestionIndex(0);
-    await loadQuestion();
+    setLevel(1);
+    loadQuestion();
   };
 
-  const loadQuestion = async () => {
-    // Generate a random question
-    const topics = ['Math', 'Science', 'History', 'Geography', 'Literature'];
-    const topic = topics[Math.floor(Math.random() * topics.length)];
-    
-    try {
-      const response = await fetch('/api/arcade', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          action: 'generate-question',
-          topic,
-          difficulty: level 
-        })
-      });
-      const data = await response.json();
-      setCurrentQuestion(data.question);
-    } catch (error) {
-      console.error('Error loading question:', error);
-    }
+  const loadQuestion = () => {
+    const question = getRandomQuestion(undefined, level === 1 ? 'easy' : level === 2 ? 'medium' : 'hard');
+    setCurrentQuestion(question);
   };
 
   const answerQuestion = async (answer: string) => {
@@ -157,11 +142,18 @@ export default function ArcadePage() {
     setScore(0);
     setTimeLeft(120);
     
-    // Create pairs of cards
-    const pairs = ['🧠', '📚', '🎓', '📝', '✨', '🚀', '💡', '🏆'];
+    // Create pairs of memory match cards
+    const pairs = getMemoryMatchPairs().map((pair, idx) => ({
+      id: `pair-${idx}`,
+      term: pair.term,
+      definition: pair.definition,
+      pairId: idx,
+      isFlipped: false,
+    }));
+    
     const shuffled = [...pairs, ...pairs]
       .sort(() => Math.random() - 0.5)
-      .map((emoji, i) => ({ id: i, emoji, flipped: false }));
+      .map((card, i) => ({ ...card, index: i }));
     
     setCards(shuffled);
     setFlippedCards([]);
@@ -176,7 +168,7 @@ export default function ArcadePage() {
 
     if (newFlipped.length === 2) {
       const [first, second] = newFlipped;
-      if (cards[first].emoji === cards[second].emoji) {
+      if (cards[first]?.pairId === cards[second]?.pairId) {
         setMatchedCards([...matchedCards, first, second]);
         setScore(score + 20);
         setFlippedCards([]);
@@ -190,7 +182,7 @@ export default function ArcadePage() {
     }
   };
 
-  const startWordRace = async () => {
+  const startWordRace = () => {
     setGameMode('word-race');
     setIsPlaying(true);
     setScore(0);
@@ -198,29 +190,18 @@ export default function ArcadePage() {
     setWordQuestionIndex(0);
     setWordRaceCorrect(0);
     setUserAnswer('');
-    await loadWordQuestion();
+    setLevel(1);
+    loadWordQuestion();
   };
 
-  const loadWordQuestion = async () => {
-    const topics = ['Math', 'Science', 'History', 'Geography', 'Literature'];
-    const topic = topics[Math.floor(Math.random() * topics.length)];
-    
-    try {
-      const response = await fetch('/api/arcade', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          action: 'generate-question',
-          topic,
-          difficulty: level 
-        })
-      });
-      const data = await response.json();
-      setCurrentWordQuestion(data.question);
-      setUserAnswer('');
-    } catch (error) {
-      console.error('Error loading word race question:', error);
-    }
+  const loadWordQuestion = () => {
+    const wordAnswer = getRandomWordRaceAnswer();
+    setCurrentWordQuestion({
+      question: wordAnswer.question,
+      correctAnswer: wordAnswer.answer,
+      difficulty: wordAnswer.difficulty
+    });
+    setUserAnswer('');
   };
 
   const submitWordRaceAnswer = () => {
@@ -445,13 +426,15 @@ export default function ArcadePage() {
                 <button
                   key={i}
                   onClick={() => flipCard(i)}
-                  className={`aspect-square rounded-xl text-4xl flex items-center justify-center font-bold transition-all transform hover:scale-105 ${
+                  className={`aspect-square rounded-xl text-sm flex items-center justify-center font-bold transition-all transform hover:scale-105 p-2 ${
                     flippedCards.includes(i) || matchedCards.includes(i)
                       ? 'bg-gradient-to-br from-purple-400 to-pink-400 text-white'
                       : 'bg-gradient-to-br from-gray-200 to-gray-300 text-transparent'
                   }`}
                 >
-                  {flippedCards.includes(i) || matchedCards.includes(i) ? card.emoji : '?'}
+                  {flippedCards.includes(i) || matchedCards.includes(i) 
+                    ? (i % 2 === 0 ? card.term : card.definition)
+                    : '?'}
                 </button>
               ))}
             </div>
