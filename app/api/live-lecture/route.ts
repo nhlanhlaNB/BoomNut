@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAudioTranscription, createChatCompletion } from '@/lib/azureOpenAI';
 
-let activeStream: any = null;
+const activeStream: any = null;
 let fullTranscription = '';
 
 // Start live lecture transcription

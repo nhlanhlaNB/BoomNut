@@ -42,7 +42,7 @@ When grading:
     }
 
     // Handle image input for visual analysis
-    let chatMessages = [
+    const chatMessages = [
       { role: 'system', content: systemMessage },
       ...messages,
     ];

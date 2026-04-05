@@ -74,7 +74,7 @@ export default function Home() {
               
               <blockquote className="mb-6">
                 <p className="text-2xl md:text-3xl font-bold text-gray-900 leading-relaxed mb-4">
-                  "Education is the most powerful weapon which you can use to change the world."
+                  &quot;Education is the most powerful weapon which you can use to change the world.&quot;
                 </p>
                 <footer className="text-lg text-gray-700 font-semibold">
                   — Nelson Mandela

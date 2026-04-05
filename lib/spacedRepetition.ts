@@ -77,7 +77,7 @@ export function getStudyStatistics(reviews: any[]) {
   );
 
   let streakDays = 0;
-  let currentDate = new Date();
+  const currentDate = new Date();
   currentDate.setHours(0, 0, 0, 0);
 
   for (const review of sortedReviews) {

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { rtdb } from '@/lib/firebase';
 import { ref, set, get, update } from 'firebase/database';
-import crypto from 'crypto';
 
 // PayPal webhook events we care about
 const WEBHOOK_EVENTS = {

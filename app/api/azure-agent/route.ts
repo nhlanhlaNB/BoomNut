@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     const { messages, subject, uploadedFiles, image, language = 'en', mode = 'tutor' } = await request.json();
 
     // Build system instructions based on mode and subject
-    let instructions = getInstructions(mode, subject, language, uploadedFiles);
+    const instructions = getInstructions(mode, subject, language, uploadedFiles);
 
     if (!AZURE_API_KEY) {
       return NextResponse.json(
