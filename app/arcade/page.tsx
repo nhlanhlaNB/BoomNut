@@ -3,9 +3,11 @@
 // Updated: Word Race game fully implemented - April 5, 2026
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Gamepad2, Trophy, Zap, Target, Clock, Star, Award, ArrowLeft } from 'lucide-react';
+import { Gamepad2, Trophy, Zap, Target, Clock, Star, Award, ArrowLeft, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
+import { useSubscription } from '@/hooks/useSubscription';
+import PaywallModal from '@/components/PaywallModal';
 import { getRandomQuestion, getRandomWordRaceAnswer, getMemoryMatchPairs } from '@/lib/quizQuestions';
 
 type GameMode = 'speed-quiz' | 'memory-match' | 'word-race' | null;
@@ -20,6 +22,7 @@ interface LeaderboardEntry {
 export default function ArcadePage() {
   const router = useRouter();
   const { user, loading } = useAuth();
+  const { isActive } = useSubscription();
   const [gameMode, setGameMode] = useState<GameMode>(null);
   const [score, setScore] = useState(0);
   const [level, setLevel] = useState(1);
@@ -27,6 +30,10 @@ export default function ArcadePage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [totalPoints, setTotalPoints] = useState(0);
+  const [usageCount, setUsageCount] = useState(0);
+  const [showPaywall, setShowPaywall] = useState(false);
+
+  const FREE_LIMIT = 2;
 
   // Speed Quiz State
   const [currentQuestion, setCurrentQuestion] = useState<any>(null);
@@ -67,7 +74,23 @@ export default function ArcadePage() {
   useEffect(() => {
     loadLeaderboard();
     loadUserPoints();
+    fetchUsage();
   }, []);
+
+  // Fetch usage on mount
+  const fetchUsage = async () => {
+    if (!user || isActive) return;
+
+    try {
+      const response = await fetch(`/api/usage/track?userId=${user.uid}&appName=arcade`);
+      if (response.ok) {
+        const data = await response.json();
+        setUsageCount(data.messageCount || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching usage:', error);
+    }
+  };
 
   useEffect(() => {
     if (isPlaying && timeLeft > 0) {
@@ -112,7 +135,34 @@ export default function ArcadePage() {
     setTotalPoints(newTotal);
   };
 
-  const startSpeedQuiz = () => {
+  const startSpeedQuiz = async () => {
+    // Check free tier limit
+    if (!isActive && usageCount >= FREE_LIMIT) {
+      setShowPaywall(true);
+      return;
+    }
+
+    // Track usage for free tier
+    if (!isActive && user) {
+      try {
+        const trackResponse = await fetch('/api/usage/track', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.uid,
+            appName: 'arcade'
+          })
+        });
+        
+        if (trackResponse.ok) {
+          const trackData = await trackResponse.json();
+          setUsageCount(trackData.messageCount);
+        }
+      } catch (error) {
+        console.error('Error tracking usage:', error);
+      }
+    }
+
     setGameMode('speed-quiz');
     setIsPlaying(true);
     setScore(0);
@@ -161,7 +211,34 @@ export default function ArcadePage() {
     loadQuestion();
   };
 
-  const startMemoryMatch = () => {
+  const startMemoryMatch = async () => {
+    // Check free tier limit
+    if (!isActive && usageCount >= FREE_LIMIT) {
+      setShowPaywall(true);
+      return;
+    }
+
+    // Track usage for free tier
+    if (!isActive && user) {
+      try {
+        const trackResponse = await fetch('/api/usage/track', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.uid,
+            appName: 'arcade'
+          })
+        });
+        
+        if (trackResponse.ok) {
+          const trackData = await trackResponse.json();
+          setUsageCount(trackData.messageCount);
+        }
+      } catch (error) {
+        console.error('Error tracking usage:', error);
+      }
+    }
+
     setGameMode('memory-match');
     setIsPlaying(true);
     setScore(0);
@@ -207,7 +284,34 @@ export default function ArcadePage() {
     }
   };
 
-  const startWordRace = () => {
+  const startWordRace = async () => {
+    // Check free tier limit
+    if (!isActive && usageCount >= FREE_LIMIT) {
+      setShowPaywall(true);
+      return;
+    }
+
+    // Track usage for free tier
+    if (!isActive && user) {
+      try {
+        const trackResponse = await fetch('/api/usage/track', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.uid,
+            appName: 'arcade'
+          })
+        });
+        
+        if (trackResponse.ok) {
+          const trackData = await trackResponse.json();
+          setUsageCount(trackData.messageCount);
+        }
+      } catch (error) {
+        console.error('Error tracking usage:', error);
+      }
+    }
+
     setGameMode('word-race');
     setIsPlaying(true);
     setScore(0);
@@ -287,7 +391,33 @@ export default function ArcadePage() {
   if (!gameMode) {
     return (
       <main className="min-h-screen bg-white p-4 md:p-8">
+        {showPaywall && (
+          <PaywallModal
+            feature="arcade"
+            featureName="Unlimited Arcade Games"
+            requiredPlan="pro"
+          />
+        )}
+
         <div className="max-w-7xl mx-auto">
+          {/* Usage Indicator */}
+          {!isActive && user && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Lock className="w-4 h-4 text-blue-600" />
+                <span className="text-sm text-blue-800">
+                  Free Plan: {usageCount}/{FREE_LIMIT} games played today
+                </span>
+              </div>
+              <a
+                href="/pricing"
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium underline"
+              >
+                Upgrade
+              </a>
+            </div>
+          )}
+
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <Link 

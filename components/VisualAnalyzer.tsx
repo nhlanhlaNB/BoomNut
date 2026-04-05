@@ -1,14 +1,42 @@
 'use client';
 
-import { useState } from 'react';
-import { Camera, Upload, Loader, Image as ImageIcon } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Camera, Upload, Loader, Image as ImageIcon, Lock } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useSubscription } from '@/hooks/useSubscription';
+import PaywallModal from './PaywallModal';
 
 export default function VisualAnalyzer() {
+  const { user } = useAuth();
+  const { isActive } = useSubscription();
   const [image, setImage] = useState<string | null>(null);
   const [question, setQuestion] = useState('');
   const [explanation, setExplanation] = useState('');
   const [followUpQuestions, setFollowUpQuestions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [usageCount, setUsageCount] = useState(0);
+  const [showPaywall, setShowPaywall] = useState(false);
+
+  const FREE_LIMIT = 2;
+
+  // Fetch usage on mount
+  useEffect(() => {
+    const fetchUsage = async () => {
+      if (!user || isActive) return;
+
+      try {
+        const response = await fetch(`/api/usage/track?userId=${user.uid}&appName=visual-analysis`);
+        if (response.ok) {
+          const data = await response.json();
+          setUsageCount(data.messageCount || 0);
+        }
+      } catch (error) {
+        console.error('Error fetching usage:', error);
+      }
+    };
+
+    fetchUsage();
+  }, [user, isActive]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -24,7 +52,35 @@ export default function VisualAnalyzer() {
   const analyzeImage = async () => {
     if (!image) return;
 
+    // Check free tier limit
+    if (!isActive && usageCount >= FREE_LIMIT) {
+      setShowPaywall(true);
+      return;
+    }
+
     setLoading(true);
+
+    // Track usage for free tier
+    if (!isActive && user) {
+      try {
+        const trackResponse = await fetch('/api/usage/track', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.uid,
+            appName: 'visual-analysis'
+          })
+        });
+        
+        if (trackResponse.ok) {
+          const trackData = await trackResponse.json();
+          setUsageCount(trackData.messageCount);
+        }
+      } catch (error) {
+        console.error('Error tracking usage:', error);
+      }
+    }
+
     try {
       const response = await fetch('/api/visual-analysis', {
         method: 'POST',
@@ -51,6 +107,32 @@ export default function VisualAnalyzer() {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
+      {showPaywall && (
+        <PaywallModal
+          feature="visual-analysis"
+          featureName="Unlimited Visual Analysis"
+          requiredPlan="pro"
+        />
+      )}
+
+      {/* Usage Indicator */}
+      {!isActive && user && (
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Lock className="w-4 h-4 text-blue-600" />
+            <span className="text-sm text-blue-800">
+              Free Plan: {usageCount}/{FREE_LIMIT} analyses used today
+            </span>
+          </div>
+          <a
+            href="/pricing"
+            className="text-sm text-blue-600 hover:text-blue-700 font-medium underline"
+          >
+            Upgrade
+          </a>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl shadow-lg p-6">
         <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
           <Camera className="w-6 h-6 text-indigo-600" />

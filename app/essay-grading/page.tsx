@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileText, Send, CheckCircle, XCircle, ArrowLeft, Sparkles, AlertCircle } from 'lucide-react';
+import { FileText, Send, CheckCircle, XCircle, ArrowLeft, Sparkles, AlertCircle, Lock } from 'lucide-react';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import { useAuth } from '@/hooks/useAuth';
+import { useSubscription } from '@/hooks/useSubscription';
+import PaywallModal from '@/components/PaywallModal';
 
 interface GradingResult {
   grade: string;
@@ -24,20 +26,44 @@ interface GradingResult {
 export default function EssayGradingPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
+  const { isActive } = useSubscription();
   const [essay, setEssay] = useState('');
   const [prompt, setPrompt] = useState('');
   const [subject, setSubject] = useState('English');
   const [gradeLevel, setGradeLevel] = useState('High School');
   const [isGrading, setIsGrading] = useState(false);
   const [result, setResult] = useState<GradingResult | null>(null);
+  const [wordCount, setWordCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [usageCount, setUsageCount] = useState(0);
+  const [showPaywall, setShowPaywall] = useState(false);
+
+  const FREE_LIMIT = 2;
 
   useEffect(() => {
     if (!loading && !user) {
       router.push('/signin');
     }
   }, [user, loading, router]);
-  const [wordCount, setWordCount] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+
+  // Fetch usage on mount
+  useEffect(() => {
+    const fetchUsage = async () => {
+      if (!user || isActive) return;
+
+      try {
+        const response = await fetch(`/api/usage/track?userId=${user.uid}&appName=essay-grading`);
+        if (response.ok) {
+          const data = await response.json();
+          setUsageCount(data.messageCount || 0);
+        }
+      } catch (error) {
+        console.error('Error fetching usage:', error);
+      }
+    };
+
+    fetchUsage();
+  }, [user, isActive]);
 
   const handleEssayChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value;
@@ -56,8 +82,36 @@ export default function EssayGradingPage() {
       return;
     }
 
+    // Check free tier limit
+    if (!isActive && usageCount >= FREE_LIMIT) {
+      setShowPaywall(true);
+      return;
+    }
+
     setIsGrading(true);
     setError(null);
+
+    // Track usage for free tier
+    if (!isActive && user) {
+      try {
+        const trackResponse = await fetch('/api/usage/track', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.uid,
+            appName: 'essay-grading'
+          })
+        });
+        
+        if (trackResponse.ok) {
+          const trackData = await trackResponse.json();
+          setUsageCount(trackData.messageCount);
+        }
+      } catch (error) {
+        console.error('Error tracking usage:', error);
+      }
+    }
+
     try {
       const response = await fetch('/api/essay-grading', {
         method: 'POST',
@@ -101,7 +155,32 @@ export default function EssayGradingPage() {
 
   return (
     <main className="min-h-screen bg-white p-4 md:p-8">
+      {showPaywall && (
+        <PaywallModal
+          feature="essay-grading"
+          featureName="Unlimited Essay Grading"
+          requiredPlan="pro"
+        />
+      )}
+
       <div className="max-w-6xl mx-auto">
+        {/* Usage Indicator */}
+        {!isActive && user && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Lock className="w-4 h-4 text-blue-600" />
+              <span className="text-sm text-blue-800">
+                Free Plan: {usageCount}/{FREE_LIMIT} essays graded today
+              </span>
+            </div>
+            <a
+              href="/pricing"
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium underline"
+            >
+              Upgrade
+            </a>
+          </div>
+        )}
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <Link 

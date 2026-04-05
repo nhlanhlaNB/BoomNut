@@ -1,9 +1,14 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Mic, Square, FileText, Download, Loader, Copy, Check, Sparkles, AlertCircle, Info } from 'lucide-react';
+import { Mic, Square, FileText, Download, Loader, Copy, Check, Sparkles, AlertCircle, Info, Lock } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useSubscription } from '@/hooks/useSubscription';
+import PaywallModal from './PaywallModal';
 
 export default function LiveLectureRecorder() {
+  const { user } = useAuth();
+  const { isActive } = useSubscription();
   const [isRecording, setIsRecording] = useState(false);
   const [transcription, setTranscription] = useState('');
   const [notes, setNotes] = useState('');
@@ -13,10 +18,33 @@ export default function LiveLectureRecorder() {
   const [copied, setCopied] = useState(false);
   const [hasUserResponse, setHasUserResponse] = useState(false);
   const [userInput, setUserInput] = useState('');
+  const [usageCount, setUsageCount] = useState(0);
+  const [showPaywall, setShowPaywall] = useState(false);
+
+  const FREE_LIMIT = 2;
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Fetch usage on mount
+  useEffect(() => {
+    const fetchUsage = async () => {
+      if (!user || isActive) return;
+
+      try {
+        const response = await fetch(`/api/usage/track?userId=${user.uid}&appName=live-lecture`);
+        if (response.ok) {
+          const data = await response.json();
+          setUsageCount(data.messageCount || 0);
+        }
+      } catch (error) {
+        console.error('Error fetching usage:', error);
+      }
+    };
+
+    fetchUsage();
+  }, [user, isActive]);
 
 
   // Timer effect
@@ -40,6 +68,12 @@ export default function LiveLectureRecorder() {
   };
 
   const startRecording = async () => {
+    // Check free tier limit
+    if (!isActive && usageCount >= FREE_LIMIT) {
+      setShowPaywall(true);
+      return;
+    }
+
     try {
       const startRes = await fetch('/api/live-lecture', {
         method: 'POST',
@@ -94,6 +128,27 @@ export default function LiveLectureRecorder() {
 
       mediaRecorder.start(1000);
       setIsRecording(true);
+
+      // Track usage for free tier
+      if (!isActive && user) {
+        try {
+          const trackResponse = await fetch('/api/usage/track', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: user.uid,
+              appName: 'live-lecture'
+            })
+          });
+          
+          if (trackResponse.ok) {
+            const trackData = await trackResponse.json();
+            setUsageCount(trackData.messageCount);
+          }
+        } catch (error) {
+          console.error('Error tracking usage:', error);
+        }
+      }
     } catch (error) {
       console.error('Failed to start recording:', error);
       alert('Failed to start recording. Please enable microphone access in your browser settings.');
@@ -171,7 +226,32 @@ export default function LiveLectureRecorder() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-50 p-4 md:p-8">
+      {showPaywall && (
+        <PaywallModal
+          feature="live-lecture"
+          featureName="Unlimited Live Lectures"
+          requiredPlan="pro"
+        />
+      )}
+
       <div className="max-w-5xl mx-auto">
+        {/* Usage Indicator */}
+        {!isActive && user && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Lock className="w-4 h-4 text-blue-600" />
+              <span className="text-sm text-blue-800">
+                Free Plan: {usageCount}/{FREE_LIMIT} recordings used today
+              </span>
+            </div>
+            <a
+              href="/pricing"
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium underline"
+            >
+              Upgrade
+            </a>
+          </div>
+        )}
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-block px-4 py-2 bg-indigo-100 text-indigo-800 rounded-full text-sm font-semibold mb-4">
