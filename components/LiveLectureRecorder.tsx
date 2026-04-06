@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useRef, useEffect } from 'react';
 import { Mic, Square, FileText, Download, Loader, Copy, Check, Sparkles, AlertCircle, Info, Lock } from 'lucide-react';
@@ -173,11 +173,11 @@ export default function LiveLectureRecorder() {
         });
 
         const data = await response.json();
-        setTranscription(data.transcription || '');
-        setNotes(data.notes || '');
+        setTranscription(data.transcription || transcription);
+        setNotes(data.notes || notes);
 
-        // Only auto-generate slides if there's actual transcription
-        if (data.transcription && data.transcription.trim().length > 0) {
+        // Auto-generate slides after recording ends
+        if (data.transcription) {
           await generateSlides(data.transcription, data.notes);
         }
       } catch (error) {
@@ -189,12 +189,6 @@ export default function LiveLectureRecorder() {
   };
 
   const generateSlides = async (lectureTrans: string, lectureNotes: string) => {
-    // Only generate slides if there's actual transcription
-    if (!lectureTrans || lectureTrans.trim().length === 0) {
-      console.log('No transcription available for slide generation');
-      return;
-    }
-
     try {
       setLoading(true);
       const response = await fetch('/api/live-lecture', {
@@ -290,12 +284,12 @@ export default function LiveLectureRecorder() {
               }`}>
                 {usageCount >= FREE_LIMIT ? (
                   <>
-                    ⚠️ You've used your {FREE_LIMIT} free recordings today.
+                    ÔÜá´©Å You've used your {FREE_LIMIT} free recordings today.
                     <a
                       href="/pricing"
                       className="ml-2 font-bold underline text-red-700 hover:text-red-800"
                     >
-                      Subscribe to continue →
+                      Subscribe to continue ÔåÆ
                     </a>
                   </>
                 ) : (
@@ -400,41 +394,6 @@ export default function LiveLectureRecorder() {
             </div>
           ) : (
             <div className="space-y-6">
-              {/* No Content Detected */}
-              {!transcription && !notes && (
-                <div className="bg-red-50 border-2 border-red-200 rounded-xl p-8 text-center">
-                  <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold text-red-900 mb-2">No Content Detected</h3>
-                  <p className="text-red-700 mb-6">
-                    We didn't hear any clear audio during your recording. Please make sure:
-                  </p>
-                  <ul className="text-red-700 text-left max-w-md mx-auto mb-6 space-y-2">
-                    <li className="flex items-center gap-2">
-                      <span className="text-red-600">✓</span> Your microphone is working
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-red-600">✓</span> You're speaking clearly and loud enough
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-red-600">✓</span> There's no excessive background noise
-                    </li>
-                  </ul>
-                  <button
-                    onClick={() => {
-                      setNotes('');
-                      setTranscription('');
-                      setUserInput('');
-                      setHasUserResponse(false);
-                      setShowSlides(false);
-                      setSlides([]);
-                    }}
-                    className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition"
-                  >
-                    Try Recording Again
-                  </button>
-                </div>
-              )}
-
               {/* Generated Notes */}
               {notes && (
                 <div>
@@ -478,45 +437,45 @@ export default function LiveLectureRecorder() {
                 </div>
               )}
 
-              {/* Action Buttons - Only show if we have content */}
-              {transcription && (
-                <div className="flex gap-3 pt-4 border-t border-gray-200">
-                  <button
-                    onClick={downloadNotes}
-                    className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold flex items-center justify-center gap-2 transition"
-                  >
-                    <Download className="w-5 h-5" />
-                    Download as Text
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (!showSlides && !slides.length) {
-                        generateSlides(transcription, notes);
-                      } else {
-                        setShowSlides(!showSlides);
-                      }
-                    }}
-                    disabled={loading}
-                    className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold flex items-center justify-center gap-2 transition disabled:opacity-50"
-                  >
-                    <FileText className="w-5 h-5" />
-                    {showSlides ? 'Hide Slides' : 'Generate Slides'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setNotes('');
-                      setTranscription('');
-                      setUserInput('');
-                      setHasUserResponse(false);
-                      setShowSlides(false);
-                      setSlides([]);
-                    }}
-                    className="px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-900 rounded-lg font-semibold transition"
-                  >
-                    Start Over
-                  </button>
-                </div>
-              )}
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t border-gray-200">
+                <button
+                  onClick={downloadNotes}
+                  className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold flex items-center justify-center gap-2 transition"
+                >
+                  <Download className="w-5 h-5" />
+                  Download as Text
+                </button>
+                <button
+                  onClick={() => {
+                    if (!showSlides && !slides.length) {
+                      generateSlides(transcription, notes);
+                    } else {
+                      setShowSlides(!showSlides);
+                    }
+                  }}
+                  disabled={loading}
+                  className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold flex items-center justify-center gap-2 transition disabled:opacity-50"
+                >
+                  <FileText className="w-5 h-5" />
+                  {showSlides ? 'Hide Slides' : 'Generate Slides'}
+                </button>
+                <button
+                  onClick={() => {
+                    setNotes('');
+                    setTranscription('');
+                    setUserInput('');
+                    setHasUserResponse(false);
+                    setShowSlides(false);
+                    setSlides([]);
+                  }}
+                  className="px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-900 rounded-lg font-semibold transition"
+                >
+                  Start Over
+                </button>
+              </div>
+            </div>
+          )}
 
           {loading && (
             <div className="flex items-center justify-center gap-2 text-indigo-600">
