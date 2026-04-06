@@ -7,7 +7,7 @@ let fullTranscription = '';
 // Start live lecture transcription
 export async function POST(req: NextRequest) {
   try {
-    let action, audio, language, sessionId, question;
+    let action, audio, language, sessionId, question, transcription, notes;
 
     // Determine if it's multipart or JSON
     const contentType = req.headers.get('content-type') || '';
@@ -24,6 +24,8 @@ export async function POST(req: NextRequest) {
       language = body.language || 'en';
       sessionId = body.sessionId;
       question = body.question;
+      transcription = body.transcription;
+      notes = body.notes;
     }
 
     console.log('[LIVE-LECTURE] API called with action:', action, 'sessionId:', sessionId);
@@ -247,9 +249,7 @@ export async function POST(req: NextRequest) {
 
     if (action === 'generateSlides') {
       // Generate lecture slides from transcription and notes
-      const { transcription: lectureTrans, notes: lectureNotes } = await req.json();
-      
-      if (!lectureTrans || lectureTrans.trim().length === 0) {
+      if (!transcription || transcription.trim().length === 0) {
         return NextResponse.json(
           { error: 'Transcription required to generate slides' },
           { status: 400 }
@@ -282,7 +282,7 @@ Guidelines:
           },
           {
             role: 'user',
-            content: `Lecture transcription:\n${lectureTrans}\n\nLecture notes:\n${lectureNotes || 'N/A'}\n\nGenerate professional presentation slides based ONLY on the transcription.`,
+            content: `Lecture transcription:\n${transcription}\n\nLecture notes:\n${notes || 'N/A'}\n\nGenerate professional presentation slides based ONLY on the transcription.`,
           },
         ],
         maxTokens: 3000,
@@ -315,6 +315,51 @@ Guidelines:
         slideCount: slides.length,
         generatedAt: new Date().toISOString(),
       });
+    }
+
+    if (action === 'generateNotes') {
+      // Generate notes from transcription
+      if (!transcription || transcription.trim().length === 0) {
+        return NextResponse.json(
+          { error: 'Transcription required to generate notes' },
+          { status: 400 }
+        );
+      }
+
+      try {
+        const notesResponse = await createChatCompletion({
+          messages: [
+            {
+              role: 'system',
+              content: 'Create comprehensive, well-organized notes from the lecture transcription. Include key concepts, important points, definitions, and summary. Format with clear sections and bullet points. Base ONLY on what is in the transcription provided.',
+            },
+            {
+              role: 'user',
+              content: transcription,
+            },
+          ],
+          maxTokens: 1500,
+        });
+
+        const generatedNotes = notesResponse.choices[0]?.message?.content || '';
+
+        if (!generatedNotes) {
+          return NextResponse.json(
+            { notes: 'Unable to generate notes. Please try again.' },
+            { status: 200 }
+          );
+        }
+
+        return NextResponse.json({
+          notes: generatedNotes,
+        });
+      } catch (error: any) {
+        console.error('[LIVE-LECTURE] Notes generation error:', error);
+        return NextResponse.json(
+          { notes: 'Unable to generate notes. Please try again.' },
+          { status: 200 }
+        );
+      }
     }
 
     return NextResponse.json(
