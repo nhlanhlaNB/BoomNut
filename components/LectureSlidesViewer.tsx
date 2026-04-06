@@ -50,9 +50,64 @@ export default function LectureSlidesViewer({ slides, title, onClose }: LectureS
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+    <>
+      <style>{`
+        @media print {
+          * {
+            margin: 0 !important;
+            padding: 0 !important;
+            border: 0 !important;
+          }
+          
+          body {
+            background: white !important;
+          }
+          
+          #slides-viewer-print {
+            display: block !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            background: white !important;
+            page-break-after: avoid !important;
+          }
+          
+          #slides-viewer-print .bg-white,
+          #slides-viewer-print .bg-gradient-to-r,
+          #slides-viewer-print .bg-gray-50,
+          #slides-viewer-print .border-t {
+            background: white !important;
+            border: none !important;
+          }
+          
+          #slides-viewer-header-print {
+            display: none !important;
+          }
+          
+          #slides-viewer-navigation-print,
+          #slides-viewer-actions-print,
+          #slides-viewer-notes-print {
+            display: none !important;
+          }
+          
+          #slides-content-print {
+            display: block !important;
+            padding: 40px !important;
+            min-height: auto !important;
+            background: white !important;
+            page-break-inside: avoid !important;
+            margin: 0 !important;
+          }
+          
+          #slides-content-print * {
+            color: black !important;
+            background: white !important;
+            page-break-inside: avoid !important;
+          }
+        }
+      `}</style>
+      <div id="slides-viewer-print" className="bg-white rounded-xl shadow-lg overflow-hidden">
       {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-600 to-blue-600 px-6 py-4 text-white">
+      <div id="slides-viewer-header-print" className="bg-gradient-to-r from-indigo-600 to-blue-600 px-6 py-4 text-white">
         <div className="flex justify-between items-center">
           <h3 className="text-xl font-bold">Generated Lecture Slides</h3>
           {onClose && (
@@ -68,7 +123,7 @@ export default function LectureSlidesViewer({ slides, title, onClose }: LectureS
       </div>
 
       {/* Main Slide Display */}
-      <div className="p-8 bg-gradient-to-br from-gray-50 to-gray-100 min-h-[500px] flex flex-col justify-between">
+      <div id="slides-content-print" className="p-8 bg-gradient-to-br from-gray-50 to-gray-100 min-h-[500px] flex flex-col justify-between">
         {/* Slide Content */}
         <div>
           <div className="text-sm text-gray-500 mb-4">
@@ -106,7 +161,7 @@ export default function LectureSlidesViewer({ slides, title, onClose }: LectureS
         </div>
 
         {/* Navigation */}
-        <div className="flex justify-between items-center mt-8">
+        <div id="slides-viewer-navigation-print" className="flex justify-between items-center mt-8">
           <button
             onClick={prevSlide}
             disabled={currentSlide === 0}
@@ -141,7 +196,7 @@ export default function LectureSlidesViewer({ slides, title, onClose }: LectureS
       </div>
 
       {/* Action Buttons */}
-      <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-between gap-3">
+      <div id="slides-viewer-actions-print" className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-between gap-3">
         <button
           onClick={printSlides}
           className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition"
@@ -163,7 +218,7 @@ export default function LectureSlidesViewer({ slides, title, onClose }: LectureS
 
       {/* Presenter Notes (Optional) */}
       {isPresenterMode && (
-        <div className="bg-gray-100 px-6 py-4 border-t border-gray-200">
+        <div id="slides-viewer-notes-print" className="bg-gray-100 px-6 py-4 border-t border-gray-200">
           <h4 className="font-semibold text-gray-900 mb-2">Presenter Notes:</h4>
           <p className="text-gray-700 text-sm">
             Focus on explaining the main concepts above and engage with the audience on key points.
@@ -171,5 +226,6 @@ export default function LectureSlidesViewer({ slides, title, onClose }: LectureS
         </div>
       )}
     </div>
+    </>
   );
 }
