@@ -63,6 +63,8 @@ export default function VoiceTutorPage() {
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const audioQueueRef = useRef<string[]>([]);
   const isProcessingAudioRef = useRef(false);
+  const isStartingListeningRef = useRef(false);
+  const audioPlaybackInProgressRef = useRef(false);
 
   // Check if browser supports required APIs
   const [browserSupport, setBrowserSupport] = useState({
@@ -99,17 +101,19 @@ export default function VoiceTutorPage() {
 
       recognitionRef.current.onerror = (event: any) => {
         console.error('Speech recognition error:', event.error);
-        // Auto-restart if error occurred while session is active
+        // Auto-restart if error occurred while session is active (only if not speaking)
         if (isConnected && !isTutorSpeaking && event.error !== 'aborted') {
-          setTimeout(() => startListening(), 1000);
+          setTimeout(() => {
+            console.log('[Speech Recognition] Auto-restarting after error');
+            startListening();
+          }, 1000);
         }
       };
 
       recognitionRef.current.onend = () => {
-        // Auto-restart recognition when it ends (unless tutor is speaking)
-        if (isConnected && !isTutorSpeaking) {
-          setTimeout(() => startListening(), 500);
-        }
+        console.log('[Speech Recognition] Recognition ended');
+        // Don't auto-restart - let the flow control this explicitly
+        // This prevents race conditions with speaking
       };
     }
 
@@ -132,14 +136,25 @@ export default function VoiceTutorPage() {
   }, [isPressingButton]);
 
   const startListening = () => {
+    // Prevent multiple simultaneous calls
+    if (isStartingListeningRef.current) {
+      console.log('[Speech Recognition] Already starting/listening - canceling duplicate call');
+      return;
+    }
+
     if (recognitionRef.current && !isTutorSpeaking && isConnected) {
       try {
+        isStartingListeningRef.current = true;
         recognitionRef.current.start();
         setIsListening(true);
         setCurrentSpeaking('user');
+        console.log('[Speech Recognition] Started listening');
       } catch (error: any) {
+        isStartingListeningRef.current = false;
         // Ignore if already started
-        if (error.message.includes('already started')) {
+        if (error.message && error.message.includes('already started')) {
+          console.log('[Speech Recognition] Recognition already active');
+          setIsListening(true);
           return;
         }
         console.error('Error starting recognition:', error);
@@ -151,10 +166,13 @@ export default function VoiceTutorPage() {
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
+        isStartingListeningRef.current = false;
         setIsListening(false);
         setCurrentSpeaking(null);
+        console.log('[Speech Recognition] Stopped listening');
       } catch (error) {
         console.error('Error stopping recognition:', error);
+        isStartingListeningRef.current = false;
       }
     }
   };
@@ -262,6 +280,25 @@ export default function VoiceTutorPage() {
   const speakText = async (text: string) => {
     return new Promise<void>(async (resolve) => {
       try {
+        // Prevent multiple simultaneous audio playback
+        if (audioPlaybackInProgressRef.current) {
+          console.log('[Audio] Audio playback already in progress - waiting...');
+          // Wait a bit and try again
+          setTimeout(() => speakText(text).then(resolve), 500);
+          return;
+        }
+
+        // Mark that audio playback is starting
+        audioPlaybackInProgressRef.current = true;
+
+        // Stop any currently playing audio before starting new one
+        if (currentAudioRef.current) {
+          console.log('[Audio] Canceling previous audio playback');
+          currentAudioRef.current.pause();
+          currentAudioRef.current.currentTime = 0;
+          currentAudioRef.current = null;
+        }
+
         // Stop listening while tutor speaks
         stopListening();
         
@@ -280,24 +317,40 @@ export default function VoiceTutorPage() {
           // Store reference to current audio
           currentAudioRef.current = audio;
           
+          let audioEnded = false;
+
           audio.onended = () => {
+            // Prevent double-firing
+            if (audioEnded) return;
+            audioEnded = true;
+
+            console.log('[Audio] Audio playback ended');
             URL.revokeObjectURL(audioUrl);
             currentAudioRef.current = null;
+            audioPlaybackInProgressRef.current = false;
             setIsTutorSpeaking(false);
             setCurrentSpeaking(null);
             
             // Add natural pause before listening again (feels more human)
             setTimeout(() => {
               if (isConnected) {
+                console.log('[Audio] Restarting listening after speaking');
                 startListening();
               }
               resolve();
             }, 800); // 800ms pause for natural conversation flow
           };
 
-          audio.onerror = () => {
+          audio.onerror = (error) => {
+            console.error('[Audio] Playback error:', error);
+            
+            // Prevent double-firing
+            if (audioEnded) return;
+            audioEnded = true;
+
             URL.revokeObjectURL(audioUrl);
             currentAudioRef.current = null;
+            audioPlaybackInProgressRef.current = false;
             setIsTutorSpeaking(false);
             setCurrentSpeaking(null);
             setTimeout(() => {
@@ -307,10 +360,16 @@ export default function VoiceTutorPage() {
               resolve();
             }, 500);
           };
-          
-          await audio.play();
+
+          console.log('[Audio] Starting audio playback');
+          await audio.play().catch((error) => {
+            console.error('[Audio] Error playing audio:', error);
+            audioPlaybackInProgressRef.current = false;
+          });
         } else {
           // If TTS fails, still manage turn-taking
+          console.error('[Audio] TTS API failed with status:', response.status);
+          audioPlaybackInProgressRef.current = false;
           setIsTutorSpeaking(false);
           setCurrentSpeaking(null);
           setTimeout(() => {
@@ -322,6 +381,7 @@ export default function VoiceTutorPage() {
         }
       } catch (error) {
         console.error('Error speaking text:', error);
+        audioPlaybackInProgressRef.current = false;
         setIsTutorSpeaking(false);
         setCurrentSpeaking(null);
         setTimeout(() => {
@@ -373,14 +433,20 @@ export default function VoiceTutorPage() {
   };
 
   const stopVoiceSession = () => {
+    console.log('[Session] Stopping voice session');
     // Stop any ongoing speech recognition
     stopListening();
     
     // Stop any playing audio
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
+      currentAudioRef.current.currentTime = 0;
       currentAudioRef.current = null;
     }
+    
+    // Reset flags
+    audioPlaybackInProgressRef.current = false;
+    isStartingListeningRef.current = false;
     
     setIsRecording(false);
     setIsConnected(false);

@@ -5,6 +5,7 @@ import { Mic, Square, FileText, Download, Loader, Copy, Check, Sparkles, AlertCi
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import PaywallModal from './PaywallModal';
+import LectureSlidesViewer, { Slide } from './LectureSlidesViewer';
 
 export default function LiveLectureRecorder() {
   const { user } = useAuth();
@@ -12,6 +13,8 @@ export default function LiveLectureRecorder() {
   const [isRecording, setIsRecording] = useState(false);
   const [transcription, setTranscription] = useState('');
   const [notes, setNotes] = useState('');
+  const [slides, setSlides] = useState<Slide[]>([]);
+  const [showSlides, setShowSlides] = useState(false);
   const [sessionId, setSessionId] = useState('');
   const [loading, setLoading] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -172,11 +175,43 @@ export default function LiveLectureRecorder() {
         const data = await response.json();
         setTranscription(data.transcription || transcription);
         setNotes(data.notes || notes);
+
+        // Auto-generate slides after recording ends
+        if (data.transcription) {
+          await generateSlides(data.transcription, data.notes);
+        }
       } catch (error) {
         console.error('Error getting final notes:', error);
       } finally {
         setLoading(false);
       }
+    }
+  };
+
+  const generateSlides = async (lectureTrans: string, lectureNotes: string) => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/live-lecture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'generateSlides',
+          transcription: lectureTrans,
+          notes: lectureNotes,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.slides && Array.isArray(data.slides)) {
+        setSlides(data.slides);
+        setShowSlides(true);
+      }
+    } catch (error) {
+      console.error('Error generating slides:', error);
+      // Don't block the flow if slides fail to generate
+      console.log('Continuing without slides');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -291,7 +326,7 @@ export default function LiveLectureRecorder() {
           <div className="mb-8 p-4 bg-blue-50 border border-blue-200 rounded-lg flex gap-3">
             <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-blue-800">
-              <strong>How it works:</strong> Click "Start Recording" to record your lecture. The transcription will appear in real-time. When done, we'll automatically generate organized notes with key concepts.
+              <strong>How it works:</strong> Click "Start Recording" to record your lecture. The transcription will appear in real-time. When done, we'll automatically generate organized notes with key concepts and presentation slides.
             </div>
           </div>
         )}
@@ -413,10 +448,26 @@ export default function LiveLectureRecorder() {
                 </button>
                 <button
                   onClick={() => {
+                    if (!showSlides && !slides.length) {
+                      generateSlides(transcription, notes);
+                    } else {
+                      setShowSlides(!showSlides);
+                    }
+                  }}
+                  disabled={loading}
+                  className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold flex items-center justify-center gap-2 transition disabled:opacity-50"
+                >
+                  <FileText className="w-5 h-5" />
+                  {showSlides ? 'Hide Slides' : 'Generate Slides'}
+                </button>
+                <button
+                  onClick={() => {
                     setNotes('');
                     setTranscription('');
                     setUserInput('');
                     setHasUserResponse(false);
+                    setShowSlides(false);
+                    setSlides([]);
                   }}
                   className="px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-900 rounded-lg font-semibold transition"
                 >
@@ -433,6 +484,17 @@ export default function LiveLectureRecorder() {
             </div>
           )}
         </div>
+
+        {/* Lecture Slides Viewer */}
+        {showSlides && slides.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-xl mb-8">
+            <LectureSlidesViewer
+              slides={slides}
+              title="Lecture Slides"
+              onClose={() => setShowSlides(false)}
+            />
+          </div>
+        )}
 
         {/* Real-time Transcription Display */}
         {isRecording && transcription && (

@@ -166,6 +166,77 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(result);
     }
 
+    if (action === 'generateSlides') {
+      // Generate lecture slides from transcription and notes
+      const { transcription: lectureTrans, notes: lectureNotes } = await req.json();
+      
+      if (!lectureTrans) {
+        return NextResponse.json(
+          { error: 'Transcription required to generate slides' },
+          { status: 400 }
+        );
+      }
+
+      // Generate slides structure using AI
+      const slidesResponse = await createChatCompletion({
+        messages: [
+          {
+            role: 'system',
+            content: `Generate presentation slides from the lecture content. Return a JSON array of slides with the following structure:
+[
+  {
+    "title": "Slide Title",
+    "content": ["Point 1", "Point 2", "Point 3"],
+    "keyPoints": ["Key point 1", "Key point 2"]
+  }
+]
+
+Guidelines:
+- Create 5-8 slides covering the main topics
+- Each slide should have a clear title
+- Content should be bullet points
+- Include key takeaways
+- Make slides visual and easy to understand
+- First slide should be an introduction
+- Last slide should be a summary/conclusion`,
+          },
+          {
+            role: 'user',
+            content: `Lecture transcription:\n${lectureTrans}\n\nLecture notes:\n${lectureNotes || 'N/A'}\n\nGenerate professional presentation slides.`,
+          },
+        ],
+        maxTokens: 3000,
+      });
+
+      const slidesContent = slidesResponse.choices[0]?.message?.content || '';
+
+      // Parse the JSON response
+      let slides = [];
+      try {
+        // Extract JSON from the response
+        const jsonMatch = slidesContent.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          slides = JSON.parse(jsonMatch[0]);
+        }
+      } catch (parseError) {
+        console.error('Error parsing slides JSON:', parseError);
+        // If JSON parsing fails, create a default slide structure
+        slides = [
+          {
+            title: 'Lecture Slides',
+            content: ['Unable to parse automatic slide generation', 'Please review the transcription and notes above'],
+            keyPoints: ['Check transcription quality', 'Manual slide creation may be needed']
+          }
+        ];
+      }
+
+      return NextResponse.json({
+        slides,
+        slideCount: slides.length,
+        generatedAt: new Date().toISOString(),
+      });
+    }
+
     return NextResponse.json(
       { error: 'Invalid action' },
       { status: 400 }
