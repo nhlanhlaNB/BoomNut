@@ -170,7 +170,7 @@ export async function createAudioTranscription(options: AudioTranscriptionOption
   const { file, prompt, language = 'en' } = options;
 
   const { endpoint, apiKey, apiVersion } = getAzureConfig('audio');
-  const deployment = process.env.AZURE_OPENAI_AUDIO_DEPLOYMENT || 'gpt-audio';
+  const deployment = process.env.AZURE_OPENAI_AUDIO_DEPLOYMENT || 'whisper';
 
   // Check if endpoint is a full Target URI for audio transcription
   let url: string;
@@ -179,7 +179,7 @@ export async function createAudioTranscription(options: AudioTranscriptionOption
     url = endpoint;
   } else {
     // Build the URL from base endpoint with correct API version for audio
-    const audioApiVersion = process.env.AZURE_OPENAI_AUDIO_VERSION || apiVersion || '2024-05-01-preview';
+    const audioApiVersion = process.env.AZURE_OPENAI_AUDIO_VERSION || '2024-02-01';
     url = `${endpoint}/openai/deployments/${deployment}/audio/transcriptions?api-version=${audioApiVersion}`;
   }
 

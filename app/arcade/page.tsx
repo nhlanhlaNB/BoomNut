@@ -534,7 +534,7 @@ export default function ArcadePage() {
           </div>
 
           {/* Game Selection */}
-          <div className="grid md:grid-cols-3 gap-6 mb-12">
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-12">
             <GameCard
               icon={<Zap className="w-16 h-16 text-yellow-500" />}
               title="Speed Quiz"
@@ -542,14 +542,6 @@ export default function ArcadePage() {
               gradient="from-yellow-400 to-orange-500"
               difficulty="⚡ Fast-Paced"
               onPlay={startSpeedQuiz}
-            />
-            <GameCard
-              icon={<Target className="w-16 h-16 text-purple-500" />}
-              title="Memory Match"
-              description="Find matching pairs of study concepts and terms!"
-              gradient="from-purple-400 to-pink-500"
-              difficulty="🧠 Brain Training"
-              onPlay={startMemoryMatch}
             />
             <GameCard
               icon={<Star className="w-16 h-16 text-blue-500" />}
