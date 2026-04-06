@@ -92,6 +92,8 @@ export async function createChatCompletion(options: ChatCompletionOptions) {
     url = `${endpoint}/openai/deployments/${deployment}/chat/completions?api-version=${apiVersion}`;
   }
 
+  console.log('[azureOpenAI] Chat completion URL:', url.substring(0, 80) + '...');
+
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -106,8 +108,15 @@ export async function createChatCompletion(options: ChatCompletionOptions) {
     }),
   });
 
+  console.log('[azureOpenAI] Chat completion response status:', response.status);
+
   if (!response.ok) {
     const error = await response.text();
+    console.error('[azureOpenAI] Chat completion error response:', {
+      status: response.status,
+      statusText: response.statusText,
+      body: error.substring(0, 500)
+    });
     throw new Error(`Azure OpenAI API error: ${response.status} - ${error}`);
   }
 
@@ -169,14 +178,23 @@ export async function createAudioTranscription(options: AudioTranscriptionOption
     // Already a complete Target URI
     url = endpoint;
   } else {
-    // Build the URL from base endpoint
-    url = `${endpoint}/openai/deployments/${deployment}/audio/transcriptions?api-version=${apiVersion}`;
+    // Build the URL from base endpoint with correct API version for audio
+    const audioApiVersion = process.env.AZURE_OPENAI_AUDIO_VERSION || apiVersion || '2024-05-01-preview';
+    url = `${endpoint}/openai/deployments/${deployment}/audio/transcriptions?api-version=${audioApiVersion}`;
   }
 
+  console.log('[azureOpenAI] Audio transcription URL:', url.substring(0, 80) + '...');
+  
   const formData = new FormData();
   formData.append('file', file);
   if (prompt) formData.append('prompt', prompt);
   formData.append('language', language);
+
+  console.log('[azureOpenAI] Sending audio for transcription:', {
+    fileSize: file.size,
+    fileType: file.type,
+    language
+  });
 
   const response = await fetch(url, {
     method: 'POST',
@@ -186,8 +204,15 @@ export async function createAudioTranscription(options: AudioTranscriptionOption
     body: formData,
   });
 
+  console.log('[azureOpenAI] Transcription response status:', response.status);
+
   if (!response.ok) {
     const error = await response.text();
+    console.error('[azureOpenAI] Transcription error response:', {
+      status: response.status,
+      statusText: response.statusText,
+      body: error.substring(0, 500)
+    });
     throw new Error(`Azure OpenAI Audio API error: ${response.status} - ${error}`);
   }
 
