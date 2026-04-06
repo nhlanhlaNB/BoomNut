@@ -39,8 +39,26 @@ function getAzureConfig(deploymentType?: 'chat' | 'audio') {
   
   const apiVersion = process.env.AZURE_OPENAI_API_VERSION || '2024-08-01-preview';
 
+  console.log('[Azure Config] Type:', deploymentType);
+  console.log('[Azure Config] Has endpoint:', !!endpoint, 'URL:', endpoint?.substring(0, 50) + '...');
+  console.log('[Azure Config] Has apiKey:', !!apiKey, 'Length:', apiKey?.length);
+  console.log('[Azure Config] API Version:', apiVersion);
+
   if (!endpoint || !apiKey) {
-    throw new Error('Azure AI Project credentials not configured');
+    console.error('[Azure Config] Missing credentials:', {
+      hasEndpoint: !!endpoint,
+      hasApiKey: !!apiKey,
+      deploymentType,
+      availableEnvVars: {
+        AZURE_PROJECT_ENDPOINT: !!process.env.AZURE_PROJECT_ENDPOINT,
+        AZURE_PROJECT_API_KEY: !!process.env.AZURE_PROJECT_API_KEY,
+        AZURE_OPENAI_CHAT_ENDPOINT: !!process.env.AZURE_OPENAI_CHAT_ENDPOINT,
+        AZURE_OPENAI_CHAT_KEY: !!process.env.AZURE_OPENAI_CHAT_KEY,
+        AZURE_OPENAI_AUDIO_ENDPOINT: !!process.env.AZURE_OPENAI_AUDIO_ENDPOINT,
+        AZURE_OPENAI_AUDIO_KEY: !!process.env.AZURE_OPENAI_AUDIO_KEY,
+      }
+    });
+    throw new Error(`Azure AI Project credentials not configured (type: ${deploymentType})`);
   }
 
   return { endpoint, apiKey, apiVersion };

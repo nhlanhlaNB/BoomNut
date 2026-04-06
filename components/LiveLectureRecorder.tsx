@@ -83,6 +83,17 @@ export default function LiveLectureRecorder() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'start' }),
       });
+      
+      if (!startRes.ok) {
+        console.error('[LiveLectureRecorder] Start session failed:', {
+          status: startRes.status,
+          statusText: startRes.statusText
+        });
+        const errorData = await startRes.json();
+        console.error('[LiveLectureRecorder] Error response:', errorData);
+        throw new Error(`Failed to start recording: ${errorData.error || startRes.statusText}`);
+      }
+      
       const { sessionId: newSessionId } = await startRes.json();
       setSessionId(newSessionId);
       setRecordingTime(0);
@@ -116,6 +127,16 @@ export default function LiveLectureRecorder() {
                   sessionId: newSessionId,
                 }),
               });
+
+              if (!response.ok) {
+                console.error('[LiveLectureRecorder] Transcribe failed:', {
+                  status: response.status,
+                  statusText: response.statusText
+                });
+                const errorData = await response.json().catch(() => ({}));
+                console.error('[LiveLectureRecorder] Error response:', errorData);
+                return;
+              }
 
               const data = await response.json();
               if (data.transcription) {
@@ -172,6 +193,16 @@ export default function LiveLectureRecorder() {
           body: JSON.stringify({ action: 'end', sessionId }),
         });
 
+        if (!response.ok) {
+          console.error('[LiveLectureRecorder] End recording failed:', {
+            status: response.status,
+            statusText: response.statusText
+          });
+          const errorData = await response.json().catch(() => ({}));
+          console.error('[LiveLectureRecorder] Error response:', errorData);
+          throw new Error(`Failed to end recording: ${errorData.error || response.statusText}`);
+        }
+
         const data = await response.json();
         setTranscription(data.transcription || transcription);
         setNotes(data.notes || notes);
@@ -182,6 +213,7 @@ export default function LiveLectureRecorder() {
         }
       } catch (error) {
         console.error('Error getting final notes:', error);
+        alert(`Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`);
       } finally {
         setLoading(false);
       }
@@ -200,6 +232,16 @@ export default function LiveLectureRecorder() {
           notes: lectureNotes,
         }),
       });
+
+      if (!response.ok) {
+        console.error('[LiveLectureRecorder] Generate slides failed:', {
+          status: response.status,
+          statusText: response.statusText
+        });
+        const errorData = await response.json().catch(() => ({}));
+        console.error('[LiveLectureRecorder] Error response:', errorData);
+        throw new Error(`Failed to generate slides: ${errorData.error || response.statusText}`);
+      }
 
       const data = await response.json();
       if (data.slides && Array.isArray(data.slides)) {

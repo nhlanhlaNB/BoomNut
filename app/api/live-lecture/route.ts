@@ -8,6 +8,8 @@ let fullTranscription = '';
 export async function POST(req: NextRequest) {
   try {
     const { action, audio, language = 'en', question } = await req.json();
+    
+    console.log('[LIVE-LECTURE] API called with action:', action);
 
     if (action === 'start') {
       // Start new session
@@ -36,18 +38,41 @@ export async function POST(req: NextRequest) {
         const base64Data = audio.includes(',') ? audio.split(',')[1] : audio;
         audioBuffer = Buffer.from(base64Data, 'base64');
       } catch (error) {
+        console.error('[LIVE-LECTURE] Audio buffer creation error:', error);
         return NextResponse.json(
           { error: 'Invalid audio data format' },
           { status: 400 }
         );
       }
 
-      const audioFile = new File([new Uint8Array(audioBuffer)], 'audio.webm', { type: 'audio/webm' });
+      console.log('[LIVE-LECTURE] Audio buffer created, size:', audioBuffer.length, 'bytes');
 
-      const transcriptionResponse = await createAudioTranscription({
-        file: audioFile,
-        language: language,
+      // Create a File-like object from the buffer for Azure API
+      const audioFile = new File([Buffer.from(audioBuffer)], 'audio.webm', { type: 'audio/webm' });
+
+      console.log('[LIVE-LECTURE] Audio file created:', { 
+        fileName: audioFile.name, 
+        fileType: audioFile.type,
+        fileSize: audioFile.size 
       });
+
+      console.log('[LIVE-LECTURE] Calling createAudioTranscription...');
+      let transcriptionResponse;
+      try {
+        transcriptionResponse = await createAudioTranscription({
+          file: audioFile,
+          language: language,
+        });
+        console.log('[LIVE-LECTURE] Transcription response received:', transcriptionResponse);
+      } catch (transcriptionError: any) {
+        console.error('[LIVE-LECTURE] Transcription error:', {
+          message: transcriptionError.message,
+          response: transcriptionError.response?.data,
+          status: transcriptionError.response?.status,
+        });
+        throw transcriptionError;
+      }
+      
       const transcription = transcriptionResponse?.text || '';
 
       if (!transcription) {
@@ -62,21 +87,32 @@ export async function POST(req: NextRequest) {
       // Generate real-time notes from accumulated transcription
       let notes = '';
       if (fullTranscription.split(' ').length > 50) {
-        const notesResponse = await createChatCompletion({
-          messages: [
-            {
-              role: 'system',
-              content: 'Create brief, organized notes from lecture transcription. Focus on key points, definitions, and important concepts. Use bullet points.',
-            },
-            {
-              role: 'user',
-              content: `Transcription so far:\n${fullTranscription}\n\nProvide updated notes.`,
-            },
-          ],
-          maxTokens: 500,
-        });
-
-        notes = notesResponse.choices[0]?.message?.content || '';
+        console.log('[LIVE-LECTURE] Calling createChatCompletion for notes...');
+        try {
+          const notesResponse = await createChatCompletion({
+            messages: [
+              {
+                role: 'system',
+                content: 'Create brief, organized notes from lecture transcription. Focus on key points, definitions, and important concepts. Use bullet points.',
+              },
+              {
+                role: 'user',
+                content: `Transcription so far:\n${fullTranscription}\n\nProvide updated notes.`,
+              },
+            ],
+            maxTokens: 500,
+          });
+          console.log('[LIVE-LECTURE] Notes response received');
+          notes = notesResponse.choices[0]?.message?.content || '';
+        } catch (notesError: any) {
+          console.error('[LIVE-LECTURE] Notes generation error:', {
+            message: notesError.message,
+            response: notesError.response?.data,
+            status: notesError.response?.status,
+          });
+          // Don't throw, just skip notes
+          notes = '';
+        }
       }
 
       return NextResponse.json({
@@ -267,10 +303,30 @@ Guidelines:
       { status: 400 }
     );
   } catch (error: any) {
-    console.error('Live lecture error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to process live lecture' },
-      { status: 500 }
-    );
+    console.error('[LIVE-LECTURE] CRITICAL ERROR:', {
+      message: error.message,
+      code: error.code,
+      response_status: error.response?.status,
+      response_data: error.response?.data,
+      stack: error.stack,
+    });
+    
+    // Check for environment variable issues
+    const envVars = {
+      has_azure_endpoint: !!process.env.AZURE_PROJECT_ENDPOINT,
+      has_azure_key: !!process.env.AZURE_PROJECT_API_KEY,
+      has_azure_deployment: !!process.env.AZURE_DEPLOYMENT_ID,
+      has_speech_key: !!process.env.AZURE_SPEECH_KEY,
+      has_speech_region: !!process.env.AZURE_SPEECH_REGION,
+    };
+    console.error('[LIVE-LECTURE] Environment variables status:', envVars);
+    
+    const errorResponse = {
+      error: error.message || 'Failed to process live lecture',
+      type: error.response?.status ? 'api_error' : 'unknown_error',
+      details: process.env.NODE_ENV === 'development' ? error.response?.data : undefined,
+    };
+    
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }
