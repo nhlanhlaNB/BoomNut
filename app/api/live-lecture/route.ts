@@ -118,16 +118,39 @@ export async function POST(req: NextRequest) {
     }
     
     if (action === 'end') {
-      // End session and generate final notes
+      // End session and generate final notes ONLY if there's actual transcription
+      
+      // Check if there's actual audio content that was transcribed
+      const cleanedTranscription = fullTranscription.trim();
+      const wordCount = cleanedTranscription.split(/\s+/).filter(word => word.length > 0).length;
+      
+      // If nothing was heard (less than 5 words), return empty result with message
+      if (wordCount < 5) {
+        const emptyResult = {
+          transcription: '',
+          notes: '',
+          summary: '❌ No content detected. Please ensure your microphone is working and speak clearly.',
+          duration: 0,
+          wordCount: 0,
+          isEmpty: true,
+        };
+        
+        // Reset
+        fullTranscription = '';
+        
+        return NextResponse.json(emptyResult);
+      }
+      
+      // Generate final notes ONLY from actual transcription
       const finalNotesResponse = await createChatCompletion({
         messages: [
           {
             role: 'system',
-            content: 'Create comprehensive, well-organized notes from the complete lecture transcription. Include summary, key concepts, important points, and any definitions.',
+            content: 'Create comprehensive, well-organized notes from the complete lecture transcription. Include summary, key concepts, important points, and any definitions. Base ONLY on what is in the transcription provided.',
           },
           {
             role: 'user',
-            content: fullTranscription,
+            content: cleanedTranscription,
           },
         ],
         maxTokens: 2000,
@@ -140,11 +163,11 @@ export async function POST(req: NextRequest) {
         messages: [
           {
             role: 'system',
-            content: 'Provide a brief 2-3 sentence summary of the lecture.',
+            content: 'Provide a brief 2-3 sentence summary of the lecture. Only use information that was explicitly mentioned in the transcription.',
           },
           {
             role: 'user',
-            content: fullTranscription,
+            content: cleanedTranscription,
           },
         ],
         maxTokens: 150,
@@ -153,11 +176,12 @@ export async function POST(req: NextRequest) {
       const summary = summaryResponse.choices[0]?.message?.content || '';
 
       const result = {
-        transcription: fullTranscription,
+        transcription: cleanedTranscription,
         notes: finalNotes,
         summary,
-        duration: fullTranscription.split(' ').length / 150, // Estimated minutes
-        wordCount: fullTranscription.split(' ').length,
+        duration: wordCount / 150, // Estimated minutes
+        wordCount: wordCount,
+        isEmpty: false,
       };
 
       // Reset
@@ -170,7 +194,7 @@ export async function POST(req: NextRequest) {
       // Generate lecture slides from transcription and notes
       const { transcription: lectureTrans, notes: lectureNotes } = await req.json();
       
-      if (!lectureTrans) {
+      if (!lectureTrans || lectureTrans.trim().length === 0) {
         return NextResponse.json(
           { error: 'Transcription required to generate slides' },
           { status: 400 }
@@ -195,6 +219,7 @@ Guidelines:
 - Create 5-8 slides covering the main topics
 - Each slide should have a clear title
 - Content should be bullet points
+- Include ONLY information from the transcription provided
 - Include key takeaways
 - Make slides visual and easy to understand
 - First slide should be an introduction
@@ -202,7 +227,7 @@ Guidelines:
           },
           {
             role: 'user',
-            content: `Lecture transcription:\n${lectureTrans}\n\nLecture notes:\n${lectureNotes || 'N/A'}\n\nGenerate professional presentation slides.`,
+            content: `Lecture transcription:\n${lectureTrans}\n\nLecture notes:\n${lectureNotes || 'N/A'}\n\nGenerate professional presentation slides based ONLY on the transcription.`,
           },
         ],
         maxTokens: 3000,
