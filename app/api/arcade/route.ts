@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { createChatCompletion } from '@/lib/azureOpenAI';
 
 // Question database with fallback questions
 const questionDatabase: Record<string, Record<number, any[]>> = {
@@ -54,7 +55,7 @@ const questionDatabase: Record<string, Record<number, any[]>> = {
     ],
     2: [
       { question: 'What is the longest river in the world?', options: ['Amazon', 'Nile', 'Yangtze', 'Mississippi'], correctAnswer: 'Nile' },
-      { question: 'Which country has the most islands?', options: ['Indonesia', 'Finland', 'Sweden', 'Norway'], correctAnswer: 'Sweden' },
+      { country: 'Which country has the most islands?', options: ['Indonesia', 'Finland', 'Sweden', 'Norway'], correctAnswer: 'Sweden' },
     ],
     3: [
       { question: 'What is the capital of Kazakhstan?', options: ['Almaty', 'Bishkek', 'Astana', 'Aktau'], correctAnswer: 'Astana' },
@@ -77,7 +78,48 @@ const questionDatabase: Record<string, Record<number, any[]>> = {
 
 export async function POST(req: Request) {
   try {
-    const { action, topic, difficulty } = await req.json();
+    const { action, topic, difficulty, pdfContent, gameType } = await req.json();
+
+    if (action === 'generate-from-pdf') {
+      if (!pdfContent) {
+        return NextResponse.json({ error: 'No PDF content provided' }, { status: 400 });
+      }
+
+      console.log(`[ARCADE] Generating ${gameType} questions from PDF content...`);
+
+      const prompt = gameType === 'speed-quiz' 
+        ? `Generate 10 multiple choice questions based on the following text. 
+           Return ONLY a JSON array of objects with "question", "options" (array of 4 strings), "correctAnswer" (must match one of the options), and "explanation".
+           
+           TEXT: ${pdfContent.substring(0, 5000)}`
+        : gameType === 'memory-match'
+        ? `Generate 8 pairs of related educational terms and their definitions or relationships from the following text.
+           Return ONLY a JSON array of objects with "term" and "definition".
+           
+           TEXT: ${pdfContent.substring(0, 5000)}`
+        : `Generate 10 educational "word race" questions (short answer) from the following text.
+           Return ONLY a JSON array of objects with "question" and "correctAnswer" (one or two words only).
+           
+           TEXT: ${pdfContent.substring(0, 5000)}`;
+
+      const response = await createChatCompletion({
+        messages: [
+          { role: 'system', content: 'You are an educational game content generator. Output valid JSON array only.' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.7
+      });
+
+      const content = response.choices[0].message.content;
+      // Clean content from potential markdown markers if any
+      const cleanedContent = content.replace(/```json|```/g, '').trim();
+      const generatedData = JSON.parse(cleanedContent);
+
+      return NextResponse.json({ 
+        data: generatedData,
+        source: 'ai-generated'
+      });
+    }
 
     if (action === 'generate-question') {
       const diffLevel = Math.min(3, Math.max(1, difficulty || 1));

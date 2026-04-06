@@ -3,11 +3,12 @@
 // Updated: Word Race game fully implemented - April 5, 2026
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Gamepad2, Trophy, Zap, Target, Clock, Star, Award, ArrowLeft, Lock } from 'lucide-react';
+import { Gamepad2, Trophy, Zap, Target, Clock, Star, Award, ArrowLeft, Lock, FileText, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import PaywallModal from '@/components/PaywallModal';
+import FileUpload, { UploadedFileData } from '@/components/FileUpload';
 import { getRandomQuestion, getRandomWordRaceAnswer, getMemoryMatchPairs } from '@/lib/quizQuestions';
 
 type GameMode = 'speed-quiz' | 'memory-match' | 'word-race' | null;
@@ -32,6 +33,11 @@ export default function ArcadePage() {
   const [totalPoints, setTotalPoints] = useState(0);
   const [usageCount, setUsageCount] = useState(0);
   const [showPaywall, setShowPaywall] = useState(false);
+
+  // PDF Upload State
+  const [uploadedFile, setUploadedFile] = useState<UploadedFileData | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedQuestions, setGeneratedQuestions] = useState<any[]>([]);
 
   const FREE_LIMIT = 2;
 
@@ -135,67 +141,81 @@ export default function ArcadePage() {
     setTotalPoints(newTotal);
   };
 
+  const handleFileUpload = (file: UploadedFileData) => {
+    setUploadedFile(file);
+    setGeneratedQuestions([]);
+  };
+
   const startSpeedQuiz = async () => {
-    // Check free tier limit
     if (!isActive && usageCount >= FREE_LIMIT) {
       setShowPaywall(true);
       return;
     }
-
-    // Track usage for free tier
-    if (!isActive && user) {
-      try {
-        const trackResponse = await fetch('/api/usage/track', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: user.uid,
-            appName: 'arcade'
-          })
-        });
-        
-        if (trackResponse.ok) {
-          const trackData = await trackResponse.json();
-          setUsageCount(trackData.messageCount);
-        }
-      } catch (error) {
-        console.error('Error tracking usage:', error);
-      }
+    if (!uploadedFile) {
+        alert("Please upload a PDF first!");
+        return;
     }
-
-    setGameMode('speed-quiz');
-    setIsPlaying(true);
-    setScore(0);
-    setStreak(0);
-    setTimeLeft(60);
-    setQuestionIndex(0);
-    setLevel(1);
-    loadQuestion();
+    setIsGenerating(true);
+    try {
+      const response = await fetch('/api/arcade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'generate-from-pdf',
+          pdfContent: uploadedFile.content,
+          gameType: 'speed-quiz'
+        })
+      });
+      const result = await response.json();
+      if (result.data) {
+        setGeneratedQuestions(result.data);
+        if (!isActive && user) {
+          try {
+            const trackResponse = await fetch('/api/usage/track', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId: user.uid, appName: 'arcade' })
+            });
+            if (trackResponse.ok) {
+              const trackData = await trackResponse.json();
+              setUsageCount(trackData.messageCount);
+            }
+          } catch (error) { console.error('Error tracking usage:', error); }
+        }
+        setGameMode('speed-quiz');
+        setIsPlaying(true);
+        setScore(0);
+        setStreak(0);
+        setTimeLeft(60);
+        setQuestionIndex(0);
+        setLevel(1);
+        setCurrentQuestion(result.data[0]);
+      }
+    } catch (err) {
+      console.error('Failed to generate quiz:', err);
+      alert("Failed to generate quiz content.");
+    } finally { setIsGenerating(false); }
   };
 
   const loadQuestion = () => {
-    const question = getRandomQuestion(undefined, level === 1 ? 'easy' : level === 2 ? 'medium' : 'hard');
-    setCurrentQuestion(question);
+    if (generatedQuestions.length > 0) {
+      const nextIdx = questionIndex % generatedQuestions.length;
+      setCurrentQuestion(generatedQuestions[nextIdx]);
+    } else {
+      const question = getRandomQuestion(undefined, level === 1 ? 'easy' : level === 2 ? 'medium' : 'hard');
+      setCurrentQuestion(question);
+    }
   };
 
   const answerQuestion = async (answer: string) => {
     if (!currentQuestion) return;
-
     const isCorrect = answer === currentQuestion.correctAnswer;
-    
     if (isCorrect) {
       const points = (10 + streak * 5) * level;
       setScore(score + points);
       setStreak(streak + 1);
-      
-      if (streak > 0 && streak % 5 === 0) {
-        setLevel(level + 1);
-      }
-    } else {
-      setStreak(0);
-    }
-
-    // Show feedback before moving to next question
+      if (streak > 0 && streak % 5 === 0) setLevel(level + 1);
+    } else { setStreak(0); }
     setFeedbackData({
       isCorrect,
       selectedAnswer: answer,
@@ -207,91 +227,144 @@ export default function ArcadePage() {
 
   const continuToNextQuestion = () => {
     setShowFeedback(false);
-    setQuestionIndex(questionIndex + 1);
-    loadQuestion();
+    const nextIdx = questionIndex + 1;
+    setQuestionIndex(nextIdx);
+    if (generatedQuestions.length > 0) {
+      setCurrentQuestion(generatedQuestions[nextIdx % generatedQuestions.length]);
+    } else { loadQuestion(); }
   };
 
   const startMemoryMatch = async () => {
-    // Check free tier limit
     if (!isActive && usageCount >= FREE_LIMIT) {
       setShowPaywall(true);
       return;
     }
-
-    // Track usage for free tier
-    if (!isActive && user) {
-      try {
-        const trackResponse = await fetch('/api/usage/track', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: user.uid,
-            appName: 'arcade'
-          })
-        });
-        
-        if (trackResponse.ok) {
-          const trackData = await trackResponse.json();
-          setUsageCount(trackData.messageCount);
-        }
-      } catch (error) {
-        console.error('Error tracking usage:', error);
-      }
+    if (!uploadedFile) {
+        alert("Please upload a PDF first!");
+        return;
     }
-
-    setGameMode('memory-match');
-    setIsPlaying(true);
-    setScore(0);
-    setTimeLeft(120);
-    
-    // Create pairs of memory match cards
-    const pairs = getMemoryMatchPairs().map((pair, idx) => ({
-      id: `pair-${idx}`,
-      term: pair.term,
-      definition: pair.definition,
-      pairId: idx,
-      isFlipped: false,
-    }));
-    
-    const shuffled = [...pairs, ...pairs]
-      .sort(() => Math.random() - 0.5)
-      .map((card, i) => ({ ...card, index: i }));
-    
-    setCards(shuffled);
-    setFlippedCards([]);
-    setMatchedCards([]);
+    setIsGenerating(true);
+    try {
+      const response = await fetch('/api/arcade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'generate-from-pdf',
+          pdfContent: uploadedFile.content,
+          gameType: 'memory-match'
+        })
+      });
+      const result = await response.json();
+      if (result.data) {
+        if (!isActive && user) {
+          try {
+            const trackResponse = await fetch('/api/usage/track', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId: user.uid, appName: 'arcade' })
+            });
+            if (trackResponse.ok) {
+              const trackData = await trackResponse.json();
+              setUsageCount(trackData.messageCount);
+            }
+          } catch (error) { console.error('Error tracking usage:', error); }
+        }
+        setGameMode('memory-match');
+        setIsPlaying(true);
+        setScore(0);
+        setTimeLeft(120);
+        const pairs = result.data.map((pair: any, idx: number) => ({
+          term: pair.term,
+          definition: pair.definition,
+          pairId: idx
+        }));
+        const shuffled = [...pairs.map(p => ({ content: p.term, pairId: p.pairId, type: 'term' })), 
+                          ...pairs.map(p => ({ content: p.definition, pairId: p.pairId, type: 'definition' }))]
+          .sort(() => Math.random() - 0.5)
+          .map((card, i) => ({ ...card, index: i }));
+        setCards(shuffled);
+        setFlippedCards([]);
+        setMatchedCards([]);
+      }
+    } catch (err) {
+      console.error('Failed to generate memory match:', err);
+      alert("Failed to generate memory match.");
+    } finally { setIsGenerating(false); }
   };
 
   const flipCard = (index: number) => {
     if (flippedCards.length === 2 || matchedCards.includes(index)) return;
-    
     const newFlipped = [...flippedCards, index];
     setFlippedCards(newFlipped);
-
     if (newFlipped.length === 2) {
       const [first, second] = newFlipped;
       if (cards[first]?.pairId === cards[second]?.pairId) {
         setMatchedCards([...matchedCards, first, second]);
         setScore(score + 20);
         setFlippedCards([]);
-        
-        if (matchedCards.length + 2 === cards.length) {
-          endGame();
-        }
-      } else {
-        setTimeout(() => setFlippedCards([]), 1000);
-      }
+        if (matchedCards.length + 2 === cards.length) endGame();
+      } else { setTimeout(() => setFlippedCards([]), 1000); }
     }
   };
 
   const startWordRace = async () => {
-    // Check free tier limit
     if (!isActive && usageCount >= FREE_LIMIT) {
       setShowPaywall(true);
       return;
     }
+    if (!uploadedFile) {
+        alert("Please upload a PDF first!");
+        return;
+    }
+    setIsGenerating(true);
+    try {
+      const response = await fetch('/api/arcade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'generate-from-pdf',
+          pdfContent: uploadedFile.content,
+          gameType: 'word-race'
+        })
+      });
+      const result = await response.json();
+      if (result.data) {
+        setGeneratedQuestions(result.data);
+        if (!isActive && user) {
+          try {
+            const trackResponse = await fetch('/api/usage/track', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId: user.uid, appName: 'arcade' })
+            });
+            if (trackResponse.ok) {
+              const trackData = await trackResponse.json();
+              setUsageCount(trackData.messageCount);
+            }
+          } catch (error) { console.error('Error tracking usage:', error); }
+        }
+        setGameMode('word-race');
+        setIsPlaying(true);
+        setScore(0);
+        setTimeLeft(60);
+        setWordQuestionIndex(0);
+        setWordRaceCorrect(0);
+        setCurrentWordQuestion(result.data[0]);
+      }
+    } catch (err) {
+      console.error('Failed to generate word race:', err);
+      alert("Failed to generate word race.");
+    } finally { setIsGenerating(false); }
+  };
 
-    // Track usage for free tier
+  const loadWordQuestion = () => {
+    if (generatedQuestions.length > 0) {
+      setCurrentWordQuestion(generatedQuestions[wordQuestionIndex % generatedQuestions.length]);
+    } else {
+      const question = getRandomWordRaceAnswer();
+      setCurrentWordQuestion(question);
+    }
+  };
     if (!isActive && user) {
       try {
         const trackResponse = await fetch('/api/usage/track', {
@@ -464,9 +537,38 @@ export default function ArcadePage() {
             <h1 className="text-5xl md:text-7xl font-black text-gray-900 mb-4">
               Study <span className="text-gray-900 font-bold">Arcade</span>
             </h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-10">
               Turn learning into an adventure! Compete, earn points, and climb the leaderboard.
             </p>
+
+            {/* NEW: PDF Upload Section */}
+            <div className="max-w-2xl mx-auto mb-12 p-8 bg-white rounded-3xl shadow-xl border-4 border-dashed border-purple-200 hover:border-purple-400 transition-all">
+              <div className="flex items-center gap-3 mb-6 justify-center">
+                <FileText className="w-8 h-8 text-purple-600" />
+                <h2 className="text-2xl font-black text-gray-900">Step 1: Upload Study PDF</h2>
+              </div>
+              <p className="text-gray-500 mb-6 text-center italic">
+                Upload your notes to generate games customized to your material!
+              </p>
+              <FileUpload onFileUpload={handleFileUpload} />
+              
+              {uploadedFile && (
+                <div className="mt-6 flex items-center justify-center gap-2 text-green-600 bg-green-50 py-3 rounded-xl font-bold border border-green-200">
+                  <Award className="w-5 h-5" />
+                  <span>PDF Loaded: {uploadedFile.filename}</span>
+                </div>
+              )}
+              {isGenerating && (
+                <div className="mt-6 flex items-center justify-center gap-3 text-purple-600 bg-purple-50 py-4 rounded-xl font-black animate-pulse border-2 border-purple-200">
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                  <span>AI is crafting your custom game...</span>
+                </div>
+              )}
+            </div>
+
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-100 rounded-full text-sm font-bold text-purple-700 mb-6">
+               <span className="text-lg">👇 Step 2: Choose Your Challenge!</span>
+            </div>
           </div>
 
           {/* Game Selection */}
