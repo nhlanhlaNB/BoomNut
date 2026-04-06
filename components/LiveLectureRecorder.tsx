@@ -15,19 +15,19 @@ export default function LiveLectureRecorder() {
   const [notes, setNotes] = useState('');
   const [slides, setSlides] = useState<Slide[]>([]);
   const [showSlides, setShowSlides] = useState(false);
-  const [sessionId, setSessionId] = useState('');
   const [loading, setLoading] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [copied, setCopied] = useState(false);
-  const [hasUserResponse, setHasUserResponse] = useState(false);
   const [userInput, setUserInput] = useState('');
   const [usageCount, setUsageCount] = useState(0);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isListening, setIsListening] = useState(false);
 
   const FREE_LIMIT = 2;
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+  const recognitionRef = useRef<any>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch usage on mount
@@ -49,6 +49,52 @@ export default function LiveLectureRecorder() {
     fetchUsage();
   }, [user, isActive]);
 
+  // Initialize Speech Recognition
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
+      recognitionRef.current.lang = 'en-US';
+
+      recognitionRef.current.onresult = (event: any) => {
+        const transcript = Array.from(event.results)
+          .map((result: any) => result[0].transcript)
+          .join('');
+        
+        setTranscription((prev) => {
+          if (event.results[event.results.length - 1].isFinal) {
+            return prev + (prev ? ' ' : '') + transcript;
+          }
+          return prev;
+        });
+      };
+
+      recognitionRef.current.onerror = (event: any) => {
+        console.error('[Live Lecture] Speech recognition error:', event.error);
+        setError(`Speech recognition error: ${event.error}`);
+        if (isRecording && event.error !== 'aborted') {
+          setTimeout(() => {
+            if (recognitionRef.current && isRecording) {
+              recognitionRef.current.start();
+            }
+          }, 1000);
+        }
+      };
+
+      recognitionRef.current.onend = () => {
+        console.log('[Live Lecture] Speech recognition ended');
+        setIsListening(false);
+      };
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, [isRecording]);
 
   // Timer effect
   useEffect(() => {
@@ -78,74 +124,33 @@ export default function LiveLectureRecorder() {
     }
 
     try {
-      const startRes = await fetch('/api/live-lecture', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'start' }),
-      });
-      
-      if (!startRes.ok) {
-        console.error('[LiveLectureRecorder] Start session failed:', {
-          status: startRes.status,
-          statusText: startRes.statusText
-        });
-        const errorData = await startRes.json();
-        console.error('[LiveLectureRecorder] Error response:', errorData);
-        throw new Error(`Failed to start recording: ${errorData.error || startRes.statusText}`);
-      }
-      
-      const { sessionId: newSessionId } = await startRes.json();
-      setSessionId(newSessionId);
+      setError(null);
       setRecordingTime(0);
       setTranscription('');
       setNotes('');
       setUserInput('');
-
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-
-      mediaRecorder.ondataavailable = async (event) => {
-        if (event.data.size > 0) {
-          chunksRef.current.push(event.data);
-
-          if (chunksRef.current.length >= 5) {
-            const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
-            chunksRef.current = [];
-
-            const formData = new FormData();
-            formData.append('action', 'transcribe');
-            formData.append('audioFile', audioBlob, 'lecture_chunk.webm');
-            formData.append('sessionId', newSessionId);
-
-            const response = await fetch('/api/live-lecture', {
-              method: 'POST',
-              body: formData,
-            });
-
-            if (!response.ok) {
-              console.error('[LiveLectureRecorder] Transcribe failed:', {
-                status: response.status,
-                statusText: response.statusText
-              });
-              const errorData = await response.json().catch(() => ({}));
-              console.error('[LiveLectureRecorder] Error response:', errorData);
-              return;
-            }
-
-            const data = await response.json();
-            if (data.transcription) {
-              setTranscription((prev) => prev + ' ' + data.transcription);
-            }
-            if (data.notes) {
-              setNotes(data.notes);
-            }
-          }
-        }
-      };
-
-      mediaRecorder.start(1000);
       setIsRecording(true);
+      setIsListening(true);
+
+      // Start Web Speech Recognition
+      if (recognitionRef.current) {
+        recognitionRef.current.start();
+      }
+
+      // Request microphone access for recording
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = mediaRecorder;
+
+        mediaRecorder.start();
+
+        mediaRecorder.onstop = () => {
+          stream.getTracks().forEach((track) => track.stop());
+        };
+      } catch (err) {
+        console.log('[Live Lecture] Microphone access not required for speech recognition');
+      }
 
       // Track usage for free tier
       if (!isActive && user) {
@@ -169,48 +174,55 @@ export default function LiveLectureRecorder() {
       }
     } catch (error) {
       console.error('Failed to start recording:', error);
-      alert('Failed to start recording. Please enable microphone access in your browser settings.');
+      setError('Failed to start recording. Please ensure your browser has microphone access.');
     }
   };
 
   const stopRecording = async () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop());
+    if (isRecording) {
       setIsRecording(false);
-      setLoading(true);
+      setIsListening(false);
 
-      try {
-        const response = await fetch('/api/live-lecture', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'end', sessionId }),
-        });
-
-        if (!response.ok) {
-          console.error('[LiveLectureRecorder] End recording failed:', {
-            status: response.status,
-            statusText: response.statusText
-          });
-          const errorData = await response.json().catch(() => ({}));
-          console.error('[LiveLectureRecorder] Error response:', errorData);
-          throw new Error(`Failed to end recording: ${errorData.error || response.statusText}`);
-        }
-
-        const data = await response.json();
-        setTranscription(data.transcription || transcription);
-        setNotes(data.notes || notes);
-
-        // Auto-generate slides after recording ends
-        if (data.transcription) {
-          await generateSlides(data.transcription, data.notes);
-        }
-      } catch (error) {
-        console.error('Error getting final notes:', error);
-        alert(`Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`);
-      } finally {
-        setLoading(false);
+      // Stop Web Speech Recognition
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
       }
+
+      // Stop MediaRecorder if it was started
+      if (mediaRecorderRef.current) {
+        mediaRecorderRef.current.stop();
+      }
+
+      // Auto-generate notes from transcription
+      if (transcription.trim()) {
+        await generateNotes(transcription);
+      }
+    }
+  };
+
+  const generateNotes = async (lectureTrans: string) => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/live-lecture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'generateNotes',
+          transcription: lectureTrans,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.notes) {
+        setNotes(data.notes);
+        // Auto-generate slides
+        await generateSlides(lectureTrans, data.notes);
+      }
+    } catch (error) {
+      console.error('Error generating notes:', error);
+      setNotes('Unable to generate notes. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -228,13 +240,7 @@ export default function LiveLectureRecorder() {
       });
 
       if (!response.ok) {
-        console.error('[LiveLectureRecorder] Generate slides failed:', {
-          status: response.status,
-          statusText: response.statusText
-        });
-        const errorData = await response.json().catch(() => ({}));
-        console.error('[LiveLectureRecorder] Error response:', errorData);
-        throw new Error(`Failed to generate slides: ${errorData.error || response.statusText}`);
+        throw new Error('Failed to generate slides');
       }
 
       const data = await response.json();
@@ -244,8 +250,41 @@ export default function LiveLectureRecorder() {
       }
     } catch (error) {
       console.error('Error generating slides:', error);
-      // Don't block the flow if slides fail to generate
-      console.log('Continuing without slides');
+      // Continue without slides if generation fails
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGenerateNotes = async () => {
+    if (!userInput.trim()) return;
+    
+    setLoading(true);
+    try {
+      const response = await fetch('/api/live-lecture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'generateNotes',
+          transcription: userInput,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.notes) {
+        setNotes(data.notes);
+        setTranscription(userInput);
+        setUserInput('');
+        // Auto-generate slides
+        await generateSlides(userInput, data.notes);
+      } else {
+        setNotes('Unable to generate notes. Please try again.');
+        setTranscription(userInput);
+        setUserInput('');
+      }
+    } catch (error) {
+      console.error('Error generating notes:', error);
+      setNotes('Error generating notes. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -267,33 +306,7 @@ export default function LiveLectureRecorder() {
     a.download = `lecture_notes_${new Date().toISOString().split('T')[0]}.txt`;
     a.click();
     URL.revokeObjectURL(url);
-  };
-
-  const handleGenerateNotes = async () => {
-    if (!userInput.trim()) return;
-    
-    setLoading(true);
-    try {
-      const response = await fetch('/api/live-lecture', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'generateNotes',
-          transcription: userInput,
-        }),
-      });
-
-      const data = await response.json();
-      setNotes(data.notes || 'Unable to generate notes. Please try again.');
-      setTranscription(userInput);
-      setUserInput('');
-    } catch (error) {
-      console.error('Error generating notes:', error);
-      setNotes('Error generating notes. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  };;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-50 p-4 md:p-8">
@@ -362,14 +375,14 @@ export default function LiveLectureRecorder() {
           <div className="mb-8 p-4 bg-blue-50 border border-blue-200 rounded-lg flex gap-3">
             <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-blue-800">
-              <strong>How it works:</strong> Click "Start Recording" to record your lecture. The transcription will appear in real-time. When done, we'll automatically generate organized notes with key concepts and presentation slides.
+              <strong>How it works:</strong> Click "Start Recording" to record your lecture using your browser's speech recognition. The transcription will appear in real-time. When done, we'll automatically generate organized notes with key concepts and presentation slides.
             </div>
           </div>
         )}
 
         {/* Main Recording Area */}
         <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
-          {!notes && !hasUserResponse ? (
+          {!notes ? (
             <div className="text-center">
               {/* Recording Status */}
               {isRecording && (
@@ -402,6 +415,32 @@ export default function LiveLectureRecorder() {
                 {isRecording ? 'Stop when finished' : 'Click to start recording'}
               </p>
 
+              {/* Live Transcription Box */}
+              {isRecording && (
+                <div className="mb-6 p-4 bg-blue-50 border-2 border-blue-300 rounded-lg">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-2.5 h-2.5 bg-blue-600 rounded-full animate-pulse" />
+                    <p className="text-sm font-semibold text-blue-700">
+                      {isListening ? 'Listening...' : 'Processing...'}
+                    </p>
+                  </div>
+                  <textarea
+                    value={transcription}
+                    readOnly
+                    placeholder="Your speech will appear here..."
+                    className="w-full h-32 p-3 border border-blue-200 rounded-lg bg-white text-gray-700 text-sm resize-none focus:outline-none"
+                  />
+                </div>
+              )}
+
+              {/* Error Display */}
+              {error && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex gap-2">
+                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-800">{error}</p>
+                </div>
+              )}
+
               {/* Alternative Input Method */}
               {!isRecording && !transcription && (
                 <div className="mt-8 pt-8 border-t border-gray-200">
@@ -415,7 +454,6 @@ export default function LiveLectureRecorder() {
                   <button
                     onClick={() => {
                       if (userInput.trim()) {
-                        setHasUserResponse(true);
                         handleGenerateNotes();
                       }
                     }}
@@ -501,9 +539,9 @@ export default function LiveLectureRecorder() {
                     setNotes('');
                     setTranscription('');
                     setUserInput('');
-                    setHasUserResponse(false);
                     setShowSlides(false);
                     setSlides([]);
+                    setError(null);
                   }}
                   className="px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-900 rounded-lg font-semibold transition"
                 >
@@ -516,7 +554,7 @@ export default function LiveLectureRecorder() {
           {loading && (
             <div className="flex items-center justify-center gap-2 text-indigo-600">
               <Loader className="w-5 h-5 animate-spin" />
-              <span className="font-semibold">Generating notes...</span>
+              <span className="font-semibold">Generating notes and slides...</span>
             </div>
           )}
         </div>
