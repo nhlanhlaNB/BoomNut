@@ -113,39 +113,33 @@ export default function LiveLectureRecorder() {
             const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
             chunksRef.current = [];
 
-            const reader = new FileReader();
-            reader.readAsDataURL(audioBlob);
-            reader.onloadend = async () => {
-              const base64Audio = reader.result as string;
+            const formData = new FormData();
+            formData.append('action', 'transcribe');
+            formData.append('audioFile', audioBlob, 'lecture_chunk.webm');
+            formData.append('sessionId', newSessionId);
 
-              const response = await fetch('/api/live-lecture', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  action: 'transcribe',
-                  audio: base64Audio,
-                  sessionId: newSessionId,
-                }),
+            const response = await fetch('/api/live-lecture', {
+              method: 'POST',
+              body: formData,
+            });
+
+            if (!response.ok) {
+              console.error('[LiveLectureRecorder] Transcribe failed:', {
+                status: response.status,
+                statusText: response.statusText
               });
+              const errorData = await response.json().catch(() => ({}));
+              console.error('[LiveLectureRecorder] Error response:', errorData);
+              return;
+            }
 
-              if (!response.ok) {
-                console.error('[LiveLectureRecorder] Transcribe failed:', {
-                  status: response.status,
-                  statusText: response.statusText
-                });
-                const errorData = await response.json().catch(() => ({}));
-                console.error('[LiveLectureRecorder] Error response:', errorData);
-                return;
-              }
-
-              const data = await response.json();
-              if (data.transcription) {
-                setTranscription((prev) => prev + ' ' + data.transcription);
-              }
-              if (data.notes) {
-                setNotes(data.notes);
-              }
-            };
+            const data = await response.json();
+            if (data.transcription) {
+              setTranscription((prev) => prev + ' ' + data.transcription);
+            }
+            if (data.notes) {
+              setNotes(data.notes);
+            }
           }
         }
       };

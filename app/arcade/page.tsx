@@ -278,10 +278,10 @@ export default function ArcadePage() {
           definition: pair.definition,
           pairId: idx
         }));
-        const shuffled = [...pairs.map(p => ({ content: p.term, pairId: p.pairId, type: 'term' })), 
-                          ...pairs.map(p => ({ content: p.definition, pairId: p.pairId, type: 'definition' }))]
+        const shuffled = [...pairs.map((p: any) => ({ content: p.term, pairId: p.pairId, type: 'term' })), 
+                          ...pairs.map((p: any) => ({ content: p.definition, pairId: p.pairId, type: 'definition' }))]
           .sort(() => Math.random() - 0.5)
-          .map((card, i) => ({ ...card, index: i }));
+          .map((card: any, i: number) => ({ ...card, index: i }));
         setCards(shuffled);
         setFlippedCards([]);
         setMatchedCards([]);
@@ -332,15 +332,12 @@ export default function ArcadePage() {
         setGeneratedQuestions(result.data);
         if (!isActive && user) {
           try {
-            const trackResponse = await fetch('/api/usage/track', {
+            await fetch('/api/usage/track', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ userId: user.uid, appName: 'arcade' })
             });
-            if (trackResponse.ok) {
-              const trackData = await trackResponse.json();
-              setUsageCount(trackData.messageCount);
-            }
+            fetchUsage();
           } catch (error) { console.error('Error tracking usage:', error); }
         }
         setGameMode('word-race');
@@ -362,47 +359,12 @@ export default function ArcadePage() {
       setCurrentWordQuestion(generatedQuestions[wordQuestionIndex % generatedQuestions.length]);
     } else {
       const question = getRandomWordRaceAnswer();
-      setCurrentWordQuestion(question);
+      setCurrentWordQuestion({
+        question: question.question,
+        correctAnswer: question.answer,
+        difficulty: question.difficulty
+      });
     }
-  };
-    if (!isActive && user) {
-      try {
-        const trackResponse = await fetch('/api/usage/track', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: user.uid,
-            appName: 'arcade'
-          })
-        });
-        
-        if (trackResponse.ok) {
-          const trackData = await trackResponse.json();
-          setUsageCount(trackData.messageCount);
-        }
-      } catch (error) {
-        console.error('Error tracking usage:', error);
-      }
-    }
-
-    setGameMode('word-race');
-    setIsPlaying(true);
-    setScore(0);
-    setTimeLeft(90);
-    setWordQuestionIndex(0);
-    setWordRaceCorrect(0);
-    setUserAnswer('');
-    setLevel(1);
-    loadWordQuestion();
-  };
-
-  const loadWordQuestion = () => {
-    const wordAnswer = getRandomWordRaceAnswer();
-    setCurrentWordQuestion({
-      question: wordAnswer.question,
-      correctAnswer: wordAnswer.answer,
-      difficulty: wordAnswer.difficulty
-    });
     setUserAnswer('');
   };
 

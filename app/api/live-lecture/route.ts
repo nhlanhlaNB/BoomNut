@@ -7,9 +7,26 @@ let fullTranscription = '';
 // Start live lecture transcription
 export async function POST(req: NextRequest) {
   try {
-    const { action, audio, language = 'en', question } = await req.json();
-    
-    console.log('[LIVE-LECTURE] API called with action:', action);
+    let action, audio, language, sessionId, question;
+
+    // Determine if it's multipart or JSON
+    const contentType = req.headers.get('content-type') || '';
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await req.formData();
+      action = formData.get('action') as string;
+      audio = formData.get('audioFile') as Blob;
+      language = (formData.get('language') as string) || 'en';
+      sessionId = formData.get('sessionId') as string;
+    } else {
+      const body = await req.json();
+      action = body.action;
+      audio = body.audio;
+      language = body.language || 'en';
+      sessionId = body.sessionId;
+      question = body.question;
+    }
+
+    console.log('[LIVE-LECTURE] API called with action:', action, 'sessionId:', sessionId);
 
     if (action === 'start') {
       // Start new session
@@ -31,24 +48,26 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Handle base64 audio data
-      let audioBuffer: Buffer;
-      try {
-        // Remove data URL prefix if present
-        const base64Data = audio.includes(',') ? audio.split(',')[1] : audio;
-        audioBuffer = Buffer.from(base64Data, 'base64');
-      } catch (error) {
-        console.error('[LIVE-LECTURE] Audio buffer creation error:', error);
-        return NextResponse.json(
-          { error: 'Invalid audio data format' },
-          { status: 400 }
-        );
+      let audioFile: File;
+      if (audio instanceof Blob) {
+        audioFile = new File([audio], 'lecture_chunk.webm', { type: 'audio/webm' });
+      } else {
+        // Handle base64 audio data
+        let audioBuffer: Buffer;
+        try {
+          // Remove data URL prefix if present
+          const base64Data = audio.includes(',') ? audio.split(',')[1] : audio;
+          const buffer = Buffer.from(base64Data, 'base64');
+          const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+          audioFile = new File([arrayBuffer], 'audio.webm', { type: 'audio/webm' });
+        } catch (error) {
+          console.error('[LIVE-LECTURE] Audio buffer creation error:', error);
+          return NextResponse.json(
+            { error: 'Invalid audio data format' },
+            { status: 400 }
+          );
+        }
       }
-
-      console.log('[LIVE-LECTURE] Audio buffer created, size:', audioBuffer.length, 'bytes');
-
-      // Create a File-like object from the buffer for Azure API
-      const audioFile = new File([Buffer.from(audioBuffer)], 'audio.webm', { type: 'audio/webm' });
 
       console.log('[LIVE-LECTURE] Audio file created:', { 
         fileName: audioFile.name, 
