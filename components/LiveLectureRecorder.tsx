@@ -352,16 +352,130 @@ export default function LiveLectureRecorder() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const downloadNotes = () => {
-    const content = `LECTURE NOTES\n\n${notes}\n\n---\nFULL TRANSCRIPTION\n\n${transcription}`;
-    const blob = new Blob([content], { type: 'text/plain' });
+  const downloadSlides = () => {
+    if (!slides.length) return;
+    let html = '';
+    html += '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Lecture Slides</title>';
+    html += '<style>body{font-family:Arial,sans-serif;background:#f5f5f5;padding:20px}';
+    html += '.slide{background:white;padding:60px;margin:20px 0;border-radius:8px;page-break-after:always}';
+    html += '.slide-num{color:#6366f1;font-size:14px;margin-bottom:20px}';
+    html += '.slide h1{color:#0f172a;font-size:48px;margin:0 0 30px 0}';
+    html += '.slide h2{color:#0f172a;font-size:32px;margin:30px 0 20px 0}';
+    html += '.slide ul{margin:20px 0 0 30px}.slide li{margin:10px 0;color:#334155;font-size:18px;line-height:1.6}';
+    html += '</style></head><body>';
+    slides.forEach((slide: any, idx: number) => {
+      html += '<div class="slide"><div class="slide-num">Slide ' + (idx + 1) + ' of ' + slides.length + '</div>';
+      html += '<h1>' + (slide.title || 'Slide') + '</h1>';
+      if (slide.content && slide.content.length > 0) {
+        html += '<ul>';
+        slide.content.forEach((pt: string) => { html += '<li>' + pt + '</li>'; });
+        html += '</ul>';
+      }
+      if (slide.keyPoints && slide.keyPoints.length > 0) {
+        html += '<h2>Key Points</h2><ul>';
+        slide.keyPoints.forEach((pt: string) => { html += '<li>' + pt + '</li>'; });
+        html += '</ul>';
+      }
+      html += '</div>';
+    });
+    html += '</body></html>';
+    const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `lecture_notes_${new Date().toISOString().split('T')[0]}.txt`;
+    a.download = 'slides_' + new Date().toISOString().split('T')[0] + '.html';
     a.click();
     URL.revokeObjectURL(url);
-  };;
+  };
+
+  const printSlides = () => {
+    if (!slides.length) return;
+    let html = '';
+    html += '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Lecture Slides</title>';
+    html += '<style>body{font-family:Arial,sans-serif;margin:0}';
+    html += '.slide{background:white;padding:60px;min-height:800px;page-break-after:always}';
+    html += '.slide-num{color:#6366f1;font-size:14px;margin-bottom:20px}';
+    html += '.slide h1{color:#0f172a;font-size:44px;margin:0 0 30px 0}';
+    html += '.slide h2{color:#0f172a;font-size:28px;margin:25px 0 15px 0}';
+    html += '.slide ul{margin:20px 0 0 30px}.slide li{margin:8px 0;color:#334155;font-size:16px;line-height:1.6}';
+    html += '@media print{body{margin:0;padding:0}}';
+    html += '</style></head><body>';
+    slides.forEach((slide: any, idx: number) => {
+      html += '<div class="slide"><div class="slide-num">Slide ' + (idx + 1) + ' of ' + slides.length + '</div>';
+      html += '<h1>' + (slide.title || 'Slide') + '</h1>';
+      if (slide.content && slide.content.length > 0) {
+        html += '<ul>';
+        slide.content.forEach((pt: string) => { html += '<li>' + pt + '</li>'; });
+        html += '</ul>';
+      }
+      if (slide.keyPoints && slide.keyPoints.length > 0) {
+        html += '<h2>Key Points</h2><ul>';
+        slide.keyPoints.forEach((pt: string) => { html += '<li>' + pt + '</li>'; });
+        html += '</ul>';
+      }
+      html += '</div>';
+    });
+    html += '</body></html>';
+    const pw = window.open('', '_blank');
+    if (pw) {
+      pw.document.write(html);
+      pw.document.close();
+      setTimeout(() => pw.print(), 250);
+    }
+  };
+
+  const downloadNotes = () => {
+    let html = '';
+    html += '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Lecture Notes</title>';
+    html += '<style>body{font-family:Arial,sans-serif;background:#f5f5f5;padding:20px;color:#0f172a}';
+    html += '.container{max-width:900px;margin:0 auto}';
+    html += '.section{background:white;padding:40px;margin:20px 0;border-radius:8px;page-break-after:always}';
+    html += 'h1{color:#6366f1;font-size:36px;margin:0 0 20px 0}h2{color:#0f172a;font-size:28px;margin:30px 0 15px 0}';
+    html += 'h3{color:#334155;font-size:20px;margin:20px 0 10px 0}';
+    html += 'p{line-height:1.8;margin:10px 0;color:#334155;font-size:16px}';
+    html += 'ul{margin:20px 0 0 30px}li{margin:8px 0;color:#334155;font-size:16px;line-height:1.6}';
+    html += '.timestamp{color:#64748b;font-size:14px;margin-top:15px}';
+    html += '@media print{body{background:white;padding:0}.section{page-break-after:always}}';
+    html += '</style></head><body><div class="container">';
+    html += '<div class="section"><h1>Lecture Notes & Slides</h1>';
+    html += '<p class="timestamp">Generated on ' + new Date().toLocaleString() + '</p></div>';
+    
+    html += '<div class="section"><h2>AI-Generated Notes</h2>';
+    notes.split('\n').forEach((line: string) => {
+      if (line.startsWith('#')) {
+        html += '<h3>' + line.replace(/#/g, '').trim() + '</h3>';
+      } else if (line.trim()) {
+        html += '<p>' + line + '</p>';
+      }
+    });
+    html += '</div>';
+    
+    html += '<div class="section"><h2>Full Transcription</h2><p>' + transcription + '</p></div>';
+    
+    slides.forEach((slide: any, idx: number) => {
+      html += '<div class="section"><h2>Slide ' + (idx + 1) + ': ' + (slide.title || 'Slide') + '</h2>';
+      if (slide.content && slide.content.length > 0) {
+        html += '<ul>';
+        slide.content.forEach((pt: string) => { html += '<li>' + pt + '</li>'; });
+        html += '</ul>';
+      }
+      if (slide.keyPoints && slide.keyPoints.length > 0) {
+        html += '<h3>Key Points</h3><ul>';
+        slide.keyPoints.forEach((pt: string) => { html += '<li>' + pt + '</li>'; });
+        html += '</ul>';
+      }
+      html += '</div>';
+    });
+    
+    html += '</div></body></html>';
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'notes_' + new Date().toISOString().split('T')[0] + '.html';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-50 p-4 md:p-8">
@@ -582,13 +696,21 @@ export default function LiveLectureRecorder() {
               )}
 
               {/* Action Buttons */}
-              <div className="flex gap-3 pt-4 border-t border-gray-200">
+              <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
                 <button
                   onClick={downloadNotes}
-                  className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold flex items-center justify-center gap-2 transition"
+                  className="flex-1 min-w-[140px] px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold flex items-center justify-center gap-2 transition"
                 >
                   <Download className="w-5 h-5" />
-                  Download as Text
+                  Download Notes & Slides
+                </button>
+                <button
+                  onClick={printSlides}
+                  disabled={!slides.length}
+                  className="flex-1 min-w-[140px] px-4 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold flex items-center justify-center gap-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  🖨️
+                  Print Slides
                 </button>
                 <button
                   onClick={() => {
@@ -599,10 +721,10 @@ export default function LiveLectureRecorder() {
                     }
                   }}
                   disabled={loading}
-                  className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold flex items-center justify-center gap-2 transition disabled:opacity-50"
+                  className="flex-1 min-w-[140px] px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold flex items-center justify-center gap-2 transition disabled:opacity-50"
                 >
                   <FileText className="w-5 h-5" />
-                  {showSlides ? 'Hide Slides' : 'Generate Slides'}
+                  {showSlides ? 'Hide Slides' : 'View Slides'}
                 </button>
                 <button
                   onClick={() => {
