@@ -89,6 +89,22 @@ export default function LiveLectureRecorder() {
       recognitionRef.current.onend = () => {
         console.log('[Live Lecture] Speech recognition ended');
         setIsListening(false);
+        
+        // Auto-restart if user is still recording (button held)
+        // This handles the 5-second timeout limitation of Web Speech API
+        if (isRecording) {
+          console.log('[Live Lecture] Auto-restarting recognition for continuous recording');
+          setTimeout(() => {
+            if (isRecording && recognitionRef.current) {
+              try {
+                recognitionRef.current.start();
+                console.log('[Live Lecture] Restarted listening');
+              } catch (e) {
+                console.error('Error restarting recognition:', e);
+              }
+            }
+          }, 100);
+        }
       };
     }
 
@@ -105,18 +121,18 @@ export default function LiveLectureRecorder() {
 
 
 
-  // Timer effect - for hold duration
+  // Timer effect - for recording duration
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (isPressingButton) {
+    if (isRecording) {
       interval = setInterval(() => {
-        setRecordingTime(prev => prev + 0.1);
-      }, 100);
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
     }
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isPressingButton]);
+  }, [isRecording]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -124,10 +140,10 @@ export default function LiveLectureRecorder() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const startPressToRecord = async () => {
+  const startRecording = async () => {
     try {
-      // Don't start if already pressing or if tier limit reached
-      if (isPressingButton) return;
+      // Don't start if already recording or if tier limit reached
+      if (isRecording) return;
       if (!isActive && usageCount >= FREE_LIMIT) {
         setShowPaywall(true);
         return;
@@ -152,7 +168,8 @@ export default function LiveLectureRecorder() {
 
       setError(null);
       setRecordingTime(0);
-      setIsPressingButton(true);
+      setTranscription('');
+      setNotes('');
       setIsRecording(true);
 
       // Start listening
@@ -160,11 +177,12 @@ export default function LiveLectureRecorder() {
         try {
           recognitionRef.current.start();
           setIsListening(true);
-          console.log('[Live Lecture] Started recording on button press');
+          console.log('[Live Lecture] Started continuous recording');
         } catch (error: any) {
           if (!error.message.includes('already started')) {
             console.error('Error starting recognition:', error);
             setError('Failed to start recording');
+            setIsRecording(false);
           }
         }
       }
@@ -192,17 +210,15 @@ export default function LiveLectureRecorder() {
     } catch (error) {
       console.error('Failed to start recording:', error);
       setError('Failed to start recording. Please ensure your browser has microphone access.');
-      setIsPressingButton(false);
       setIsRecording(false);
     }
   };
 
-  const stopPressToRecord = async () => {
-    if (!isPressingButton) return;
+  const stopRecording = async () => {
+    if (!isRecording) return;
 
     try {
-      console.log('[Live Lecture] Stopped recording on button release');
-      setIsPressingButton(false);
+      console.log('[Live Lecture] Stopped recording');
       setIsRecording(false);
 
       // Stop listening
@@ -419,28 +435,40 @@ export default function LiveLectureRecorder() {
                 </div>
               )}
 
-              {/* Large Recording Button - Hold to Record */}
-              <button
-                onMouseDown={startPressToRecord}
-                onMouseUp={stopPressToRecord}
-                onTouchStart={startPressToRecord}
-                onTouchEnd={stopPressToRecord}
-                disabled={loading || !isPressingButton && isRecording}
-                className={`mb-6 w-24 h-24 rounded-full flex items-center justify-center transition-all transform ${
-                  isPressingButton
-                    ? 'bg-red-600 scale-110 shadow-2xl'
-                    : 'bg-indigo-600 hover:bg-indigo-700 hover:scale-105'
-                } text-white disabled:opacity-50 active:scale-95`}
-              >
-                {isPressingButton ? (
-                  <Square className="w-10 h-10" />
-                ) : (
+              {/* Recording Controls */}
+              <div className="flex items-center justify-center gap-4 mb-6">
+                {/* Start Recording Button */}
+                <button
+                  onClick={isRecording ? undefined : startRecording}
+                  disabled={loading || isRecording}
+                  className={`w-24 h-24 rounded-full flex items-center justify-center transition-all transform ${
+                    isRecording
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-indigo-600 hover:bg-indigo-700 hover:scale-105'
+                  } text-white disabled:opacity-50 shadow-lg`}
+                >
                   <Mic className="w-10 h-10" />
+                </button>
+
+                {/* Stop Recording Button - Only shows when recording */}
+                {isRecording && (
+                  <button
+                    onClick={stopRecording}
+                    className="w-24 h-24 rounded-full flex items-center justify-center transition-all transform bg-red-600 hover:bg-red-700 hover:scale-105 text-white shadow-lg animate-pulse"
+                  >
+                    <Square className="w-10 h-10" />
+                  </button>
                 )}
-              </button>
+              </div>
 
               <p className="text-lg font-semibold text-gray-700 mb-6">
-                {isPressingButton ? `Recording... ${formatTime(recordingTime)}` : 'Hold to record'}
+                {isRecording ? (
+                  <>
+                    <span className="text-red-600">● Recording...</span> {formatTime(recordingTime)}
+                  </>
+                ) : (
+                  'Click to start recording'
+                )}
               </p>
 
               {/* Live Transcription Box */}
