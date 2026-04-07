@@ -23,12 +23,14 @@ export default function LiveLectureRecorder() {
   const [showPaywall, setShowPaywall] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isListening, setIsListening] = useState(false);
+  const [isPressingButton, setIsPressingButton] = useState(false);
 
   const FREE_LIMIT = 2;
   
   const recognitionRef = useRef<any>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const isStartingListeningRef = useRef(false);
+  const recognitionInstanceRef = useRef<any>(null);
 
   // Fetch usage on mount
   useEffect(() => {
@@ -54,7 +56,7 @@ export default function LiveLectureRecorder() {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true; // Continuous for lecture recording
+      recognitionRef.current.continuous = false; // Turn-taking for hold-to-record
       recognitionRef.current.interimResults = true;
       recognitionRef.current.lang = 'en-US';
 
@@ -63,27 +65,19 @@ export default function LiveLectureRecorder() {
           .map((result: any) => result[0].transcript)
           .join('');
         
-        // Show transcription in real-time
-        if (isRecording) {
-          setTranscription((prev) => {
-            if (event.results[event.results.length - 1].isFinal) {
-              return prev + (prev ? ' ' : '') + transcript;
-            }
-            return prev;
-          });
-        }
+        // Always update transcription, don't check isRecording (closure bug)
+        setTranscription((prev) => {
+          if (event.results[event.results.length - 1].isFinal) {
+            return prev + (prev ? ' ' : '') + transcript;
+          }
+          return prev;
+        });
       };
 
       recognitionRef.current.onerror = (event: any) => {
         console.error('[Live Lecture] Speech recognition error:', event.error);
         setError(`Speech recognition error: ${event.error}`);
-        // Auto-restart if error occurred while session is active
-        if (isRecording && event.error !== 'aborted') {
-          setTimeout(() => {
-            console.log('[Live Lecture] Auto-restarting after error');
-            startListening();
-          }, 1000);
-        }
+        // Error handled, no auto-restart (user controls via button)
       };
 
       recognitionRef.current.onstart = () => {
@@ -94,7 +88,7 @@ export default function LiveLectureRecorder() {
 
       recognitionRef.current.onend = () => {
         console.log('[Live Lecture] Speech recognition ended');
-        // Don't auto-restart - let the flow control this explicitly
+        setIsListening(false);
       };
     }
 
@@ -109,61 +103,20 @@ export default function LiveLectureRecorder() {
     };
   }, []);
 
-  // Helper function to start listening
-  const startListening = () => {
-    // Prevent multiple simultaneous calls
-    if (isStartingListeningRef.current) {
-      console.log('[Live Lecture] Already starting/listening - canceling duplicate call');
-      return;
-    }
 
-    if (recognitionRef.current && isRecording) {
-      try {
-        isStartingListeningRef.current = true;
-        recognitionRef.current.start();
-        setIsListening(true);
-        console.log('[Live Lecture] Started listening');
-      } catch (error: any) {
-        isStartingListeningRef.current = false;
-        // Ignore if already started
-        if (error.message && error.message.includes('already started')) {
-          console.log('[Live Lecture] Recognition already active');
-          setIsListening(true);
-          return;
-        }
-        console.error('Error starting recognition:', error);
-      }
-    }
-  };
 
-  // Helper function to stop listening
-  const stopListening = () => {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-        isStartingListeningRef.current = false;
-        setIsListening(false);
-        console.log('[Live Lecture] Stopped listening');
-      } catch (error) {
-        console.error('Error stopping recognition:', error);
-        isStartingListeningRef.current = false;
-      }
-    }
-  };
-
-  // Timer effect
+  // Timer effect - for hold duration
   useEffect(() => {
-    if (isRecording) {
-      timerRef.current = setInterval(() => {
-        setRecordingTime(t => t + 1);
-      }, 1000);
-    } else {
-      if (timerRef.current) clearInterval(timerRef.current);
+    let interval: NodeJS.Timeout;
+    if (isPressingButton) {
+      interval = setInterval(() => {
+        setRecordingTime(prev => prev + 0.1);
+      }, 100);
     }
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (interval) clearInterval(interval);
     };
-  }, [isRecording]);
+  }, [isPressingButton]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -171,34 +124,50 @@ export default function LiveLectureRecorder() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const startRecording = async () => {
-    // Check free tier limit
-    if (!isActive && usageCount >= FREE_LIMIT) {
-      setShowPaywall(true);
-      return;
-    }
-
+  const startPressToRecord = async () => {
     try {
-      setError(null);
-      setRecordingTime(0);
-      setTranscription('');
-      setNotes('');
-      setUserInput('');
-      setIsRecording(true);
-
-      // Request microphone access first
-      try {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
-        console.log('[Live Lecture] Microphone access granted');
-      } catch (err) {
-        console.error('[Live Lecture] Microphone access error:', err);
-        setError('Please grant microphone permission to start recording');
-        setIsRecording(false);
+      // Don't start if already pressing or if tier limit reached
+      if (isPressingButton) return;
+      if (!isActive && usageCount >= FREE_LIMIT) {
+        setShowPaywall(true);
         return;
       }
 
+      // Request microphone access
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          }
+        });
+        console.log('[Live Lecture] Microphone access granted');
+        stream.getTracks().forEach(track => track.stop()); // Stop immediately, will restart when listening
+      } catch (err: any) {
+        console.error('[Live Lecture] Microphone access error:', err);
+        setError(`Microphone error: ${err.message}`);
+        return;
+      }
+
+      setError(null);
+      setRecordingTime(0);
+      setIsPressingButton(true);
+      setIsRecording(true);
+
       // Start listening
-      startListening();
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.start();
+          setIsListening(true);
+          console.log('[Live Lecture] Started recording on button press');
+        } catch (error: any) {
+          if (!error.message.includes('already started')) {
+            console.error('Error starting recognition:', error);
+            setError('Failed to start recording');
+          }
+        }
+      }
 
       // Track usage for free tier
       if (!isActive && user) {
@@ -223,19 +192,36 @@ export default function LiveLectureRecorder() {
     } catch (error) {
       console.error('Failed to start recording:', error);
       setError('Failed to start recording. Please ensure your browser has microphone access.');
+      setIsPressingButton(false);
       setIsRecording(false);
     }
   };
 
-  const stopRecording = async () => {
-    if (isRecording) {
+  const stopPressToRecord = async () => {
+    if (!isPressingButton) return;
+
+    try {
+      console.log('[Live Lecture] Stopped recording on button release');
+      setIsPressingButton(false);
       setIsRecording(false);
-      stopListening();
+
+      // Stop listening
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+          setIsListening(false);
+        } catch (e) {
+          console.error('Error stopping recognition:', e);
+        }
+      }
 
       // Auto-generate notes from transcription
       if (transcription.trim()) {
         await generateNotes(transcription);
       }
+    } catch (error) {
+      console.error('Error stopping recording:', error);
+      setError('Error processing recording');
     }
   };
 
@@ -433,17 +419,20 @@ export default function LiveLectureRecorder() {
                 </div>
               )}
 
-              {/* Large Recording Button */}
+              {/* Large Recording Button - Hold to Record */}
               <button
-                onClick={isRecording ? stopRecording : startRecording}
-                disabled={loading}
-                className={`mb-6 w-24 h-24 rounded-full flex items-center justify-center transition-all transform hover:scale-105 ${
-                  isRecording
-                    ? 'bg-red-600 hover:bg-red-700 shadow-lg'
-                    : 'bg-indigo-600 hover:bg-indigo-700 shadow-lg'
-                } text-white disabled:opacity-50`}
+                onMouseDown={startPressToRecord}
+                onMouseUp={stopPressToRecord}
+                onTouchStart={startPressToRecord}
+                onTouchEnd={stopPressToRecord}
+                disabled={loading || !isPressingButton && isRecording}
+                className={`mb-6 w-24 h-24 rounded-full flex items-center justify-center transition-all transform ${
+                  isPressingButton
+                    ? 'bg-red-600 scale-110 shadow-2xl'
+                    : 'bg-indigo-600 hover:bg-indigo-700 hover:scale-105'
+                } text-white disabled:opacity-50 active:scale-95`}
               >
-                {isRecording ? (
+                {isPressingButton ? (
                   <Square className="w-10 h-10" />
                 ) : (
                   <Mic className="w-10 h-10" />
@@ -451,7 +440,7 @@ export default function LiveLectureRecorder() {
               </button>
 
               <p className="text-lg font-semibold text-gray-700 mb-6">
-                {isRecording ? 'Stop when finished' : 'Click to start recording'}
+                {isPressingButton ? `Recording... ${formatTime(recordingTime)}` : 'Hold to record'}
               </p>
 
               {/* Live Transcription Box */}
