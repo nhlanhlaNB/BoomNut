@@ -56,7 +56,7 @@ export default function LiveLectureRecorder() {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false; // Turn-taking for hold-to-record
+      recognitionRef.current.continuous = true; // Continuous recording while button held - no timeout
       recognitionRef.current.interimResults = true;
       recognitionRef.current.lang = 'en-US';
 
