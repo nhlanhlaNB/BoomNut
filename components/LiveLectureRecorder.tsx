@@ -12,7 +12,6 @@ export default function LiveLectureRecorder() {
   const { isActive } = useSubscription();
   const [isRecording, setIsRecording] = useState(false);
   const [transcription, setTranscription] = useState('');
-  const [displayTranscription, setDisplayTranscription] = useState('');
   const [notes, setNotes] = useState('');
   const [slides, setSlides] = useState<Slide[]>([]);
   const [showSlides, setShowSlides] = useState(false);
@@ -27,9 +26,9 @@ export default function LiveLectureRecorder() {
 
   const FREE_LIMIT = 2;
   
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recognitionRef = useRef<any>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const isStartingListeningRef = useRef(false);
 
   // Fetch usage on mount
   useEffect(() => {
@@ -50,12 +49,12 @@ export default function LiveLectureRecorder() {
     fetchUsage();
   }, [user, isActive]);
 
-  // Initialize Speech Recognition (only once on mount, like Voice Tutor)
+  // Initialize Speech Recognition - EXACT VOICE TUTOR LOGIC
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true;
+      recognitionRef.current.continuous = true; // Continuous for lecture recording
       recognitionRef.current.interimResults = true;
       recognitionRef.current.lang = 'en-US';
 
@@ -64,25 +63,25 @@ export default function LiveLectureRecorder() {
           .map((result: any) => result[0].transcript)
           .join('');
         
-        setDisplayTranscription((prev) => prev + transcript);
-        
-        if (event.results[event.results.length - 1].isFinal) {
-          setTranscription((prev) => prev + (prev ? ' ' : '') + transcript);
+        // Show transcription in real-time
+        if (isRecording) {
+          setTranscription((prev) => {
+            if (event.results[event.results.length - 1].isFinal) {
+              return prev + (prev ? ' ' : '') + transcript;
+            }
+            return prev;
+          });
         }
       };
 
       recognitionRef.current.onerror = (event: any) => {
         console.error('[Live Lecture] Speech recognition error:', event.error);
         setError(`Speech recognition error: ${event.error}`);
-        if (event.error !== 'aborted') {
+        // Auto-restart if error occurred while session is active
+        if (isRecording && event.error !== 'aborted') {
           setTimeout(() => {
-            if (recognitionRef.current && isRecording) {
-              try {
-                recognitionRef.current.start();
-              } catch (err) {
-                console.error('[Live Lecture] Error restarting recognition:', err);
-              }
-            }
+            console.log('[Live Lecture] Auto-restarting after error');
+            startListening();
           }, 1000);
         }
       };
@@ -95,7 +94,7 @@ export default function LiveLectureRecorder() {
 
       recognitionRef.current.onend = () => {
         console.log('[Live Lecture] Speech recognition ended');
-        setIsListening(false);
+        // Don't auto-restart - let the flow control this explicitly
       };
     }
 
@@ -109,6 +108,48 @@ export default function LiveLectureRecorder() {
       }
     };
   }, []);
+
+  // Helper function to start listening
+  const startListening = () => {
+    // Prevent multiple simultaneous calls
+    if (isStartingListeningRef.current) {
+      console.log('[Live Lecture] Already starting/listening - canceling duplicate call');
+      return;
+    }
+
+    if (recognitionRef.current && isRecording) {
+      try {
+        isStartingListeningRef.current = true;
+        recognitionRef.current.start();
+        setIsListening(true);
+        console.log('[Live Lecture] Started listening');
+      } catch (error: any) {
+        isStartingListeningRef.current = false;
+        // Ignore if already started
+        if (error.message && error.message.includes('already started')) {
+          console.log('[Live Lecture] Recognition already active');
+          setIsListening(true);
+          return;
+        }
+        console.error('Error starting recognition:', error);
+      }
+    }
+  };
+
+  // Helper function to stop listening
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+        isStartingListeningRef.current = false;
+        setIsListening(false);
+        console.log('[Live Lecture] Stopped listening');
+      } catch (error) {
+        console.error('Error stopping recognition:', error);
+        isStartingListeningRef.current = false;
+      }
+    }
+  };
 
   // Timer effect
   useEffect(() => {
@@ -141,27 +182,11 @@ export default function LiveLectureRecorder() {
       setError(null);
       setRecordingTime(0);
       setTranscription('');
-      setDisplayTranscription('');
       setNotes('');
       setUserInput('');
       setIsRecording(true);
 
-      // Start Web Speech Recognition
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.start();
-          console.log('[Live Lecture] Recording started');
-        } catch (err: any) {
-          if (err.message && err.message.includes('already started')) {
-            console.log('[Live Lecture] Recognition already active');
-            setIsListening(true);
-          } else {
-            throw err;
-          }
-        }
-      }
-
-      // Request microphone access for permission
+      // Request microphone access first
       try {
         await navigator.mediaDevices.getUserMedia({ audio: true });
         console.log('[Live Lecture] Microphone access granted');
@@ -171,6 +196,9 @@ export default function LiveLectureRecorder() {
         setIsRecording(false);
         return;
       }
+
+      // Start listening
+      startListening();
 
       // Track usage for free tier
       if (!isActive && user) {
@@ -195,22 +223,14 @@ export default function LiveLectureRecorder() {
     } catch (error) {
       console.error('Failed to start recording:', error);
       setError('Failed to start recording. Please ensure your browser has microphone access.');
+      setIsRecording(false);
     }
   };
 
   const stopRecording = async () => {
     if (isRecording) {
       setIsRecording(false);
-      setIsListening(false);
-
-      // Stop Web Speech Recognition
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch (err) {
-          console.error('[Live Lecture] Error stopping recognition:', err);
-        }
-      }
+      stopListening();
 
       // Auto-generate notes from transcription
       if (transcription.trim()) {
@@ -444,7 +464,7 @@ export default function LiveLectureRecorder() {
                     </p>
                   </div>
                   <textarea
-                    value={displayTranscription}
+                    value={transcription}
                     readOnly
                     placeholder="Your speech will appear here..."
                     className="w-full h-32 p-3 border border-blue-200 rounded-lg bg-white text-gray-700 text-sm resize-none focus:outline-none"
