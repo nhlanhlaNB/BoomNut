@@ -31,6 +31,8 @@ export default function LiveLectureRecorder() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const isStartingListeningRef = useRef(false);
   const recognitionInstanceRef = useRef<any>(null);
+  const isRecordingRef = useRef(false); // Track recording state for handlers
+  const lastProcessedResultIndexRef = useRef(0); // Track which results we've processed
 
   // Fetch usage on mount
   useEffect(() => {
@@ -61,17 +63,21 @@ export default function LiveLectureRecorder() {
       recognitionRef.current.lang = 'en-US';
 
       recognitionRef.current.onresult = (event: any) => {
-        const transcript = Array.from(event.results)
+        // Only process NEW results we haven't seen before
+        const newResults = Array.from(event.results).slice(lastProcessedResultIndexRef.current);
+        const newTranscript = newResults
           .map((result: any) => result[0].transcript)
           .join('');
         
-        // Always update transcription, don't check isRecording (closure bug)
-        setTranscription((prev) => {
-          if (event.results[event.results.length - 1].isFinal) {
-            return prev + (prev ? ' ' : '') + transcript;
-          }
-          return prev;
-        });
+        // Only update if there's new content and it's final
+        if (newTranscript && event.results[event.results.length - 1].isFinal) {
+          setTranscription((prev) => {
+            return prev + (prev ? ' ' : '') + newTranscript;
+          });
+        }
+        
+        // Track which results we've processed
+        lastProcessedResultIndexRef.current = event.results.length;
       };
 
       recognitionRef.current.onerror = (event: any) => {
@@ -90,14 +96,15 @@ export default function LiveLectureRecorder() {
         console.log('[Live Lecture] Speech recognition ended');
         setIsListening(false);
         
-        // Auto-restart if user is still recording (button held)
-        // This handles the 5-second timeout limitation of Web Speech API
-        if (isRecording) {
+        // Auto-restart if user is still recording
+        // Use ref to avoid closure issues with state
+        if (isRecordingRef.current) {
           console.log('[Live Lecture] Auto-restarting recognition for continuous recording');
           setTimeout(() => {
-            if (isRecording && recognitionRef.current) {
+            if (isRecordingRef.current && recognitionRef.current) {
               try {
                 recognitionRef.current.start();
+                setIsListening(true);
                 console.log('[Live Lecture] Restarted listening');
               } catch (e) {
                 console.error('Error restarting recognition:', e);
@@ -120,6 +127,11 @@ export default function LiveLectureRecorder() {
   }, []);
 
 
+
+  // Sync recording state to ref - for use in handlers to avoid closure issues
+  useEffect(() => {
+    isRecordingRef.current = isRecording;
+  }, [isRecording]);
 
   // Timer effect - for recording duration
   useEffect(() => {
@@ -170,6 +182,7 @@ export default function LiveLectureRecorder() {
       setRecordingTime(0);
       setTranscription('');
       setNotes('');
+      lastProcessedResultIndexRef.current = 0; // Reset result tracking
       setIsRecording(true);
 
       // Start listening
@@ -226,6 +239,7 @@ export default function LiveLectureRecorder() {
         try {
           recognitionRef.current.stop();
           setIsListening(false);
+          lastProcessedResultIndexRef.current = 0; // Reset for next recording
         } catch (e) {
           console.error('Error stopping recognition:', e);
         }
