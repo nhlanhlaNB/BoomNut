@@ -256,6 +256,11 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      // Calculate number of slides based on transcript length
+      // Estimate: ~500 words per slide
+      const wordCount = transcription.split(/\s+/).length;
+      const suggestedSlides = Math.max(3, Math.ceil(wordCount / 500));
+
       // Generate slides structure using AI
       const slidesResponse = await createChatCompletion({
         messages: [
@@ -271,21 +276,22 @@ export async function POST(req: NextRequest) {
 ]
 
 Guidelines:
-- Create 5-8 slides covering the main topics
+- Create approximately ${suggestedSlides} slides - generate AS MANY slides as needed to cover all topics
 - Each slide should have a clear title
 - Content should be bullet points
 - Include ONLY information from the transcription provided
 - Include key takeaways
 - Make slides visual and easy to understand
 - First slide should be an introduction
-- Last slide should be a summary/conclusion`,
+- Last slide should be a summary/conclusion
+- Do NOT limit slides - generate comprehensive coverage of ALL topics`,
           },
           {
             role: 'user',
-            content: `Lecture transcription:\n${transcription}\n\nLecture notes:\n${notes || 'N/A'}\n\nGenerate professional presentation slides based ONLY on the transcription.`,
+            content: `Lecture transcription (${wordCount} words):\n${transcription}\n\nLecture notes:\n${notes || 'N/A'}\n\nGenerate comprehensive presentation slides based on the transcription. Create as many slides as needed to cover all topics properly.`,
           },
         ],
-        maxTokens: 3000,
+        maxTokens: 4000,
       });
 
       const slidesContent = slidesResponse.choices[0]?.message?.content || '';
