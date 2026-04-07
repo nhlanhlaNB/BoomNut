@@ -266,32 +266,37 @@ export async function POST(req: NextRequest) {
         messages: [
           {
             role: 'system',
-            content: `Generate presentation slides from the lecture content. Return a JSON array of slides with the following structure:
+            content: `You are creating presentation slides from a lecture. Return a JSON array of slides.
+
+IMPORTANT: Extract and summarize KEY CONCEPTS AND IDEAS, NOT just recite what was said.
+
+Format:
 [
   {
     "title": "Slide Title",
-    "content": ["Point 1", "Point 2", "Point 3"],
-    "keyPoints": ["Key point 1", "Key point 2"]
+    "content": ["Key point 1", "Key point 2", "Key point 3"],
+    "keyPoints": ["Main takeaway 1", "Main takeaway 2"]
   }
 ]
 
 Guidelines:
-- Create approximately ${suggestedSlides} slides - generate AS MANY slides as needed to cover all topics
-- Each slide should have a clear title
-- Content should be bullet points
-- Include ONLY information from the transcription provided
-- Include key takeaways
-- Make slides visual and easy to understand
-- First slide should be an introduction
-- Last slide should be a summary/conclusion
-- Do NOT limit slides - generate comprehensive coverage of ALL topics`,
+- Create 5-8 well-organized slides covering the main topics
+- Each slide should focus on ONE main topic or concept
+- Content should be concise bullet points (5-7 words max each)
+- SUMMARIZE and EXTRACT key ideas - do NOT just repeat what was said
+- Group related concepts together
+- First slide: Title/Introduction
+- Middle slides: Main topics and concepts (SUMMARIZED)
+- Last slide: Summary and key takeaways
+- Avoid verbose explanations - use short, impactful phrases
+- Focus on what students need to understand, not transcription details`,
           },
           {
             role: 'user',
-            content: `Lecture transcription (${wordCount} words):\n${transcription}\n\nLecture notes:\n${notes || 'N/A'}\n\nGenerate comprehensive presentation slides based on the transcription. Create as many slides as needed to cover all topics properly.`,
+            content: `Lecture content:\n${transcription}\n\nCreate concise, concept-focused presentation slides that summarize the key ideas (NOT a transcription). Extract the main topics and key points.`,
           },
         ],
-        maxTokens: 4000,
+        maxTokens: 3000,
       });
 
       const slidesContent = slidesResponse.choices[0]?.message?.content || '';

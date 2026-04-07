@@ -63,21 +63,30 @@ export default function LiveLectureRecorder() {
       recognitionRef.current.lang = 'en-US';
 
       recognitionRef.current.onresult = (event: any) => {
-        // Only process NEW results we haven't seen before
-        const newResults = Array.from(event.results).slice(lastProcessedResultIndexRef.current);
-        const newTranscript = newResults
-          .map((result: any) => result[0].transcript)
-          .join('');
+        // Find the last FINAL result we haven't processed yet
+        let finalTranscript = '';
+        let lastFinalIndex = -1;
         
-        // Only update if there's new content and it's final
-        if (newTranscript && event.results[event.results.length - 1].isFinal) {
-          setTranscription((prev) => {
-            return prev + (prev ? ' ' : '') + newTranscript;
-          });
+        // Scan from the end backwards to find the last final result
+        for (let i = event.results.length - 1; i >= lastProcessedResultIndexRef.current; i--) {
+          if (event.results[i].isFinal) {
+            // Only add this result if we haven't seen it before
+            if (i >= lastProcessedResultIndexRef.current) {
+              finalTranscript = event.results[i][0].transcript;
+              lastFinalIndex = i;
+            }
+            break;
+          }
         }
         
-        // Track which results we've processed
-        lastProcessedResultIndexRef.current = event.results.length;
+        // Only add if we found a new final result
+        if (finalTranscript && lastFinalIndex > -1) {
+          setTranscription((prev) => {
+            return prev + (prev ? ' ' : '') + finalTranscript;
+          });
+          // Update to track the last final result we've processed
+          lastProcessedResultIndexRef.current = lastFinalIndex + 1;
+        }
       };
 
       recognitionRef.current.onerror = (event: any) => {
