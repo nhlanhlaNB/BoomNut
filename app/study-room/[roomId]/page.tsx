@@ -324,31 +324,6 @@ export default function StudyRoomPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Header */}
-      <header className="bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg p-4">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center gap-2 text-white hover:text-blue-100">
-              <Home className="w-5 h-5" />
-              <span className="font-semibold">Home</span>
-            </Link>
-            <div className="h-6 w-px bg-white/30"></div>
-            <span className="text-white font-semibold">Study Room</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={copyRoomLink}
-              className="flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm text-white rounded-lg hover:bg-white/30 transition-colors"
-            >
-              {copied ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              {copied ? 'Copied!' : 'Share Room'}
-            </button>
-            <SubjectSelector subject={subject} onSubjectChange={updateRoomSubject} />
-            <AuthButton />
-          </div>
-        </div>
-      </header>
-
       <div className="flex-1 max-w-7xl w-full mx-auto p-4 flex gap-4">
         {/* Participants Sidebar */}
         <div className="w-64 bg-white rounded-lg shadow p-4">

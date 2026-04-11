@@ -108,22 +108,6 @@ export default function TestSubscriptionPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="max-w-4xl mx-auto px-4 py-6 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-gray-900 rounded-lg">
-              <Zap className="w-6 h-6 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">Subscription Tests</h1>
-          </div>
-          <Link href="/" className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
-            <Home className="w-4 h-4" />
-            Home
-          </Link>
-        </div>
-      </header>
-
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 py-12">
         {/* User Info */}
