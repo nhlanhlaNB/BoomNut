@@ -39,6 +39,3 @@ prisma/*.db-journal
 
 # uploads
 /public/uploads
-
-# data storage
-.data/
