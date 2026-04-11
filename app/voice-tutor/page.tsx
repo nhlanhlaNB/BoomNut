@@ -5,12 +5,14 @@ import { useRouter } from 'next/navigation';
 import { Mic, MicOff, Volume2, VolumeX, Settings, AlertCircle, CheckCircle, Loader, Lock } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useAppUsage } from '@/hooks/useAppUsage';
 import PaywallModal from '@/components/PaywallModal';
 
 export default function VoiceTutorPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const { isActive } = useSubscription();
+  const { usageCount, isLimitExceeded, trackUsage } = useAppUsage('voiceTutor', 2);
 
   const [isRecording, setIsRecording] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -24,10 +26,7 @@ export default function VoiceTutorPage() {
   const [isListening, setIsListening] = useState(false);
   const [isPressingButton, setIsPressingButton] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [messageCount, setMessageCount] = useState(0);
   const [showPaywall, setShowPaywall] = useState(false);
-
-  const FREE_MESSAGE_LIMIT = 2;
 
   // Check authentication on mount
   useEffect(() => {
@@ -38,23 +37,9 @@ export default function VoiceTutorPage() {
 
   // Fetch message usage from database on load
   useEffect(() => {
-    if (!user || isActive) return; // Don't track for paid users
-
-    const fetchUsage = async () => {
-      try {
-        const response = await fetch(`/api/usage/track?userId=${user.uid}&appName=voiceTutor`);
-        if (response.ok) {
-          const data = await response.json();
-          setMessageCount(data.messageCount);
-          console.log('[VOICE TUTOR] Loaded usage:', data);
-        }
-      } catch (error) {
-        console.error('[VOICE TUTOR] Error fetching usage:', error);
-      }
-    };
-
-    fetchUsage();
-  }, [user, isActive]);
+    // Usage is now handled by useAppUsage hook
+    console.log('[VOICE TUTOR] Usage tracking via hook:', usageCount);
+  }, [usageCount]);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -182,7 +167,7 @@ export default function VoiceTutorPage() {
     if (!text || text.trim().length === 0) return;
     
     // Check free tier message limit
-    if (!isActive && messageCount >= FREE_MESSAGE_LIMIT) {
+    if (!isActive && isLimitExceeded) {
       setShowPaywall(true);
       setIsListening(false);
       return;
@@ -196,24 +181,7 @@ export default function VoiceTutorPage() {
     
     // Track usage for free tier users
     if (!isActive && user) {
-      try {
-        const trackResponse = await fetch('/api/usage/track', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: user.uid,
-            appName: 'voiceTutor'
-          })
-        });
-        
-        if (trackResponse.ok) {
-          const trackData = await trackResponse.json();
-          setMessageCount(trackData.messageCount);
-          console.log('[VOICE TUTOR] Usage tracked:', trackData);
-        }
-      } catch (error) {
-        console.error('[VOICE TUTOR] Error tracking usage:', error);
-      }
+      await trackUsage();
     }
     
     // Send to AI tutor
@@ -752,7 +720,7 @@ export default function VoiceTutorPage() {
                     <div className="flex items-center gap-2">
                       <Lock className="w-4 h-4 text-blue-600" />
                       <span className="text-sm text-blue-800">
-                        Free Plan: {messageCount}/{FREE_MESSAGE_LIMIT} messages used
+                        Free Plan: {usageCount}/2 messages used
                       </span>
                     </div>
                     <a

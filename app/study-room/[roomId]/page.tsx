@@ -6,6 +6,7 @@ import { db } from '@/lib/firebase';
 import { collection, addDoc, query, orderBy, onSnapshot, doc, updateDoc, arrayUnion, getDoc, setDoc } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useAppUsage } from '@/hooks/useAppUsage';
 import { Send, Users, Copy, CheckCircle, Home, Sparkles, Lock } from 'lucide-react';
 import Link from 'next/link';
 import ChatMessage from '@/components/ChatMessage';
@@ -36,6 +37,7 @@ export default function StudyRoomPage() {
   const roomId = params.roomId as string;
   const { user, loading: authLoading } = useAuth();
   const { isActive } = useSubscription();
+  const { usageCount, isLimitExceeded, trackUsage } = useAppUsage('studyRoom', 2);
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -44,31 +46,13 @@ export default function StudyRoomPage() {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [copied, setCopied] = useState(false);
   const [roomExists, setRoomExists] = useState(true);
-  const [messageCount, setMessageCount] = useState(0);
   const [showPaywall, setShowPaywall] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const FREE_MESSAGE_LIMIT = 2;
 
   // Fetch message usage from database on load
-  useEffect(() => {
-    if (!user || isActive) return; // Don't track for paid users
-
-    const fetchUsage = async () => {
-      try {
-        const response = await fetch(`/api/usage/track?userId=${user.uid}&appName=studyRoom`);
-        if (response.ok) {
-          const data = await response.json();
-          setMessageCount(data.messageCount);
-          console.log('[STUDY ROOM] Loaded usage:', data);
-        }
-      } catch (error) {
-        console.error('[STUDY ROOM] Error fetching usage:', error);
-      }
-    };
-
-    fetchUsage();
-  }, [user, isActive]);
+  // Usage loading is now handled by the useAppUsage hook automatically
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -184,7 +168,7 @@ export default function StudyRoomPage() {
     if (!input.trim() || isLoading || !user || !db) return;
 
     // Check free tier limit
-    if (!isActive && messageCount >= FREE_MESSAGE_LIMIT) {
+    if (!isActive && isLimitExceeded) {
       setShowPaywall(true);
       return;
     }
@@ -203,24 +187,7 @@ export default function StudyRoomPage() {
     
     // Track usage for free tier users
     if (!isActive && user) {
-      try {
-        const trackResponse = await fetch('/api/usage/track', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: user.uid,
-            appName: 'studyRoom'
-          })
-        });
-        
-        if (trackResponse.ok) {
-          const trackData = await trackResponse.json();
-          setMessageCount(trackData.messageCount);
-          console.log('[STUDY ROOM] Usage tracked:', trackData);
-        }
-      } catch (error) {
-        console.error('[STUDY ROOM] Error tracking usage:', error);
-      }
+      await trackUsage();
     }
 
     try {
@@ -374,7 +341,7 @@ export default function StudyRoomPage() {
                   <div className="flex items-center gap-2">
                     <Lock className="w-4 h-4 text-blue-600" />
                     <span className="text-sm text-blue-800">
-                      Free Plan: {messageCount}/{FREE_MESSAGE_LIMIT} messages used
+                      Free Plan: {usageCount}/2 messages used
                     </span>
                   </div>
                   <Link

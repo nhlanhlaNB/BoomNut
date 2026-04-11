@@ -12,6 +12,7 @@ import AuthButton from '@/components/AuthButton';
 import PaywallModal from '@/components/PaywallModal';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAuth } from '@/hooks/useAuth';
+import { useAppUsage } from '@/hooks/useAppUsage';
 
 type Message = {
   id: string;
@@ -24,6 +25,7 @@ export default function TutorPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const { isActive } = useSubscription();
+  const { usageCount, isLimitExceeded, trackUsage } = useAppUsage('tutor', 2);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -31,12 +33,9 @@ export default function TutorPage() {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFileData[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
-  const [messageCount, setMessageCount] = useState(0);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isSavingChat, setIsSavingChat] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const FREE_MESSAGE_LIMIT = 2;
 
   // Check authentication on mount
   useEffect(() => {
@@ -45,26 +44,11 @@ export default function TutorPage() {
     }
   }, [user, loading, router]);
 
-  // Fetch message usage and chat history on load
+  // Load chat history on mount
   useEffect(() => {
-    const initialize = async () => {
+    const loadHistory = async () => {
       if (!user) return;
 
-      // Fetch usage for free tier
-      if (!isActive) {
-        try {
-          const response = await fetch(`/api/usage/track?userId=${user.uid}&appName=tutor`);
-          if (response.ok) {
-            const data = await response.json();
-            setMessageCount(data.messageCount);
-            console.log('[TUTOR] Loaded usage:', data);
-          }
-        } catch (error) {
-          console.error('[TUTOR] Error fetching usage:', error);
-        }
-      }
-
-      // Load chat history if available - check for recent sessions
       try {
         const historyResponse = await fetch(`/api/tutor/chat-history?userId=${user.uid}`);
         if (historyResponse.ok) {
@@ -80,8 +64,8 @@ export default function TutorPage() {
       }
     };
 
-    initialize();
-  }, [user, isActive]);
+    loadHistory();
+  }, [user]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -149,7 +133,7 @@ export default function TutorPage() {
     if (!input.trim() || isLoading) return;
 
     // Check free tier limit
-    if (!isActive && messageCount >= FREE_MESSAGE_LIMIT) {
+    if (!isActive && isLimitExceeded) {
       setShowPaywall(true);
       return;
     }
@@ -167,24 +151,7 @@ export default function TutorPage() {
     
     // Track usage for free tier users
     if (!isActive && user) {
-      try {
-        const trackResponse = await fetch('/api/usage/track', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: user.uid,
-            appName: 'tutor'
-          })
-        });
-        
-        if (trackResponse.ok) {
-          const trackData = await trackResponse.json();
-          setMessageCount(trackData.messageCount);
-          console.log('[TUTOR] Usage tracked:', trackData);
-        }
-      } catch (error) {
-        console.error('[TUTOR] Error tracking usage:', error);
-      }
+      await trackUsage();
     }
 
     try {
@@ -272,17 +239,17 @@ export default function TutorPage() {
           {/* Free tier usage indicator */}
           {!isActive && user && (
             <div className={`border rounded-lg p-4 mb-4 ${
-              messageCount >= FREE_MESSAGE_LIMIT
+              isLimitExceeded
                 ? 'bg-red-50 border-red-200'
                 : 'bg-blue-50 border-blue-200'
             }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Lock className="w-4 h-4" style={{ color: messageCount >= FREE_MESSAGE_LIMIT ? '#dc2626' : '#2563eb' }} />
-                  <span className={`text-sm font-medium ${messageCount >= FREE_MESSAGE_LIMIT ? 'text-red-800' : 'text-blue-800'}`}>
-                    {messageCount >= FREE_MESSAGE_LIMIT ? (
+                  <Lock className="w-4 h-4" style={{ color: isLimitExceeded ? '#dc2626' : '#2563eb' }} />
+                  <span className={`text-sm font-medium ${isLimitExceeded ? 'text-red-800' : 'text-blue-800'}`}>
+                    {isLimitExceeded ? (
                       <>
-                        ⚠️ You've used your {FREE_MESSAGE_LIMIT} free messages today. 
+                        ⚠️ You've used your 2 free messages today. 
                         <Link
                           href="/pricing"
                           className="ml-2 font-bold underline text-red-700 hover:text-red-800"
@@ -292,7 +259,7 @@ export default function TutorPage() {
                       </>
                     ) : (
                       <>
-                        Free Plan: {messageCount}/{FREE_MESSAGE_LIMIT} messages used today
+                        Free Plan: {usageCount}/2 messages used today
                         <Link
                           href="/pricing"
                           className="ml-2 text-blue-600 hover:text-blue-700 font-medium underline"

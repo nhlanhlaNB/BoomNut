@@ -7,6 +7,7 @@ import { Gamepad2, Trophy, Zap, Target, Clock, Star, Award, ArrowLeft, Lock, Fil
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useAppUsage } from '@/hooks/useAppUsage';
 import PaywallModal from '@/components/PaywallModal';
 import FileUpload, { UploadedFileData } from '@/components/FileUpload';
 import { getRandomQuestion, getRandomWordRaceAnswer, getMemoryMatchPairs } from '@/lib/quizQuestions';
@@ -24,6 +25,7 @@ export default function ArcadePage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const { isActive } = useSubscription();
+  const { usageCount, isLimitExceeded, trackUsage } = useAppUsage('arcade', 2);
   const [gameMode, setGameMode] = useState<GameMode>(null);
   const [score, setScore] = useState(0);
   const [level, setLevel] = useState(1);
@@ -31,15 +33,12 @@ export default function ArcadePage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [totalPoints, setTotalPoints] = useState(0);
-  const [usageCount, setUsageCount] = useState(0);
   const [showPaywall, setShowPaywall] = useState(false);
 
   // PDF Upload State
   const [uploadedFile, setUploadedFile] = useState<UploadedFileData | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedQuestions, setGeneratedQuestions] = useState<any[]>([]);
-
-  const FREE_LIMIT = 2;
 
   // Speed Quiz State
   const [currentQuestion, setCurrentQuestion] = useState<any>(null);
@@ -80,22 +79,12 @@ export default function ArcadePage() {
   useEffect(() => {
     loadLeaderboard();
     loadUserPoints();
-    fetchUsage();
   }, []);
 
   // Fetch usage on mount
   const fetchUsage = async () => {
-    if (!user || isActive) return;
-
-    try {
-      const response = await fetch(`/api/usage/track?userId=${user.uid}&appName=arcade`);
-      if (response.ok) {
-        const data = await response.json();
-        setUsageCount(data.messageCount || 0);
-      }
-    } catch (error) {
-      console.error('Error fetching usage:', error);
-    }
+    // Usage is now handled by useAppUsage hook
+    console.log('[ARCADE] Usage tracking via hook:', usageCount);
   };
 
   useEffect(() => {
@@ -147,7 +136,7 @@ export default function ArcadePage() {
   };
 
   const startSpeedQuiz = async () => {
-    if (!isActive && usageCount >= FREE_LIMIT) {
+    if (!isActive && isLimitExceeded) {
       setShowPaywall(true);
       return;
     }
@@ -170,17 +159,7 @@ export default function ArcadePage() {
       if (result.data) {
         setGeneratedQuestions(result.data);
         if (!isActive && user) {
-          try {
-            const trackResponse = await fetch('/api/usage/track', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ userId: user.uid, appName: 'arcade' })
-            });
-            if (trackResponse.ok) {
-              const trackData = await trackResponse.json();
-              setUsageCount(trackData.messageCount);
-            }
-          } catch (error) { console.error('Error tracking usage:', error); }
+          await trackUsage();
         }
         setGameMode('speed-quiz');
         setIsPlaying(true);
@@ -235,7 +214,7 @@ export default function ArcadePage() {
   };
 
   const startMemoryMatch = async () => {
-    if (!isActive && usageCount >= FREE_LIMIT) {
+    if (!isActive && isLimitExceeded) {
       setShowPaywall(true);
       return;
     }
@@ -257,17 +236,7 @@ export default function ArcadePage() {
       const result = await response.json();
       if (result.data) {
         if (!isActive && user) {
-          try {
-            const trackResponse = await fetch('/api/usage/track', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ userId: user.uid, appName: 'arcade' })
-            });
-            if (trackResponse.ok) {
-              const trackData = await trackResponse.json();
-              setUsageCount(trackData.messageCount);
-            }
-          } catch (error) { console.error('Error tracking usage:', error); }
+          await trackUsage();
         }
         setGameMode('memory-match');
         setIsPlaying(true);
@@ -308,7 +277,7 @@ export default function ArcadePage() {
   };
 
   const startWordRace = async () => {
-    if (!isActive && usageCount >= FREE_LIMIT) {
+    if (!isActive && isLimitExceeded) {
       setShowPaywall(true);
       return;
     }
@@ -331,14 +300,7 @@ export default function ArcadePage() {
       if (result.data) {
         setGeneratedQuestions(result.data);
         if (!isActive && user) {
-          try {
-            await fetch('/api/usage/track', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ userId: user.uid, appName: 'arcade' })
-            });
-            fetchUsage();
-          } catch (error) { console.error('Error tracking usage:', error); }
+          await trackUsage();
         }
         setGameMode('word-race');
         setIsPlaying(true);
@@ -438,18 +400,18 @@ export default function ArcadePage() {
           {/* Usage Indicator */}
           {!isActive && user && (
             <div className={`mb-6 p-4 rounded-lg border flex items-center justify-between ${
-              usageCount >= FREE_LIMIT
+              isLimitExceeded
                 ? 'bg-red-50 border-red-200'
                 : 'bg-blue-50 border-blue-200'
             }`}>
               <div className="flex items-center gap-2">
-                <Lock className="w-4 h-4" style={{ color: usageCount >= FREE_LIMIT ? '#dc2626' : '#2563eb' }} />
+                <Lock className="w-4 h-4" style={{ color: isLimitExceeded ? '#dc2626' : '#2563eb' }} />
                 <span className={`text-sm font-medium ${
-                  usageCount >= FREE_LIMIT ? 'text-red-800' : 'text-blue-800'
+                  isLimitExceeded ? 'text-red-800' : 'text-blue-800'
                 }`}>
-                  {usageCount >= FREE_LIMIT ? (
+                  {isLimitExceeded ? (
                     <>
-                      ⚠️ You've used your {FREE_LIMIT} free games today.
+                      ⚠️ You've used your 2 free games today.
                       <a
                         href="/pricing"
                         className="ml-2 font-bold underline text-red-700 hover:text-red-800"
@@ -459,7 +421,7 @@ export default function ArcadePage() {
                     </>
                   ) : (
                     <>
-                      Free Plan: {usageCount}/{FREE_LIMIT} games played today
+                      Free Plan: {usageCount}/2 games played today
                       <a
                         href="/pricing"
                         className="ml-2 text-blue-600 hover:text-blue-700 font-medium underline"
