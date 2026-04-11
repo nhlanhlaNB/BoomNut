@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import fs from "fs/promises"
 import path from "path"
 
-const POSTS_PATH = path.join(process.cwd(), "public", "community-posts.json")
+const POSTS_PATH = path.join(process.cwd(), ".data", "community-posts.json")
 
 async function readPosts() {
   try {
@@ -46,8 +46,10 @@ export async function POST(req: Request) {
     posts.push(post)
     await fs.writeFile(POSTS_PATH, JSON.stringify(posts, null, 2), "utf-8")
     return NextResponse.json(post, { status: 201 })
-  } catch (err) {
-    console.error(err)
-    return NextResponse.json({ error: "Unable to save post" }, { status: 500 })
+  } catch (err: any) {
+    console.error("POST Error:", err?.message || err)
+    console.error("Posts path:", POSTS_PATH)
+    console.error("cwd:", process.cwd())
+    return NextResponse.json({ error: "Unable to save post", details: err?.message }, { status: 500 })
   }
 }

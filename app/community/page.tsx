@@ -26,7 +26,6 @@ function timeAgo(dateStr: string) {
 
 export default function CommunityFeed() {
   const [posts, setPosts] = useState<Post[]>([])
-  const [name, setName] = useState("")
   const [message, setMessage] = useState("")
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(true)
@@ -57,16 +56,18 @@ export default function CommunityFeed() {
       const res = await fetch("/api/community", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim() || "Anonymous", message: message.trim() }),
+        body: JSON.stringify({ name: "Anonymous", message: message.trim() }),
       })
-      if (!res.ok) throw new Error("Failed to post")
-      setName("")
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error?.details || error?.error || "Failed to post")
+      }
       setMessage("")
       setFocused(false)
       await fetchPosts()
-    } catch (err) {
-      console.error(err)
-      alert("Could not post message.")
+    } catch (err: any) {
+      console.error("Error posting:", err)
+      alert(`Could not post message: ${err?.message || "Unknown error"}`)
     } finally {
       setLoading(false)
     }
@@ -307,15 +308,15 @@ export default function CommunityFeed() {
 
       {/* Compose Box */}
       <div className="post-compose">
-        <div className="compose-header">
+        <div className="compose-header" style={{ display: "none" }}>
           <div className="compose-avatar">
-            {name.trim() ? getInitials(name.trim()) : "?"}
+            {"?"}
           </div>
           <input
             className="compose-name-input"
             placeholder="Your name (optional)"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            value={""}
+            onChange={() => {}}
             onFocus={() => setFocused(true)}
           />
         </div>
@@ -335,7 +336,7 @@ export default function CommunityFeed() {
               {message.length > 0 ? `${message.length} chars` : "plain text"}
             </span>
             <div className="compose-actions">
-              <button className="btn-cancel" onClick={() => { setName(""); setMessage(""); setFocused(false) }}>
+              <button className="btn-cancel" onClick={() => { setMessage(""); setFocused(false) }}>
                 Cancel
               </button>
               <button className="btn-post" onClick={handleSubmit} disabled={loading || !message.trim()}>
