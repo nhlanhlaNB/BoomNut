@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
 
     // Find the referral code in the referralCodes collection
     const codeUrl = `${FIREBASE_DB_URL}/referralCodes/${referralCode}.json`;
-    const codeResponse = await fetch(codeUrl);
+    const codeResponse = await fetch(codeUrl, { cache: 'no-store' });
     const referralData = await codeResponse.json();
 
     if (!referralData) {
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     // Check if referrer still exists
     const referrerUrl = `${FIREBASE_DB_URL}/affiliates/${referrerId}.json`;
-    const referrerResponse = await fetch(referrerUrl);
+    const referrerResponse = await fetch(referrerUrl, { cache: 'no-store' });
     const referrerData = await referrerResponse.json();
 
     if (!referrerData) {
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
 
     // Update referrer's statistics
     const referrerStatsUrl = `${FIREBASE_DB_URL}/affiliates/${referrerId}/stats.json`;
-    const referrerStatsResponse = await fetch(referrerStatsUrl);
+    const referrerStatsResponse = await fetch(referrerStatsUrl, { cache: 'no-store' });
     const referrerStats = await referrerStatsResponse.json();
     
     let currentTotal = 0;

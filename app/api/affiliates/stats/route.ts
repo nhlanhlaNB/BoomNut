@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     }
 
     const userAffiliateUrl = `${FIREBASE_DB_URL}/affiliates/${userId}.json`;
-    const response = await fetch(userAffiliateUrl);
+    const response = await fetch(userAffiliateUrl, { cache: 'no-store' });
     const affiliateData = await response.json();
 
     if (!affiliateData) {
