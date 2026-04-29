@@ -43,23 +43,32 @@ export async function GET(request: NextRequest) {
         }))
       : [];
 
-    const enhancedReferrals = await Promise.all(referrals.map(async (ref: any) => {
+    // Fetch all subscriptions once to avoid index errors in Firebase
+    let allSubscriptions: any = {};
+    try {
+      const allSubsUrl = `${FIREBASE_DB_URL}/subscriptions.json`;
+      const allSubsRes = await fetch(allSubsUrl, { cache: 'no-store' });
+      allSubscriptions = await allSubsRes.json() || {};
+    } catch (err) {
+      console.error('Error fetching all subscriptions:', err);
+    }
+
+    const enhancedReferrals = referrals.map((ref: any) => {
       let hasPaid = false;
-      try {
-        const subUrl = `${FIREBASE_DB_URL}/subscriptions.json?orderBy="userId"&equalTo="${ref.userId || ref.id}"`;
-        const subRes = await fetch(subUrl, { cache: 'no-store' });
-        const subData = await subRes.json();
-        if (subData && typeof subData === 'object') {
-          hasPaid = Object.values(subData).some((sub: any) => sub.status === 'active');
-        }
-      } catch (err) {
-        console.error('Error fetching subscription for referral:', err);
-      }
+      const refUserId = ref.userId || ref.id;
+      
+      // Filter subscriptions in memory
+      const userSubs = Object.values(allSubscriptions).filter(
+        (sub: any) => sub && sub.userId === refUserId
+      );
+      
+      hasPaid = userSubs.some((sub: any) => sub.status === 'active');
+      
       return {
         ...ref,
         hasPaid
       };
-    }));
+    });
 
     return NextResponse.json({
       referralCode: affiliateData.referralCode || null,
