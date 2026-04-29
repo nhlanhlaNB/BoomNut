@@ -282,7 +282,10 @@ export default function AffiliatePage() {
         {/* Referrals List */}
         {stats && stats.referrals && stats.referrals.length > 0 && (
           <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Your Referrals</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Your Referrals</h2>
+            <p className="text-sm text-gray-600 mb-6 bg-amber-50 p-4 rounded-lg border border-amber-200">
+              <strong>How to get paid:</strong> Once a referred user completes their $3 subscription, please email us at <strong>support@boomnut.co.za</strong> with their email address to claim your reward!
+            </p>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -297,9 +300,12 @@ export default function AffiliatePage() {
                     <tr key={referral.id} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="py-3 px-4 text-gray-900 font-medium">{referral.email}</td>
                       <td className="py-3 px-4">
-                        <span className="inline-block px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
-                          {referral.status}
+                        <span className="inline-block px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold">
+                          Awaiting $3 Subscription
                         </span>
+                        <div className="text-[11px] text-gray-500 mt-1 max-w-[200px]">
+                          Once they subscribe, email us to get paid.
+                        </div>
                       </td>
                       <td className="py-3 px-4 text-gray-600 text-sm">
                         {new Date(referral.referredAt).toLocaleDateString()}
