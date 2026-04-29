@@ -321,7 +321,7 @@ export default function AffiliatePage() {
               Start sharing your referral code to see your referrals here
             </p>
             <button
-              onClick={() => copyToClipboard(shareLink || stats.referralCode)}
+              onClick={() => copyToClipboard(shareLink || stats.referralCode || '')}
               className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-lg transition-colors"
             >
               <Copy className="w-5 h-5" />
