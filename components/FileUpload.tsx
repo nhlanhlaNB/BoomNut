@@ -92,28 +92,7 @@ export default function FileUpload({ onFileUpload, onRemove }: FileUploadProps) 
         </div>
       </label>
 
-      {/* Show content preview if available */}
-      {showContentPreview && (
-        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 max-h-40 overflow-y-auto">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-medium text-gray-700 truncate">
-              📄 {showContentPreview.filename}
-            </p>
-            <button
-              onClick={() => {
-                setShowContentPreview(null);
-                onRemove?.(showContentPreview.filename);
-              }}
-              className="text-gray-400 hover:text-red-500 transition"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <p className="text-xs text-gray-600 line-clamp-3">
-            {showContentPreview.contentPreview}
-          </p>
-        </div>
-      )}
+      {/* File content preview hidden */}
     </div>
   );
 }

@@ -1,15 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Check, AlertCircle } from 'lucide-react';
-import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Check, AlertCircle, Gift } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import AuthButton from '@/components/AuthButton';
 
 export default function SignUpPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -17,10 +18,21 @@ export default function SignUpPage() {
     email: '',
     password: '',
     confirmPassword: '',
+    referralCode: '',
     agreedToTerms: false,
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [referralMessage, setReferralMessage] = useState('');
+
+  // Get referral code from URL
+  useEffect(() => {
+    const refCode = searchParams.get('ref');
+    if (refCode) {
+      setFormData(prev => ({ ...prev, referralCode: refCode }));
+      setReferralMessage(`You're joining through a referral code! 🎉`);
+    }
+  }, [searchParams]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,12 +56,38 @@ export default function SignUpPage() {
         displayName: formData.fullName,
       });
 
+      // If referral code provided, validate it
+      if (formData.referralCode.trim()) {
+        try {
+          const validateResponse = await fetch('/api/affiliates/validate-code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              referralCode: formData.referralCode.trim().toUpperCase(),
+              newUserId: user.uid,
+              email: formData.email,
+            }),
+          });
+
+          const validateData = await validateResponse.json();
+          if (validateData.valid) {
+            console.log('Referral code validated successfully');
+          } else {
+            console.warn('Invalid referral code:', validateData.message);
+          }
+        } catch (refError) {
+          console.error('Error validating referral code:', refError);
+          // Don't block signup if referral validation fails
+        }
+      }
+
       // Reset form
       setFormData({
         fullName: '',
         email: '',
         password: '',
         confirmPassword: '',
+        referralCode: '',
         agreedToTerms: false,
       });
 
@@ -116,6 +154,14 @@ export default function SignUpPage() {
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex gap-3">
               <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
               <p className="text-red-800 text-sm">{error}</p>
+            </div>
+          )}
+
+          {/* Referral Message */}
+          {referralMessage && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex gap-3">
+              <Gift className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+              <p className="text-green-800 text-sm">{referralMessage}</p>
             </div>
           )}
           <div className="flex items-center gap-4 mb-8">
@@ -224,6 +270,28 @@ export default function SignUpPage() {
                   <Check className="w-4 h-4" />
                   <span className="text-xs sm:text-sm">Passwords match</span>
                 </div>
+              )}
+            </div>
+
+            {/* Referral Code Field (Optional) */}
+            <div>
+              <label className="block text-gray-900 font-semibold mb-2 text-sm sm:text-base">
+                Referral Code <span className="text-gray-500 font-normal">(Optional)</span>
+              </label>
+              <div className="relative">
+                <Gift className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={formData.referralCode}
+                  onChange={(e) => setFormData({ ...formData, referralCode: e.target.value.toUpperCase() })}
+                  placeholder="Enter referral code (if you have one)"
+                  className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border-2 border-gray-300 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                />
+              </div>
+              {formData.referralCode && (
+                <p className="mt-2 text-xs sm:text-sm text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
+                  You'll get special benefits when you sign up with this code!
+                </p>
               )}
             </div>
 

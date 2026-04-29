@@ -25,7 +25,7 @@ export default function ArcadePage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const { isActive } = useSubscription();
-  const { usageCount, isLimitExceeded, trackUsage } = useAppUsage('arcade', 2);
+  const { usageCount, isLimitExceeded, trackUsage, isLoaded } = useAppUsage('arcade', 2);
   const [gameMode, setGameMode] = useState<GameMode>(null);
   const [score, setScore] = useState(0);
   const [level, setLevel] = useState(1);
@@ -409,7 +409,12 @@ export default function ArcadePage() {
                 <span className={`text-sm font-medium ${
                   isLimitExceeded ? 'text-red-800' : 'text-blue-800'
                 }`}>
-                  {isLimitExceeded ? (
+                  {!isLoaded ? (
+                    <span className="inline-flex items-center gap-1">
+                      <span className="inline-block w-3 h-3 bg-blue-300 rounded animate-pulse"></span>
+                      Loading usage...
+                    </span>
+                  ) : isLimitExceeded ? (
                     <>
                       ⚠️ You've used your 2 free games today.
                       <a

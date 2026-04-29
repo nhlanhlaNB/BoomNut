@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { 
   Menu, X, ChevronDown, Home, BookOpen, Brain, Mic, Video, 
   Gamepad2, FileText, Lightbulb, GraduationCap, PenTool, 
-  Users, TrendingUp, Target, DollarSign, LogOut
+  Users, TrendingUp, Target, DollarSign, LogOut, Gift
 } from 'lucide-react';
 import AuthButton from './AuthButton';
 import SubscriptionBadge from './SubscriptionBadge';
@@ -46,12 +46,13 @@ export default function Navbar() {
     { name: 'Study Dashboard', href: '/study', icon: BookOpen },
     { name: 'Study Plan', href: '/study-plan', icon: Target },
     { name: 'Community', href: '/community', icon: Users },
+    { name: 'Affiliate', href: '/affiliate', icon: Gift },
     { name: 'Pricing', href: '/pricing', icon: DollarSign },
   ];
 
   // Filter links based on auth state
   const visibleLinks = mainLinks.filter(link => {
-    if (!user && (link.href === '/study-plan')) {
+    if (!user && (link.href === '/study-plan' || link.href === '/affiliate')) {
       return false;
     }
     return true;
@@ -92,12 +93,13 @@ export default function Navbar() {
                   <Link
                     key={link.href}
                     href={link.href}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
                       isActive(link.href)
                         ? 'bg-orange-100 text-orange-700'
                         : 'text-gray-700 hover:bg-gray-100'
                     }`}
                   >
+                    <link.icon className="w-4 h-4" />
                     {link.name}
                   </Link>
                 );

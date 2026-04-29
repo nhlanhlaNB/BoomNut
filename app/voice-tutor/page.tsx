@@ -12,7 +12,7 @@ export default function VoiceTutorPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const { isActive } = useSubscription();
-  const { usageCount, isLimitExceeded, trackUsage } = useAppUsage('voiceTutor', 2);
+  const { usageCount, isLimitExceeded, trackUsage, isLoaded } = useAppUsage('voiceTutor', 2);
 
   const [isRecording, setIsRecording] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -720,7 +720,14 @@ export default function VoiceTutorPage() {
                     <div className="flex items-center gap-2">
                       <Lock className="w-4 h-4 text-blue-600" />
                       <span className="text-sm text-blue-800">
-                        Free Plan: {usageCount}/2 messages used
+                        {!isLoaded ? (
+                          <span className="inline-flex items-center gap-1">
+                            <span className="inline-block w-3 h-3 bg-blue-300 rounded animate-pulse"></span>
+                            Loading usage...
+                          </span>
+                        ) : (
+                          <>Free Plan: {usageCount}/2 messages used</>
+                        )}
                       </span>
                     </div>
                     <a

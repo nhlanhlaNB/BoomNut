@@ -37,7 +37,7 @@ export default function StudyRoomPage() {
   const roomId = params.roomId as string;
   const { user, loading: authLoading } = useAuth();
   const { isActive } = useSubscription();
-  const { usageCount, isLimitExceeded, trackUsage } = useAppUsage('studyRoom', 2);
+  const { usageCount, isLimitExceeded, trackUsage, isLoaded } = useAppUsage('studyRoom', 2);
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -341,7 +341,14 @@ export default function StudyRoomPage() {
                   <div className="flex items-center gap-2">
                     <Lock className="w-4 h-4 text-blue-600" />
                     <span className="text-sm text-blue-800">
-                      Free Plan: {usageCount}/2 messages used
+                      {!isLoaded ? (
+                        <span className="inline-flex items-center gap-1">
+                          <span className="inline-block w-3 h-3 bg-blue-300 rounded animate-pulse"></span>
+                          Loading usage...
+                        </span>
+                      ) : (
+                        <>Free Plan: {usageCount}/2 messages used</>
+                      )}
                     </span>
                   </div>
                   <Link

@@ -26,7 +26,7 @@ export default function ExplainersPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const { isActive } = useSubscription();
-  const { usageCount, isLimitExceeded, trackUsage } = useAppUsage('explainers', 2);
+  const { usageCount, isLimitExceeded, trackUsage, isLoaded } = useAppUsage('explainers', 2);
   const [topic, setTopic] = useState('');
   const [subject, setSubject] = useState('General');
   const [complexity, setComplexity] = useState('simple');
@@ -133,7 +133,12 @@ export default function ExplainersPage() {
               <span className={`text-sm font-medium ${
                 isLimitExceeded ? 'text-red-800' : 'text-blue-800'
               }`}>
-                {isLimitExceeded ? (
+                {!isLoaded ? (
+                  <span className="inline-flex items-center gap-1">
+                    <span className="inline-block w-3 h-3 bg-blue-300 rounded animate-pulse"></span>
+                    Loading usage...
+                  </span>
+                ) : isLimitExceeded ? (
                   <>
                     ⚠️ You've used your 2 free topics explained today.
                     <a

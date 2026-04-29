@@ -28,7 +28,7 @@ export default function EssayGradingPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const { isActive } = useSubscription();
-  const { usageCount, isLimitExceeded, trackUsage } = useAppUsage('essay-grading', 2);
+  const { usageCount, isLimitExceeded, trackUsage, isLoaded } = useAppUsage('essay-grading', 2);
   const [essay, setEssay] = useState('');
   const [prompt, setPrompt] = useState('');
   const [subject, setSubject] = useState('English');
@@ -146,7 +146,12 @@ export default function EssayGradingPage() {
               <span className={`text-sm font-medium ${
                 isLimitExceeded ? 'text-red-800' : 'text-blue-800'
               }`}>
-                {isLimitExceeded ? (
+                {!isLoaded ? (
+                  <span className="inline-flex items-center gap-1">
+                    <span className="inline-block w-3 h-3 bg-blue-300 rounded animate-pulse"></span>
+                    Loading usage...
+                  </span>
+                ) : isLimitExceeded ? (
                   <>
                     ⚠️ You've used your 2 free essays graded today.
                     <a
