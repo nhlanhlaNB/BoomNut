@@ -43,11 +43,29 @@ export async function GET(request: NextRequest) {
         }))
       : [];
 
+    const enhancedReferrals = await Promise.all(referrals.map(async (ref: any) => {
+      let hasPaid = false;
+      try {
+        const subUrl = `${FIREBASE_DB_URL}/subscriptions.json?orderBy="userId"&equalTo="${ref.userId || ref.id}"`;
+        const subRes = await fetch(subUrl, { cache: 'no-store' });
+        const subData = await subRes.json();
+        if (subData && typeof subData === 'object') {
+          hasPaid = Object.values(subData).some((sub: any) => sub.status === 'active');
+        }
+      } catch (err) {
+        console.error('Error fetching subscription for referral:', err);
+      }
+      return {
+        ...ref,
+        hasPaid
+      };
+    }));
+
     return NextResponse.json({
       referralCode: affiliateData.referralCode || null,
       totalReferrals: affiliateData.stats?.totalReferrals || 0,
       activeReferrals: affiliateData.stats?.activeReferrals || 0,
-      referrals,
+      referrals: enhancedReferrals,
       createdAt: affiliateData.createdAt,
     });
   } catch (error: any) {

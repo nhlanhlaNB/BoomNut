@@ -15,6 +15,7 @@ interface AffiliateStats {
     email: string;
     referredAt: string;
     status: string;
+    hasPaid?: boolean;
   }>;
   createdAt?: string;
 }
@@ -300,12 +301,30 @@ export default function AffiliatePage() {
                     <tr key={referral.id} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="py-3 px-4 text-gray-900 font-medium">{referral.email}</td>
                       <td className="py-3 px-4">
-                        <span className="inline-block px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold">
-                          Awaiting $3 Subscription
-                        </span>
-                        <div className="text-[11px] text-gray-500 mt-1 max-w-[200px]">
-                          Once they subscribe, email us to get paid.
-                        </div>
+                        {referral.hasPaid ? (
+                          <div>
+                            <span className="inline-block px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                              Paid
+                            </span>
+                            <div className="mt-2">
+                              <a 
+                                href={`mailto:support@boomnut.co.za?subject=Referral Reward Claim&body=Hello BoomNut Support,%0D%0A%0D%0AI would like to claim my referral reward.%0D%0A%0D%0AMy Email: ${user?.email}%0D%0AReferred User Email: ${referral.email}%0D%0A%0D%0AThank you!`}
+                                className="inline-flex items-center text-[11px] font-medium text-white bg-orange-500 hover:bg-orange-600 px-3 py-1.5 rounded transition-colors shadow-sm"
+                              >
+                                Email to Claim Reward
+                              </a>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <span className="inline-block px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold">
+                              Awaiting $3 Subscription
+                            </span>
+                            <div className="text-[11px] text-gray-500 mt-1 max-w-[200px]">
+                              Once they subscribe, email us to get paid.
+                            </div>
+                          </>
+                        )}
                       </td>
                       <td className="py-3 px-4 text-gray-600 text-sm">
                         {new Date(referral.referredAt).toLocaleDateString()}
