@@ -2,7 +2,10 @@ import { NextResponse } from "next/server"
 import fs from "fs/promises"
 import path from "path"
 
-const POSTS_PATH = path.join(process.cwd(), "public", "community-posts.json")
+const POSTS_PATH = process.env.NODE_ENV === 'production' 
+  ? path.join('/tmp', 'community-posts.json') 
+  : path.join(process.cwd(), "public", "community-posts.json");
+
 
 async function readPosts() {
   try {
